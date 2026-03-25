@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #F8F9FA;
+    color: #202124;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Tamil language font override */
+  .lang-ta {
+    font-family: 'Noto Sans Tamil', sans-serif;
+  }
+}
+
+@layer components {
+  /* Card */
+  .card {
+    @apply bg-surface rounded-card shadow-card border border-border;
+  }
+
+  /* Status chips */
+  .chip-done    { @apply inline-flex items-center gap-1 px-3 py-1 rounded-chip text-sm font-medium bg-green-100 text-secondary; }
+  .chip-pending { @apply inline-flex items-center gap-1 px-3 py-1 rounded-chip text-sm font-medium bg-blue-100 text-primary; }
+  .chip-warning { @apply inline-flex items-center gap-1 px-3 py-1 rounded-chip text-sm font-medium bg-yellow-100 text-yellow-700; }
+  .chip-error   { @apply inline-flex items-center gap-1 px-3 py-1 rounded-chip text-sm font-medium bg-red-100 text-error; }
+  .chip-grey    { @apply inline-flex items-center gap-1 px-3 py-1 rounded-chip text-sm font-medium bg-gray-100 text-text-secondary; }
+
+  /* Buttons */
+  .btn-primary {
+    @apply min-h-tap min-w-tap px-6 py-3 rounded-lg bg-primary text-white font-medium text-sm
+           hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply min-h-tap min-w-tap px-6 py-3 rounded-lg border border-border text-text-primary font-medium text-sm
+           hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-50;
+  }
+  .btn-danger {
+    @apply min-h-tap min-w-tap px-6 py-3 rounded-lg bg-error text-white font-medium text-sm
+           hover:bg-red-600 active:bg-red-700 transition-colors disabled:opacity-50;
+  }
+
+  /* Form fields */
+  .input-field {
+    @apply w-full min-h-tap px-4 py-3 rounded-lg border border-border bg-surface text-text-primary
+           placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
+           transition-shadow text-base;
+  }
+  .input-label {
+    @apply block text-sm font-medium text-text-secondary mb-1;
+  }
+
+  /* Section header */
+  .section-header {
+    @apply text-xl font-semibold text-text-primary;
+  }
+
+  /* Amount display */
+  .amount {
+    @apply font-semibold text-text-primary;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #DADCE0; border-radius: 2px; }
+
+/* Prevent iOS zoom on input focus */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Safe area insets for notched phones */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-top    { padding-top: env(safe-area-inset-top); }

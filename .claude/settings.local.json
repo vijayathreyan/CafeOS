@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \":*)",
+      "Bash(gh auth:*)",
+      "Bash(git --version)"
+    ]
+  }
+}

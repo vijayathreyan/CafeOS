@@ -1,0 +1,154 @@
+version: "3.9"
+
+# ============================================================
+# Unlimited Food Works — CafeOS
+# Single docker-compose.yml — one command to start everything
+# docker compose up -d
+# ============================================================
+
+services:
+  # 1. PostgreSQL 15 — primary database
+  postgres:
+    image: postgres:15
+    container_name: cafeos_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d:ro
+    networks:
+      - cafeos_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. PostgREST — REST API over Postgres
+  supabase-api:
+    image: postgrest/postgrest:v11.2.2
+    container_name: cafeos_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: ${PGRST_DB_URI}
+      PGRST_DB_SCHEMA: ${PGRST_DB_SCHEMA}
+      PGRST_DB_ANON_ROLE: ${PGRST_DB_ANON_ROLE}
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: ${PGRST_DB_USE_LEGACY_GUCS}
+    networks:
+      - cafeos_net
+
+  # 3. GoTrue — JWT authentication
+  supabase-auth:
+    image: supabase/gotrue:v2.143.0
+    container_name: cafeos_auth
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      GOTRUE_JWT_SECRET: ${GOTRUE_JWT_SECRET}
+      GOTRUE_JWT_EXP: ${GOTRUE_JWT_EXP}
+      GOTRUE_DB_DRIVER: ${GOTRUE_DB_DRIVER}
+      DATABASE_URL: ${GOTRUE_DB_DATABASE_URL}
+      GOTRUE_API_HOST: ${GOTRUE_API_HOST}
+      PORT: ${GOTRUE_API_PORT}
+      GOTRUE_SITE_URL: ${GOTRUE_SITE_URL}
+      GOTRUE_DISABLE_SIGNUP: ${GOTRUE_DISABLE_SIGNUP}
+      GOTRUE_MAILER_AUTOCONFIRM: ${GOTRUE_MAILER_AUTOCONFIRM}
+      GOTRUE_SMS_AUTOCONFIRM: ${GOTRUE_SMS_AUTOCONFIRM}
+    networks:
+      - cafeos_net
+
+  # 4. Supabase Storage — file storage
+  supabase-storage:
+    image: supabase/storage-api:v0.46.4
+    container_name: cafeos_storage
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ANON_KEY: ${ANON_KEY_STORAGE}
+      SERVICE_KEY: ${SERVICE_KEY_STORAGE}
+      POSTGREST_URL: ${POSTGREST_URL}
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      STORAGE_BACKEND: ${STORAGE_BACKEND}
+      FILE_STORAGE_BACKEND_PATH: ${FILE_STORAGE_BACKEND_PATH}
+      FILE_SIZE_LIMIT: ${STORAGE_FILE_BACKEND_MAX_FILE_SIZE}
+      STORAGE_S3_REGION: ${REGION}
+      TENANT_ID: ${TENANT_ID}
+    volumes:
+      - storage_data:${FILE_STORAGE_BACKEND_PATH}
+    networks:
+      - cafeos_net
+
+  # 5. React Frontend app
+  app:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cafeos_app
+    restart: unless-stopped
+    environment:
+      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+      VITE_APP_NAME: ${VITE_APP_NAME}
+    networks:
+      - cafeos_net
+
+  # 6. Nginx — reverse proxy, single entry point
+  nginx:
+    image: nginx:alpine
+    container_name: cafeos_nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+      - supabase-api
+      - supabase-auth
+      - supabase-storage
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - cafeos_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 7. Whatomate — WhatsApp Business API alerts
+  whatomate:
+    image: shridarpatil/whatomate:latest
+    container_name: cafeos_whatomate
+    restart: unless-stopped
+    environment:
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN}
+    networks:
+      - cafeos_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+  storage_data:
+
+networks:
+  cafeos_net:
+    driver: bridge
