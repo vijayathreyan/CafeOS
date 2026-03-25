@@ -16,7 +16,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./supabase/migrations:/docker-entrypoint-initdb.d:ro
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/00_init.sql:ro
+      - ./supabase/migrations/001_complete_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
     networks:
       - cafeos_net
     healthcheck:
