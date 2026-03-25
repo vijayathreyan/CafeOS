@@ -86,7 +86,7 @@ services:
       STORAGE_S3_REGION: ${REGION}
       TENANT_ID: ${TENANT_ID}
     volumes:
-      - storage_data:${FILE_STORAGE_BACKEND_PATH}
+      - storage_data:/var/lib/storage
     networks:
       - cafeos_net
 
