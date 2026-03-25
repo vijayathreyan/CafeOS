@@ -4,6 +4,11 @@
 -- RLS intentionally DISABLED — access control at React app level
 -- ============================================================
 
+-- Schemas (must exist before GoTrue / Storage run their own migrations)
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE SCHEMA IF NOT EXISTS storage;
+CREATE SCHEMA IF NOT EXISTS public;
+
 -- Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
