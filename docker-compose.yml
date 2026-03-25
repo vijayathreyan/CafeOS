@@ -1,5 +1,3 @@
-version: "3.9"
-
 # ============================================================
 # Unlimited Food Works — CafeOS
 # Single docker-compose.yml — one command to start everything
@@ -129,21 +127,25 @@ services:
         max-file: "3"
 
   # 7. Whatomate — WhatsApp Business API alerts
-  whatomate:
-    image: shridarpatil/whatomate:latest
-    container_name: cafeos_whatomate
-    restart: unless-stopped
-    environment:
-      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN}
-      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
-      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN}
-    networks:
-      - cafeos_net
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+  # Commented out until Phase 10 (Alert Manager).
+  # Image to use when re-enabling: muhdominic/whatomate:latest
+  # Uncomment the entire block below and run: docker compose up -d whatomate
+  #
+  # whatomate:
+  #   image: muhdominic/whatomate:latest
+  #   container_name: cafeos_whatomate
+  #   restart: unless-stopped
+  #   environment:
+  #     WHATSAPP_TOKEN: ${WHATSAPP_TOKEN}
+  #     WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
+  #     WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN}
+  #   networks:
+  #     - cafeos_net
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
 
 volumes:
   postgres_data:
