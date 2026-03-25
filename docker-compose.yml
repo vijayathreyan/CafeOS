@@ -95,12 +95,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: http://localhost/rest/v1
+        VITE_SUPABASE_ANON_KEY: ${ANON_KEY}
     container_name: cafeos_app
     restart: unless-stopped
-    environment:
-      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
-      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-      VITE_APP_NAME: ${VITE_APP_NAME}
     networks:
       - cafeos_net
 
