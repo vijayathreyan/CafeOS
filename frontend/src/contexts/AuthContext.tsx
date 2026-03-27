@@ -41,31 +41,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Restore session on mount
+  // Auth initialisation — onAuthStateChange only, no getSession()
+  // INITIAL_SESSION fires once on mount with the existing session (or null).
   useEffect(() => {
     let mounted = true
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!mounted) return
-      if (session?.user) {
-        const emp = await fetchEmployee(session.user.id)
-        if (mounted) applyUser(emp)
-      }
+
+    // Hard 3-second fallback in case INITIAL_SESSION never fires (GoTrue slow to start)
+    const timeoutId = setTimeout(() => {
       if (mounted) setLoading(false)
-    })
+    }, 3000)
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
-      if (event === 'SIGNED_OUT' || !session) {
-        setUser(null)
-        setActiveBranchState(null)
-      } else if (session?.user) {
+
+      if (event === 'INITIAL_SESSION') {
+        clearTimeout(timeoutId)
+        if (session?.user) {
+          const emp = await fetchEmployee(session.user.id)
+          if (mounted) applyUser(emp)
+        }
+        if (mounted) setLoading(false)
+      } else if (event === 'SIGNED_IN' && session?.user) {
         const emp = await fetchEmployee(session.user.id)
         if (mounted) applyUser(emp)
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setActiveBranchState(null)
       }
     })
 
     return () => {
       mounted = false
+      clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
   }, [fetchEmployee, applyUser])

@@ -928,3 +928,31 @@ END $$;
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+-- ============================================================
+-- PHONE CHANGE FUNCTION (SECURITY DEFINER — updates auth.users)
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.update_employee_phone(
+  p_employee_id UUID,
+  p_new_phone    TEXT
+) RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_auth_id UUID;
+BEGIN
+  UPDATE public.employees
+    SET phone = p_new_phone, updated_at = NOW()
+    WHERE id = p_employee_id;
+
+  SELECT auth_user_id INTO v_auth_id
+    FROM public.employees WHERE id = p_employee_id;
+
+  IF v_auth_id IS NOT NULL THEN
+    UPDATE auth.users
+      SET email = p_new_phone || '@cafeos.local', updated_at = NOW()
+      WHERE id = v_auth_id;
+  END IF;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.update_employee_phone TO authenticated;

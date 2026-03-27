@@ -96,8 +96,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_SUPABASE_URL: http://localhost/rest/v1
-        VITE_SUPABASE_ANON_KEY: ${ANON_KEY}
+        VITE_SUPABASE_URL: http://localhost
+        VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
     container_name: cafeos_app
     restart: unless-stopped
     networks:
@@ -127,7 +127,28 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # 7. Whatomate — WhatsApp Business API alerts
+  # 7. One-time owner account seeder — exits after inserting credentials
+  db-seed:
+    image: postgres:15-alpine
+    container_name: cafeos_seed
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      supabase-auth:
+        condition: service_started
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+    volumes:
+      - ./docker/seed/seed.sh:/seed.sh:ro
+    entrypoint: ["sh", "-c", "apk add --no-cache curl jq > /dev/null 2>&1 && bash /seed.sh"]
+    networks:
+      - cafeos_net
+
+  # 8. Whatomate — WhatsApp Business API alerts
   # Commented out until Phase 10 (Alert Manager).
   # Image to use when re-enabling: muhdominic/whatomate:latest
   # Uncomment the entire block below and run: docker compose up -d whatomate

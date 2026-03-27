@@ -3,7 +3,12 @@
     "allow": [
       "Bash(python -c \":*)",
       "Bash(gh auth:*)",
-      "Bash(git --version)"
+      "Bash(git --version)",
+      "Bash(docker exec:*)",
+      "Bash(docker volume:*)",
+      "Bash(grep -E '\"\"@supabase|supabase-js\"\"' package.json)",
+      "Bash(npm run:*)",
+      "Bash(docker compose:*)"
     ]
   }
 }

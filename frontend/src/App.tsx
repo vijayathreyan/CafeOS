@@ -1,5 +1,7 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { Session } from '@supabase/supabase-js'
+import { supabase } from './lib/supabase'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -14,10 +16,31 @@ import EmployeeOnboarding from './pages/owner/EmployeeOnboarding'
 import TaskInbox from './pages/shared/TaskInbox'
 import PlaceholderPage from './pages/PlaceholderPage'
 
-function AppRoutes() {
-  const { user, activeBranch, loading } = useAuth()
+export default function App() {
+  const [session, setSession] = useState<Session | null>(null)
+  const [authReady, setAuthReady] = useState(false)
 
-  if (loading) {
+  useEffect(() => {
+    // Hard 3-second timeout — unblocks the UI if the first auth event is late
+    const timeout = setTimeout(() => setAuthReady(true), 3000)
+
+    // Use ONLY onAuthStateChange — no getSession() call.
+    // INITIAL_SESSION fires once on mount with the current session (or null),
+    // which is the reliable signal that the client is fully initialised.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      clearTimeout(timeout)
+      setSession(session)
+      setAuthReady(true)
+    })
+
+    return () => {
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  // Global loading gate — show spinner until first auth event fires (max 3s)
+  if (!authReady) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-text-secondary text-sm">Loading CafeOS...</div>
@@ -25,22 +48,13 @@ function AppRoutes() {
     )
   }
 
-  if (!user) return <Navigate to="/login" replace />
-
-  // Multi-branch users with no branch selected — go to branch selector
-  if (user.branch_access.length > 1 && !activeBranch) {
-    return <Navigate to="/branch-select" replace />
-  }
-
-  return null
-}
-
-export default function App() {
   return (
     <AuthProvider>
       <LanguageProvider>
         <Routes>
-          <Route path="/login" element={<Login />} />
+          {/* /login: redirect away if already authenticated */}
+          <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
+
           <Route path="/branch-select" element={
             <ProtectedRoute>
               <BranchSelect />
@@ -49,17 +63,14 @@ export default function App() {
 
           {/* Protected layout routes */}
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            {/* Root — role-based redirect */}
             <Route path="/" element={<RoleHome />} />
 
-            {/* Staff routes */}
             <Route path="/shift" element={
               <ProtectedRoute allowedRoles={['staff', 'supervisor']}>
                 <ShiftDashboard />
               </ProtectedRoute>
             } />
 
-            {/* Owner routes */}
             <Route path="/reports" element={
               <ProtectedRoute allowedRoles={['owner']}>
                 <PlaceholderPage title="Reports" subtitle="Phase 7–9" />
@@ -86,7 +97,6 @@ export default function App() {
               </ProtectedRoute>
             } />
 
-            {/* Shared routes */}
             <Route path="/tasks" element={<TaskInbox />} />
           </Route>
 

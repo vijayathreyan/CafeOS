@@ -6,9 +6,9 @@ const supabaseKey  = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
-    storageKey: 'cafeos_auth',
     autoRefreshToken: true,
     detectSessionInUrl: false,
+    storage: localStorage,
   },
 })
 
