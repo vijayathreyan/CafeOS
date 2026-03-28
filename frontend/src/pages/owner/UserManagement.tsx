@@ -25,6 +25,14 @@ export default function UserManagement() {
     { onSuccess: () => qc.invalidateQueries('employees') }
   )
 
+  // Bug 5: reactivate inactive employees
+  const reactivateMutation = useMutation(
+    async (id: string) => {
+      await supabase.from('employees').update({ active: true }).eq('id', id)
+    },
+    { onSuccess: () => qc.invalidateQueries('employees') }
+  )
+
   const resetPasswordMutation = useMutation(
     async (emp: AppUser) => {
       const tempPassword = Math.random().toString(36).slice(-8)
@@ -107,12 +115,19 @@ export default function UserManagement() {
                 <button onClick={() => navigate(`/users/${emp.id}/edit`)} className="btn-secondary text-sm px-3 py-2">
                   {t('common.edit')}
                 </button>
-                {emp.active && (
+                {emp.active ? (
                   <button
                     onClick={() => { if (confirm(`Deactivate ${emp.full_name}?`)) deactivateMutation.mutate(emp.id) }}
                     className="btn-danger text-sm px-3 py-2"
                   >
                     {t('employees.deactivate')}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { if (confirm(`Reactivate ${emp.full_name}?`)) reactivateMutation.mutate(emp.id) }}
+                    className="bg-green-600 text-white text-sm px-3 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    {t('employees.reactivate')}
                   </button>
                 )}
               </div>

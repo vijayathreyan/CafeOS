@@ -32,8 +32,8 @@ export default function Login() {
       return
     }
 
-    // After login, check first_login_done via auth context
-    // Redirect happens in App via route logic
+    // Bug 4: explicitly navigate after successful login instead of relying on async session state
+    navigate('/')
   }
 
   if (user && !user.first_login_done) {

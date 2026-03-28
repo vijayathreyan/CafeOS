@@ -1,4 +1,5 @@
 import React from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LanguageContext'
@@ -7,6 +8,18 @@ export default function TopBar() {
   const { t } = useTranslation()
   const { user, activeBranch, logout } = useAuth()
   const { lang, toggleLang } = useLang()
+  const navigate = useNavigate()
+
+  // Bug 1: explicit navigate to /login after signOut
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
+  const ownerNavClass = ({ isActive }: { isActive: boolean }) =>
+    `px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+      isActive ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary hover:bg-gray-100'
+    }`
 
   return (
     <header className="bg-surface border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 z-40">
@@ -23,6 +36,15 @@ export default function TopBar() {
           )}
         </div>
       </div>
+
+      {/* Bug 2/3: Owner desktop nav — Dashboard / Employees / Tasks on all pages */}
+      {user?.role === 'owner' && (
+        <nav className="hidden sm:flex items-center gap-1">
+          <NavLink to="/" end className={ownerNavClass}>{t('nav.dashboard')}</NavLink>
+          <NavLink to="/users" className={ownerNavClass}>{t('employees.title')}</NavLink>
+          <NavLink to="/tasks" className={ownerNavClass}>{t('nav.tasks')}</NavLink>
+        </nav>
+      )}
 
       <div className="flex items-center gap-2">
         {/* Language toggle — only for staff/supervisor */}
@@ -44,7 +66,7 @@ export default function TopBar() {
             </span>
           </div>
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="text-xs text-text-secondary hover:text-error transition-colors hidden sm:block"
           >
             {t('auth.logout')}

@@ -60,6 +60,9 @@ export default function EmployeeOnboarding() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  // Bug 7A: real-time phone duplicate check
+  const [phoneError, setPhoneError] = useState('')
+  const [phoneChecking, setPhoneChecking] = useState(false)
 
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<FormData>({
     defaultValues: {
@@ -120,6 +123,23 @@ export default function EmployeeOnboarding() {
     }
   }, [existing, reset])
 
+  // Bug 7A: check for duplicate phone on blur in Section 1 (new employee only)
+  const checkPhoneDuplicate = async (phone: string) => {
+    if (isEdit || !phone) return
+    setPhoneChecking(true)
+    setPhoneError('')
+    const clean = phone.replace(/\D/g, '')
+    const { data, error } = await supabase
+      .from('employees')
+      .select('id')
+      .eq('phone', clean)
+      .maybeSingle()
+    setPhoneChecking(false)
+    if (!error && data) {
+      setPhoneError('This phone number is already registered')
+    }
+  }
+
   const onSubmit = async (data: FormData) => {
     setSubmitting(true)
     setError('')
@@ -135,9 +155,10 @@ export default function EmployeeOnboarding() {
       }
 
       if (isEdit && id) {
-        // Update employee
+        // Update employee — Bug 6: include phone in update
         const { error: err } = await supabase.from('employees').update({
           full_name: data.full_name,
+          phone: data.phone,
           role: data.role,
           branch_access,
           language_pref: data.language_pref,
@@ -213,31 +234,40 @@ export default function EmployeeOnboarding() {
 
         const empId = emp.id
 
-        // Related records
-        if (data.emergency_name) {
-          await supabase.from('employee_emergency_contacts').insert({
-            employee_id: empId,
-            contact_name: data.emergency_name,
-            relationship: data.emergency_relationship,
-            phone: data.emergency_phone,
-          })
-        }
-        if (data.college_name || data.aadhaar_number) {
-          await supabase.from('employee_identity').insert({
-            employee_id: empId,
-            college_name: data.college_name || null,
-            course: data.course || null,
-            study_year: data.study_year || null,
-          })
-        }
-        if (data.bank_name || data.ifsc_code) {
-          await supabase.from('employee_bank_details').insert({
-            employee_id: empId,
-            bank_name: data.bank_name || null,
-            ifsc_code: data.ifsc_code || null,
-            account_holder_name: data.account_holder_name || null,
-            upi_id: data.upi_id || null,
-          })
+        // Bug 7B: wrap related inserts — rollback employee record if any fail
+        try {
+          if (data.emergency_name) {
+            const { error: emErr } = await supabase.from('employee_emergency_contacts').insert({
+              employee_id: empId,
+              contact_name: data.emergency_name,
+              relationship: data.emergency_relationship,
+              phone: data.emergency_phone,
+            })
+            if (emErr) throw emErr
+          }
+          if (data.college_name || data.aadhaar_number) {
+            const { error: idErr } = await supabase.from('employee_identity').insert({
+              employee_id: empId,
+              college_name: data.college_name || null,
+              course: data.course || null,
+              study_year: data.study_year || null,
+            })
+            if (idErr) throw idErr
+          }
+          if (data.bank_name || data.ifsc_code) {
+            const { error: bankErr } = await supabase.from('employee_bank_details').insert({
+              employee_id: empId,
+              bank_name: data.bank_name || null,
+              ifsc_code: data.ifsc_code || null,
+              account_holder_name: data.account_holder_name || null,
+              upi_id: data.upi_id || null,
+            })
+            if (bankErr) throw bankErr
+          }
+        } catch (relErr: any) {
+          // Rollback: delete the employee record so no ghost record is left
+          await supabase.from('employees').delete().eq('id', empId)
+          throw relErr
         }
         // TODO: send WhatsApp with credentials via alert system
       }
@@ -310,9 +340,19 @@ export default function EmployeeOnboarding() {
 
             <div>
               <label className="input-label">{t('employees.fields.phone')} *</label>
-              <input className="input-field" type="tel" placeholder="9876543210" {...register('phone', { required: true })} disabled={isEdit} />
+              <input
+                className="input-field"
+                type="tel"
+                placeholder="9876543210"
+                {...register('phone', { required: true })}
+                onBlur={e => checkPhoneDuplicate(e.target.value)}
+              />
               {errors.phone && <p className="text-error text-xs mt-1">{t('common.required')}</p>}
-              {isEdit && <p className="text-text-secondary text-xs mt-1">Phone cannot be changed after creation</p>}
+              {/* Bug 7A: duplicate phone inline error */}
+              {phoneChecking && <p className="text-text-secondary text-xs mt-1">Checking...</p>}
+              {phoneError && <p className="text-error text-xs mt-1">{phoneError}</p>}
+              {/* Bug 6: editable with warning instead of locked */}
+              {isEdit && <p className="text-yellow-600 text-xs mt-1">Changing phone number will update the login username</p>}
             </div>
 
             <div>
@@ -553,7 +593,12 @@ export default function EmployeeOnboarding() {
           </button>
 
           {sectionIndex < SECTIONS.length - 1 ? (
-            <button type="button" className="btn-primary" onClick={() => setActiveSection(SECTIONS[sectionIndex + 1])}>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => setActiveSection(SECTIONS[sectionIndex + 1])}
+              disabled={activeSection === 'systemAccess' && !isEdit && !!phoneError}
+            >
               {t('common.next')} →
             </button>
           ) : (

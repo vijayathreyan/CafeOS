@@ -170,6 +170,7 @@
       "owner": "Owner"
     },
     "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
     "resetPassword": "Reset Password",
     "callEmergency": "Call Emergency Contact"
   },
