@@ -334,7 +334,7 @@ export default function EmployeeOnboarding() {
       // No auth account exists — create one and link it
       const email = `${existing.phone.replace(/\D/g, '')}@cafeos.local`
       const { data: authData, error: createErr } = await supabaseAdmin.auth.admin.createUser({
-        email, password: v.reset_password, email_confirm: true,
+        email, password: v.reset_password, email_confirm: true, role: 'authenticated',
       })
       if (createErr) { setResetPwError('Failed to create auth account: ' + createErr.message); setResetPwSaving(false); return }
       const { error: linkErr } = await supabase.from('employees').update({ auth_user_id: authData.user.id }).eq('id', id)
@@ -441,6 +441,7 @@ export default function EmployeeOnboarding() {
         email,
         password: data.password,
         email_confirm: true,
+        role: 'authenticated',   // required so GoTrue issues JWT with role=authenticated; PostgREST needs this
       })
       if (authErr) throw new Error('Auth creation failed: ' + authErr.message)
       const authUserId = authData.user.id
