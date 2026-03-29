@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from 'react-query'
 import { supabase } from '../../../lib/supabase'
 import { saveDraft, loadDraft } from '../../../lib/offlineQueue'
+import { AlertTriangle } from 'lucide-react'
 
 interface SnackItem {
   id?: string
@@ -150,7 +151,7 @@ export default function SnacksCard({ dailyEntryId, branch, onDone }: Props) {
                     value={item.complimentary} onChange={e => update(i, 'complimentary', Number(e.target.value))} />
                 </td>
                 <td className="py-2 pl-1">
-                  {getWarning(item) && <span title={t('snacks.warning')} className="text-warning text-sm">⚠</span>}
+                  {getWarning(item) && <AlertTriangle className="w-4 h-4 text-yellow-500" aria-label={t('snacks.warning')} />}
                 </td>
               </tr>
             ))}

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { CheckCircle2 } from 'lucide-react'
 
 const SECTIONS = ['systemAccess', 'personal', 'identity', 'emergency', 'work', 'bank'] as const
 type Section = typeof SECTIONS[number]
@@ -443,7 +444,7 @@ export default function EmployeeOnboarding() {
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Card className="p-8 text-center max-w-sm">
           <CardContent className="pt-6">
-            <div className="text-4xl mb-4">✅</div>
+            <div className="flex justify-center mb-4"><CheckCircle2 className="w-16 h-16 text-green-600" /></div>
             <h2 className="text-xl font-semibold text-foreground mb-2">
               {restoringDeletedId ? 'Employee Restored' : isEdit ? 'Employee Updated' : 'Employee Created'}
             </h2>

@@ -3,19 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Users, BarChart3, Handshake, CheckSquare, Settings, Receipt, type LucideIcon } from 'lucide-react'
 
 export default function OwnerDashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-  const cards = [
-    { title: 'Users & Employees', subtitle: 'Manage staff accounts', path: '/users', icon: '👥', ready: true },
-    { title: 'Reports', subtitle: 'Sales, P&L, Reconciliation', path: '/reports', icon: '📊', ready: false, phase: 'Phase 7–9' },
-    { title: 'Vendor Payments', subtitle: 'Mon/Thu payment cycles', path: '/vendors', icon: '🤝', ready: false, phase: 'Phase 5' },
-    { title: 'Tasks', subtitle: 'Assign and track tasks', path: '/tasks', icon: '✅', ready: true },
-    { title: 'Admin Settings', subtitle: 'Configure all modules', path: '/settings', icon: '⚙️', ready: false, phase: 'Phase 11' },
-    { title: 'POS / Billing', subtitle: 'Shop billing system', path: '/pos', icon: '🧾', ready: false, phase: 'Phase 12' },
+  const cards: { title: string; subtitle: string; path: string; Icon: LucideIcon; ready: boolean; phase?: string }[] = [
+    { title: 'Users & Employees', subtitle: 'Manage staff accounts', path: '/users', Icon: Users, ready: true },
+    { title: 'Reports', subtitle: 'Sales, P&L, Reconciliation', path: '/reports', Icon: BarChart3, ready: false, phase: 'Phase 7–9' },
+    { title: 'Vendor Payments', subtitle: 'Mon/Thu payment cycles', path: '/vendors', Icon: Handshake, ready: false, phase: 'Phase 5' },
+    { title: 'Tasks', subtitle: 'Assign and track tasks', path: '/tasks', Icon: CheckSquare, ready: true },
+    { title: 'Admin Settings', subtitle: 'Configure all modules', path: '/settings', Icon: Settings, ready: false, phase: 'Phase 11' },
+    { title: 'POS / Billing', subtitle: 'Shop billing system', path: '/pos', Icon: Receipt, ready: false, phase: 'Phase 12' },
   ]
 
   return (
@@ -26,20 +27,18 @@ export default function OwnerDashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {cards.map(card => (
+        {cards.map(({ title, subtitle, path, Icon, ready, phase }) => (
           <Card
-            key={card.path}
-            onClick={() => card.ready && navigate(card.path)}
-            className={`transition-all ${card.ready ? 'cursor-pointer hover:shadow-card-lg hover:border-primary/30' : 'opacity-60 cursor-default'}`}
+            key={path}
+            onClick={() => ready && navigate(path)}
+            className={`transition-all ${ready ? 'cursor-pointer hover:shadow-card-lg hover:border-primary/30' : 'opacity-60 cursor-default'}`}
           >
             <CardContent className="p-5">
-              <div className="text-3xl mb-3">{card.icon}</div>
-              <h3 className="font-semibold text-foreground">{card.title}</h3>
-              <p className="text-muted-foreground text-sm mt-1">{card.subtitle}</p>
-              {!card.ready && (
-                <Badge variant="secondary" className="mt-2 text-xs">
-                  {card.phase}
-                </Badge>
+              <Icon className="w-8 h-8 mb-3 text-foreground" />
+              <h3 className="font-semibold text-foreground">{title}</h3>
+              <p className="text-muted-foreground text-sm mt-1">{subtitle}</p>
+              {!ready && (
+                <Badge variant="secondary" className="mt-2 text-xs">{phase}</Badge>
               )}
             </CardContent>
           </Card>

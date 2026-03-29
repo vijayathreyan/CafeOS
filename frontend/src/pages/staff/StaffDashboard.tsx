@@ -15,7 +15,7 @@ export default function StaffDashboard() {
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Good morning, {user?.full_name?.split(' ')[0]} 👋</h1>
+        <h1 className="text-xl font-semibold text-foreground">Good morning, {user?.full_name?.split(' ')[0]}</h1>
         <p className="text-muted-foreground text-sm mt-1">{today} · {branch ? t(`branch.${branch}`) : ''}</p>
       </div>
 

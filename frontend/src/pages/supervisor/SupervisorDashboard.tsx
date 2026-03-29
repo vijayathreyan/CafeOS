@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Banknote } from 'lucide-react'
 import StatusChip from '../../components/StatusChip'
 
 export default function SupervisorDashboard() {
@@ -126,7 +126,7 @@ export default function SupervisorDashboard() {
                 : '—'}
             </p>
           </div>
-          <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-2xl">💰</div>
+          <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center"><Banknote className="w-6 h-6 text-primary" /></div>
         </CardContent>
       </Card>
 

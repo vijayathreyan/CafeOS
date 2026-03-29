@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from 'react-query'
 import { supabase } from '../../lib/supabase'
+import { Lock, CheckCircle2 } from 'lucide-react'
 
 interface DailyEntry { id: string; branch: string; shift_number: number }
 
@@ -148,7 +149,7 @@ export default function ShiftCloseModal({ dailyEntry, branch, onClose, onConfirm
                 className="btn-primary flex-1 bg-error hover:bg-red-700"
                 disabled={submitting}
               >
-                {submitting ? t('shift.closing') : '🔒 Submit & Close Shift'}
+                {submitting ? t('shift.closing') : <><Lock className="w-4 h-4 inline mr-1" />Submit & Close Shift</>}
               </button>
             </div>
           </>
@@ -156,7 +157,7 @@ export default function ShiftCloseModal({ dailyEntry, branch, onClose, onConfirm
 
         {step === 'done' && (
           <div className="text-center py-4">
-            <div className="text-5xl mb-4">✅</div>
+            <div className="flex justify-center mb-4"><CheckCircle2 className="w-16 h-16 text-green-600" /></div>
             <h2 className="text-xl font-semibold text-text-primary mb-2">Shift Closed</h2>
             <p className="text-text-secondary text-sm">Cash declared: ₹{declaredTotal.toLocaleString('en-IN')}</p>
             <p className="text-text-secondary text-sm mt-1">Have a good day!</p>

@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { saveDraft, loadDraft, enqueue, flushQueue } from '../../lib/offlineQueue'
 import StatusChip from '../../components/StatusChip'
+import { Coffee, CheckCircle2, ChevronDown } from 'lucide-react'
 import SnacksCard from './cards/SnacksCard'
 import CashCard from './cards/CashCard'
 import MilkCard from './cards/MilkCard'
@@ -135,7 +136,7 @@ export default function ShiftDashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <div className="card p-8 text-center max-w-sm">
-          <div className="text-4xl mb-4">☕</div>
+          <div className="flex justify-center mb-4"><Coffee className="w-12 h-12 text-muted-foreground" /></div>
           <h2 className="text-xl font-semibold text-text-primary mb-2">{t('shift.noActiveShift')}</h2>
           <p className="text-text-secondary text-sm mb-6">
             {branch ? t(`branch.${branch}`) : ''} · {today}
@@ -156,7 +157,7 @@ export default function ShiftDashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <div className="card p-8 text-center max-w-sm">
-          <div className="text-4xl mb-4">✅</div>
+          <div className="flex justify-center mb-4"><CheckCircle2 className="w-12 h-12 text-green-600" /></div>
           <h2 className="text-xl font-semibold text-text-primary mb-2">Shift Closed</h2>
           <p className="text-text-secondary text-sm">
             {t('shift.closedAt')} {activeEntry.is_closed ? 'today' : ''}
@@ -346,10 +347,7 @@ function SectionCard({ title, done, expanded, onToggle, required, optional, chil
           ) : (
             <StatusChip variant="pending" label={t('shift.status.pending')} />
           )}
-          <svg className={`w-5 h-5 text-text-secondary transition-transform ${expanded ? 'rotate-180' : ''}`}
-            fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          <ChevronDown className={`w-5 h-5 text-text-secondary transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
       </button>
 

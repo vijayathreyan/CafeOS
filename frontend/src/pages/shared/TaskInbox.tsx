@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { Card, CardContent } from '@/components/ui/card'
 import StatusChip from '../../components/StatusChip'
+import { CheckCircle2 } from 'lucide-react'
 
 export default function TaskInbox() {
   const { t } = useTranslation()
@@ -44,7 +45,7 @@ export default function TaskInbox() {
       ) : tasks.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
-            <div className="text-4xl mb-3">✅</div>
+            <div className="flex justify-center mb-3"><CheckCircle2 className="w-12 h-12 text-green-600" /></div>
             <p className="text-muted-foreground">No tasks assigned</p>
           </CardContent>
         </Card>
