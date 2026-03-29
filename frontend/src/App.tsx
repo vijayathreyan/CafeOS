@@ -53,8 +53,10 @@ export default function App() {
     <AuthProvider>
       <LanguageProvider>
         <Routes>
-          {/* /login: redirect away if already authenticated */}
-          <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
+          {/* /login: Login.tsx's useEffect handles redirect when user is already authenticated.
+              Removing the session-based Navigate here prevents a race where App.tsx sets
+              session before AuthContext finishes fetchEmployee, causing a redirect loop. */}
+          <Route path="/login" element={<Login />} />
 
           <Route path="/branch-select" element={
             <ProtectedRoute>
