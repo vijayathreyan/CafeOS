@@ -12,12 +12,17 @@ export default function TopBar() {
   const navigate = useNavigate()
   const qc = useQueryClient()
 
-  // Bug 2: clear all cached query data before logout so the next login starts clean.
-  // navigate('/login') immediately — do not wait for onAuthStateChange.
+  // Bug 4: always navigate to /login regardless of whether signOut succeeds.
+  // try/catch ensures a failed signOut (network error, etc.) never leaves the user stuck.
   const handleLogout = async () => {
     qc.clear()
-    await logout()
-    navigate('/login')
+    try {
+      await logout()
+    } catch {
+      localStorage.clear()
+    } finally {
+      navigate('/login')
+    }
   }
 
   const ownerNavClass = ({ isActive }: { isActive: boolean }) =>

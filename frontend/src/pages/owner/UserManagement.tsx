@@ -15,6 +15,7 @@ export default function UserManagement() {
   const [filterBranch, setFilterBranch] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [showDeleted, setShowDeleted] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   // Bug 7: on mount, soft-delete ghost records (deactivated employees with no auth account).
   // These are records left from pre-fix onboarding that never had an auth user created.
@@ -59,12 +60,16 @@ export default function UserManagement() {
     { onSuccess: () => qc.invalidateQueries('employees') }
   )
 
-  // Bug 7: soft-delete sets deleted_at timestamp; record is never removed from DB.
+  // Bug 1: check for error from update; throw so react-query calls onError, not onSuccess.
   const deleteMutation = useMutation(
     async (id: string) => {
-      await supabase.from('employees').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+      const { error } = await supabase.from('employees').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+      if (error) throw new Error(error.message)
     },
-    { onSuccess: () => qc.invalidateQueries('employees') }
+    {
+      onSuccess: () => { setDeleteError(''); qc.invalidateQueries('employees') },
+      onError: (e: any) => setDeleteError(e.message || 'Failed to delete employee'),
+    }
   )
 
   // Bug 7: restore a deleted employee (clear deleted_at, reactivate).
@@ -113,6 +118,10 @@ export default function UserManagement() {
           <option value="C2">{t('branch.C2')}</option>
         </select>
       </div>
+
+      {deleteError && (
+        <div className="mb-4 p-3 bg-red-50 border border-error/30 rounded-lg text-error text-sm">{deleteError}</div>
+      )}
 
       {/* Bug 7: toggle between active and deleted employee views */}
       <div className="flex items-center gap-3 mb-4">

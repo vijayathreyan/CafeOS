@@ -321,22 +321,34 @@ export default function EmployeeOnboarding() {
     }
   }
 
-  // Bug 6: reset password for an existing employee via admin API
+  // Bug 3: if auth_user_id is null, create a new auth account and link it instead of showing error.
+  // Bug 6: reset password for an existing employee via admin API.
   const handleResetPassword = async () => {
-    if (!existing?.auth_user_id) { setResetPwError('No auth account linked to this employee'); return }
     if (!supabaseAdmin) { setResetPwError('Admin API not configured (SERVICE_ROLE_KEY missing)'); return }
     const v = watch()
     if (!v.reset_password || v.reset_password.length < 6) { setResetPwError('Minimum 6 characters'); return }
     if (v.reset_password !== v.reset_confirm_password) { setResetPwError('Passwords do not match'); return }
     setResetPwSaving(true)
     setResetPwError('')
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(existing.auth_user_id, { password: v.reset_password })
+    if (!existing?.auth_user_id) {
+      // No auth account exists — create one and link it
+      const email = `${existing.phone.replace(/\D/g, '')}@cafeos.local`
+      const { data: authData, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        email, password: v.reset_password, email_confirm: true,
+      })
+      if (createErr) { setResetPwError('Failed to create auth account: ' + createErr.message); setResetPwSaving(false); return }
+      const { error: linkErr } = await supabase.from('employees').update({ auth_user_id: authData.user.id }).eq('id', id)
+      if (linkErr) { setResetPwError('Auth account created but failed to link: ' + linkErr.message); setResetPwSaving(false); return }
+      setToast('Auth account created and password set')
+    } else {
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(existing.auth_user_id, { password: v.reset_password })
+      if (error) { setResetPwError(error.message); setResetPwSaving(false); return }
+      setToast('Password reset successfully')
+    }
     setResetPwSaving(false)
-    if (error) { setResetPwError(error.message); return }
     setValue('reset_password', '')
     setValue('reset_confirm_password', '')
     setShowResetPassword(false)
-    setToast('Password reset successfully')
   }
 
   const onSubmit = async (data: FormData) => {
