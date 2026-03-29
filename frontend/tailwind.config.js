@@ -39,9 +39,7 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // CafeOS brand colors (kept for legacy utility classes still in use)
-        'brand-primary':    '#1A73E8',
-        'brand-secondary':  '#34A853',
+        // Legacy color names kept so ShiftDashboard sub-cards still compile
         warning:    '#FBBC04',
         error:      '#EA4335',
         surface:    '#FFFFFF',
