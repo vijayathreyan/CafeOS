@@ -78,6 +78,7 @@ CREATE TABLE employees (
   auth_user_id        UUID,                          -- links to GoTrue auth.users
   first_login_done    BOOLEAN NOT NULL DEFAULT FALSE,
   active              BOOLEAN NOT NULL DEFAULT TRUE,
+  deleted_at          TIMESTAMPTZ,                     -- soft delete (null = not deleted)
   -- Section 2 — Personal Details
   date_of_birth       DATE,
   gender              gender_type,

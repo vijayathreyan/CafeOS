@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { useMutation, useQuery } from 'react-query'
+import { useQuery } from 'react-query'
 import { supabase } from '../../lib/supabase'
+import { supabaseAdmin } from '../../lib/supabase-admin'
 
 const SECTIONS = ['systemAccess', 'personal', 'identity', 'emergency', 'work', 'bank'] as const
 type Section = typeof SECTIONS[number]
@@ -18,6 +19,12 @@ interface FormData {
   language_pref: string
   join_date: string
   employee_id: string
+  // Bug 6: password fields for new employee
+  password: string
+  confirmPassword: string
+  // Bug 6: reset password for edit
+  reset_password: string
+  reset_confirm_password: string
   // Section 2
   date_of_birth: string
   gender: string
@@ -58,13 +65,36 @@ export default function EmployeeOnboarding() {
   const isEdit = Boolean(id)
   const [activeSection, setActiveSection] = useState<Section>('systemAccess')
   const [submitting, setSubmitting] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  // Bug 7A: real-time phone duplicate check
+  const [toast, setToast] = useState('')
+
+  // Bug 3: per-field inline errors for section 1 validation
+  const [sectionErrors, setSectionErrors] = useState<Record<string, string>>({})
+
+  // Bug 4A: duplicate phone check
   const [phoneError, setPhoneError] = useState('')
   const [phoneChecking, setPhoneChecking] = useState(false)
 
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<FormData>({
+  // Bug 7: restore deleted employee prompt
+  const [deletedEmployee, setDeletedEmployee] = useState<{ id: string; full_name: string } | null>(null)
+  const [restoringDeletedId, setRestoringDeletedId] = useState<string | null>(null)
+
+  // Bug 6: reset password UI toggle in edit mode
+  const [showResetPassword, setShowResetPassword] = useState(false)
+  const [resetPwError, setResetPwError] = useState('')
+  const [resetPwSaving, setResetPwSaving] = useState(false)
+
+  // Toast auto-dismiss
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(''), 3000)
+      return () => clearTimeout(t)
+    }
+  }, [toast])
+
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       language_pref: 'en',
       branch_kr: false,
@@ -78,7 +108,11 @@ export default function EmployeeOnboarding() {
     ['employee', id],
     async () => {
       if (!id) return null
-      const { data } = await supabase.from('employees').select('*, employee_emergency_contacts(*), employee_bank_details(*), employee_identity(*)').eq('id', id).single()
+      const { data } = await supabase
+        .from('employees')
+        .select('*, employee_emergency_contacts(*), employee_bank_details(*), employee_identity(*)')
+        .eq('id', id)
+        .single()
       return data
     },
     { enabled: isEdit }
@@ -123,21 +157,186 @@ export default function EmployeeOnboarding() {
     }
   }, [existing, reset])
 
-  // Bug 7A: check for duplicate phone on blur in Section 1 (new employee only)
+  // Bug 4A + Bug 7: check for duplicate or deleted phone on blur
   const checkPhoneDuplicate = async (phone: string) => {
     if (isEdit || !phone) return
     setPhoneChecking(true)
     setPhoneError('')
+    setDeletedEmployee(null)
     const clean = phone.replace(/\D/g, '')
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('employees')
-      .select('id')
+      .select('id, full_name, deleted_at')
       .eq('phone', clean)
       .maybeSingle()
     setPhoneChecking(false)
-    if (!error && data) {
-      setPhoneError('This phone number is already registered')
+    if (data) {
+      if (data.deleted_at) {
+        // Bug 7: phone belongs to a previously deleted employee — offer to restore
+        setDeletedEmployee({ id: data.id, full_name: data.full_name })
+      } else {
+        setPhoneError('This phone number is already registered')
+      }
     }
+  }
+
+  // Bug 7: load full deleted employee data and pre-fill form for restoration
+  const handleRestoreDeleted = async () => {
+    if (!deletedEmployee) return
+    const { data } = await supabase
+      .from('employees')
+      .select('*, employee_emergency_contacts(*), employee_bank_details(*), employee_identity(*)')
+      .eq('id', deletedEmployee.id)
+      .single()
+    if (data) {
+      reset({
+        full_name: data.full_name,
+        phone: data.phone,
+        role: data.role,
+        branch_kr: data.branch_access?.includes('KR'),
+        branch_c2: data.branch_access?.includes('C2'),
+        language_pref: data.language_pref,
+        join_date: data.join_date,
+        employee_id: data.employee_id,
+        date_of_birth: data.date_of_birth,
+        gender: data.gender,
+        blood_group: data.blood_group,
+        personal_email: data.personal_email,
+        address_door: data.address_door,
+        address_street: data.address_street,
+        address_area: data.address_area,
+        address_city: data.address_city,
+        address_pincode: data.address_pincode,
+        address_state: data.address_state,
+        google_maps_url: data.google_maps_url,
+        college_name: data.employee_identity?.[0]?.college_name,
+        course: data.employee_identity?.[0]?.course,
+        study_year: data.employee_identity?.[0]?.study_year,
+        emergency_name: data.employee_emergency_contacts?.[0]?.contact_name,
+        emergency_relationship: data.employee_emergency_contacts?.[0]?.relationship,
+        emergency_phone: data.employee_emergency_contacts?.[0]?.phone,
+        previous_experience: data.previous_experience,
+        reference_name: data.reference_name,
+        reference_phone: data.reference_phone,
+        bank_name: data.employee_bank_details?.[0]?.bank_name,
+        ifsc_code: data.employee_bank_details?.[0]?.ifsc_code,
+        account_holder_name: data.employee_bank_details?.[0]?.account_holder_name,
+        upi_id: data.employee_bank_details?.[0]?.upi_id,
+      })
+      setRestoringDeletedId(data.id)
+    }
+    setDeletedEmployee(null)
+  }
+
+  // Bug 3: validate mandatory fields in Section 1 before proceeding
+  const validateSection1 = (): boolean => {
+    const v = watch()
+    const errs: Record<string, string> = {}
+    if (!v.full_name?.trim()) errs.full_name = 'Full name is required'
+    if (!v.phone?.trim()) errs.phone = 'Phone number is required'
+    if (!v.role) errs.role = 'Role is required'
+    if (!v.branch_kr && !v.branch_c2) errs.branch = 'Select at least one branch'
+    // Bug 6: password required for new employees
+    if (!isEdit && !restoringDeletedId) {
+      if (!v.password?.trim()) errs.password = 'Password is required'
+      else if (v.password.length < 6) errs.password = 'Minimum 6 characters'
+      if (!v.confirmPassword?.trim()) errs.confirmPassword = 'Please confirm the password'
+      else if (v.password !== v.confirmPassword) errs.confirmPassword = 'Passwords do not match'
+    }
+    setSectionErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
+  // Bug 3: clear a single field error when user starts typing
+  const clearSectionError = (field: string) => {
+    if (sectionErrors[field]) setSectionErrors(prev => { const n = { ...prev }; delete n[field]; return n })
+  }
+
+  // Bug 5: per-section save handler (edit mode)
+  const handleSaveSection = async () => {
+    if (!id) return
+    setSaving(true)
+    const v = watch()
+    try {
+      if (activeSection === 'systemAccess') {
+        const branch_access = [v.branch_kr && 'KR', v.branch_c2 && 'C2'].filter(Boolean) as string[]
+        if (branch_access.length === 0) { setToast('Select at least one branch'); setSaving(false); return }
+        const { error } = await supabase.from('employees').update({
+          full_name: v.full_name, phone: v.phone, role: v.role,
+          branch_access, language_pref: v.language_pref,
+          join_date: v.join_date || null, employee_id: v.employee_id || undefined,
+        }).eq('id', id)
+        if (error) throw error
+
+      } else if (activeSection === 'personal') {
+        const { error } = await supabase.from('employees').update({
+          date_of_birth: v.date_of_birth || null, gender: v.gender || null,
+          blood_group: v.blood_group || null, personal_email: v.personal_email || null,
+          address_door: v.address_door || null, address_street: v.address_street || null,
+          address_area: v.address_area || null, address_city: v.address_city || null,
+          address_pincode: v.address_pincode || null, address_state: v.address_state || null,
+          google_maps_url: v.google_maps_url || null,
+        }).eq('id', id)
+        if (error) throw error
+
+      } else if (activeSection === 'identity') {
+        const { error } = await supabase.from('employee_identity').upsert({
+          employee_id: id, college_name: v.college_name || null,
+          course: v.course || null, study_year: v.study_year || null,
+        }, { onConflict: 'employee_id' })
+        if (error) throw error
+
+      } else if (activeSection === 'emergency') {
+        if (v.emergency_name) {
+          const { error } = await supabase.from('employee_emergency_contacts').upsert({
+            employee_id: id, contact_name: v.emergency_name,
+            relationship: v.emergency_relationship || null, phone: v.emergency_phone,
+          }, { onConflict: 'employee_id' })
+          if (error) throw error
+        }
+
+      } else if (activeSection === 'work') {
+        const { error } = await supabase.from('employees').update({
+          previous_experience: v.previous_experience || null,
+          reference_name: v.reference_name || null,
+          reference_phone: v.reference_phone || null,
+        }).eq('id', id)
+        if (error) throw error
+
+      } else if (activeSection === 'bank') {
+        if (v.bank_name || v.ifsc_code) {
+          const { error } = await supabase.from('employee_bank_details').upsert({
+            employee_id: id, bank_name: v.bank_name || null,
+            ifsc_code: v.ifsc_code || null, account_holder_name: v.account_holder_name || null,
+            upi_id: v.upi_id || null,
+          }, { onConflict: 'employee_id' })
+          if (error) throw error
+        }
+      }
+      setToast('Saved successfully')
+    } catch (e: any) {
+      setToast('Error: ' + (e.message || 'Failed to save'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Bug 6: reset password for an existing employee via admin API
+  const handleResetPassword = async () => {
+    if (!existing?.auth_user_id) { setResetPwError('No auth account linked to this employee'); return }
+    if (!supabaseAdmin) { setResetPwError('Admin API not configured (SERVICE_ROLE_KEY missing)'); return }
+    const v = watch()
+    if (!v.reset_password || v.reset_password.length < 6) { setResetPwError('Minimum 6 characters'); return }
+    if (v.reset_password !== v.reset_confirm_password) { setResetPwError('Passwords do not match'); return }
+    setResetPwSaving(true)
+    setResetPwError('')
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(existing.auth_user_id, { password: v.reset_password })
+    setResetPwSaving(false)
+    if (error) { setResetPwError(error.message); return }
+    setValue('reset_password', '')
+    setValue('reset_confirm_password', '')
+    setShowResetPassword(false)
+    setToast('Password reset successfully')
   }
 
   const onSubmit = async (data: FormData) => {
@@ -147,129 +346,146 @@ export default function EmployeeOnboarding() {
       const branch_access: string[] = []
       if (data.branch_kr) branch_access.push('KR')
       if (data.branch_c2) branch_access.push('C2')
+      if (branch_access.length === 0) { setError('Select at least one branch'); setSubmitting(false); return }
 
-      if (branch_access.length === 0) {
-        setError('Select at least one branch')
-        setSubmitting(false)
+      // ── Bug 7: Restore deleted employee ──
+      if (restoringDeletedId) {
+        const { error: err } = await supabase.from('employees').update({
+          full_name: data.full_name, phone: data.phone, role: data.role,
+          branch_access, language_pref: data.language_pref,
+          join_date: data.join_date || null,
+          date_of_birth: data.date_of_birth || null, gender: data.gender || null,
+          blood_group: data.blood_group || null, personal_email: data.personal_email || null,
+          address_door: data.address_door || null, address_street: data.address_street || null,
+          address_area: data.address_area || null, address_city: data.address_city || null,
+          address_pincode: data.address_pincode || null, address_state: data.address_state || null,
+          google_maps_url: data.google_maps_url || null,
+          previous_experience: data.previous_experience || null,
+          reference_name: data.reference_name || null, reference_phone: data.reference_phone || null,
+          active: true, deleted_at: null,
+        }).eq('id', restoringDeletedId)
+        if (err) throw err
+        setSuccess(true)
+        setTimeout(() => navigate('/users'), 1500)
         return
       }
 
+      // ── Edit existing employee ──
       if (isEdit && id) {
-        // Update employee — Bug 6: include phone in update
         const { error: err } = await supabase.from('employees').update({
-          full_name: data.full_name,
-          phone: data.phone,
-          role: data.role,
-          branch_access,
-          language_pref: data.language_pref,
+          full_name: data.full_name, phone: data.phone, role: data.role,
+          branch_access, language_pref: data.language_pref,
           join_date: data.join_date || null,
           employee_id: data.employee_id || undefined,
-          date_of_birth: data.date_of_birth || null,
-          gender: data.gender || null,
-          blood_group: data.blood_group || null,
-          personal_email: data.personal_email || null,
-          address_door: data.address_door || null,
-          address_street: data.address_street || null,
-          address_area: data.address_area || null,
-          address_city: data.address_city || null,
-          address_pincode: data.address_pincode || null,
-          address_state: data.address_state || null,
+          date_of_birth: data.date_of_birth || null, gender: data.gender || null,
+          blood_group: data.blood_group || null, personal_email: data.personal_email || null,
+          address_door: data.address_door || null, address_street: data.address_street || null,
+          address_area: data.address_area || null, address_city: data.address_city || null,
+          address_pincode: data.address_pincode || null, address_state: data.address_state || null,
           google_maps_url: data.google_maps_url || null,
           previous_experience: data.previous_experience || null,
-          reference_name: data.reference_name || null,
-          reference_phone: data.reference_phone || null,
+          reference_name: data.reference_name || null, reference_phone: data.reference_phone || null,
         }).eq('id', id)
         if (err) throw err
-
-        // Update related tables
         if (data.emergency_name) {
           await supabase.from('employee_emergency_contacts').upsert({
-            employee_id: id,
-            contact_name: data.emergency_name,
-            relationship: data.emergency_relationship,
-            phone: data.emergency_phone,
+            employee_id: id, contact_name: data.emergency_name,
+            relationship: data.emergency_relationship, phone: data.emergency_phone,
           }, { onConflict: 'employee_id' })
         }
         if (data.bank_name || data.ifsc_code) {
           await supabase.from('employee_bank_details').upsert({
-            employee_id: id,
-            bank_name: data.bank_name || null,
-            ifsc_code: data.ifsc_code || null,
-            account_holder_name: data.account_holder_name || null,
-            upi_id: data.upi_id || null,
+            employee_id: id, bank_name: data.bank_name || null, ifsc_code: data.ifsc_code || null,
+            account_holder_name: data.account_holder_name || null, upi_id: data.upi_id || null,
           }, { onConflict: 'employee_id' })
         }
-      } else {
-        // Create new employee
-        // First create auth user
-        const email = `${data.phone.replace(/\D/g, '')}@cafeos.local`
-        const tempPassword = Math.random().toString(36).slice(-8) + 'Aa1!'
+        setSuccess(true)
+        setTimeout(() => navigate('/users'), 1500)
+        return
+      }
 
-        // Create in auth system (in production this calls admin API)
-        // For now we insert the employee record and store auth_user_id later
-        const { data: emp, error: empErr } = await supabase.from('employees').insert({
-          full_name: data.full_name,
-          phone: data.phone,
-          role: data.role,
-          branch_access,
-          language_pref: data.language_pref,
-          join_date: data.join_date || null,
-          employee_id: data.employee_id || undefined,
-          date_of_birth: data.date_of_birth || null,
-          gender: data.gender || null,
-          blood_group: data.blood_group || null,
-          personal_email: data.personal_email || null,
-          address_door: data.address_door || null,
-          address_street: data.address_street || null,
-          address_area: data.address_area || null,
-          address_city: data.address_city || null,
-          address_pincode: data.address_pincode || null,
-          address_state: data.address_state || null,
-          google_maps_url: data.google_maps_url || null,
-          previous_experience: data.previous_experience || null,
-          reference_name: data.reference_name || null,
-          reference_phone: data.reference_phone || null,
-        }).select().single()
-        if (empErr) throw empErr
+      // ── Create new employee ──
 
-        const empId = emp.id
+      // Bug 6: validate passwords
+      if (!data.password || data.password.length < 6) {
+        setError('Password must be at least 6 characters')
+        setSubmitting(false)
+        return
+      }
+      if (data.password !== data.confirmPassword) {
+        setError('Passwords do not match')
+        setSubmitting(false)
+        return
+      }
 
-        // Bug 7B: wrap related inserts — rollback employee record if any fail
-        try {
-          if (data.emergency_name) {
-            const { error: emErr } = await supabase.from('employee_emergency_contacts').insert({
-              employee_id: empId,
-              contact_name: data.emergency_name,
-              relationship: data.emergency_relationship,
-              phone: data.emergency_phone,
-            })
-            if (emErr) throw emErr
-          }
-          if (data.college_name || data.aadhaar_number) {
-            const { error: idErr } = await supabase.from('employee_identity').insert({
-              employee_id: empId,
-              college_name: data.college_name || null,
-              course: data.course || null,
-              study_year: data.study_year || null,
-            })
-            if (idErr) throw idErr
-          }
-          if (data.bank_name || data.ifsc_code) {
-            const { error: bankErr } = await supabase.from('employee_bank_details').insert({
-              employee_id: empId,
-              bank_name: data.bank_name || null,
-              ifsc_code: data.ifsc_code || null,
-              account_holder_name: data.account_holder_name || null,
-              upi_id: data.upi_id || null,
-            })
-            if (bankErr) throw bankErr
-          }
-        } catch (relErr: any) {
-          // Rollback: delete the employee record so no ghost record is left
-          await supabase.from('employees').delete().eq('id', empId)
-          throw relErr
+      // Bug 6: create auth user first via admin API
+      if (!supabaseAdmin) {
+        setError('Admin API not configured. Add SERVICE_ROLE_KEY to .env and rebuild.')
+        setSubmitting(false)
+        return
+      }
+      const email = `${data.phone.replace(/\D/g, '')}@cafeos.local`
+      const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: data.password,
+        email_confirm: true,
+      })
+      if (authErr) throw new Error('Auth creation failed: ' + authErr.message)
+      const authUserId = authData.user.id
+
+      // Insert employee record — Bug 4B: rollback auth user if employee insert fails
+      const { data: emp, error: empErr } = await supabase.from('employees').insert({
+        full_name: data.full_name, phone: data.phone, role: data.role,
+        branch_access, language_pref: data.language_pref,
+        join_date: data.join_date || null,
+        employee_id: data.employee_id || undefined,
+        auth_user_id: authUserId,
+        date_of_birth: data.date_of_birth || null, gender: data.gender || null,
+        blood_group: data.blood_group || null, personal_email: data.personal_email || null,
+        address_door: data.address_door || null, address_street: data.address_street || null,
+        address_area: data.address_area || null, address_city: data.address_city || null,
+        address_pincode: data.address_pincode || null, address_state: data.address_state || null,
+        google_maps_url: data.google_maps_url || null,
+        previous_experience: data.previous_experience || null,
+        reference_name: data.reference_name || null, reference_phone: data.reference_phone || null,
+      }).select().single()
+
+      if (empErr) {
+        // Rollback: delete the auth user so no orphan is left
+        await supabaseAdmin.auth.admin.deleteUser(authUserId)
+        throw empErr
+      }
+
+      const empId = emp.id
+      // Insert related tables — rollback employee + auth user on failure
+      try {
+        if (data.emergency_name) {
+          const { error: emErr } = await supabase.from('employee_emergency_contacts').insert({
+            employee_id: empId, contact_name: data.emergency_name,
+            relationship: data.emergency_relationship, phone: data.emergency_phone,
+          })
+          if (emErr) throw emErr
         }
-        // TODO: send WhatsApp with credentials via alert system
+        if (data.college_name || data.aadhaar_number) {
+          const { error: idErr } = await supabase.from('employee_identity').insert({
+            employee_id: empId, college_name: data.college_name || null,
+            course: data.course || null, study_year: data.study_year || null,
+          })
+          if (idErr) throw idErr
+        }
+        if (data.bank_name || data.ifsc_code) {
+          const { error: bankErr } = await supabase.from('employee_bank_details').insert({
+            employee_id: empId, bank_name: data.bank_name || null,
+            ifsc_code: data.ifsc_code || null, account_holder_name: data.account_holder_name || null,
+            upi_id: data.upi_id || null,
+          })
+          if (bankErr) throw bankErr
+        }
+      } catch (relErr: any) {
+        // Rollback: delete employee and auth user
+        await supabase.from('employees').delete().eq('id', empId)
+        await supabaseAdmin.auth.admin.deleteUser(authUserId)
+        throw relErr
       }
 
       setSuccess(true)
@@ -287,7 +503,7 @@ export default function EmployeeOnboarding() {
         <div className="card p-8 text-center max-w-sm">
           <div className="text-4xl mb-4">✅</div>
           <h2 className="text-xl font-semibold text-text-primary mb-2">
-            {isEdit ? 'Employee Updated' : 'Employee Created'}
+            {restoringDeletedId ? 'Employee Restored' : isEdit ? 'Employee Updated' : 'Employee Created'}
           </h2>
           <p className="text-text-secondary text-sm">Redirecting...</p>
         </div>
@@ -300,14 +516,35 @@ export default function EmployeeOnboarding() {
 
   return (
     <div className="p-4 max-w-2xl mx-auto pb-24">
+      {/* Bug 5: toast notification */}
+      {toast && (
+        <div className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 text-white text-sm font-medium ${toast.startsWith('Error') ? 'bg-error' : 'bg-secondary'}`}>
+          {toast}
+        </div>
+      )}
+
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/users')} className="text-text-secondary hover:text-text-primary">
           ← {t('common.back')}
         </button>
         <h1 className="section-header">
-          {isEdit ? t('employees.edit') : t('employees.add')}
+          {restoringDeletedId ? 'Restore Employee' : isEdit ? t('employees.edit') : t('employees.add')}
         </h1>
       </div>
+
+      {/* Bug 7: restore prompt */}
+      {deletedEmployee && (
+        <div className="card p-4 mb-4 border-warning bg-yellow-50">
+          <p className="text-sm font-medium text-text-primary mb-2">
+            A deleted record exists for this phone number: <strong>{deletedEmployee.full_name}</strong>
+          </p>
+          <p className="text-xs text-text-secondary mb-3">Would you like to restore their details and update what has changed?</p>
+          <div className="flex gap-2">
+            <button onClick={handleRestoreDeleted} className="btn-primary text-sm px-3 py-1.5">Yes, Restore Details</button>
+            <button onClick={() => setDeletedEmployee(null)} className="btn-secondary text-sm px-3 py-1.5">No, Enter Fresh</button>
+          </div>
+        </div>
+      )}
 
       {/* Section tabs */}
       <div className="flex gap-1 mb-6 overflow-x-auto pb-2">
@@ -316,9 +553,7 @@ export default function EmployeeOnboarding() {
             key={s}
             onClick={() => setActiveSection(s)}
             className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-              activeSection === s
-                ? 'bg-primary text-white'
-                : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+              activeSection === s ? 'bg-primary text-white' : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
             }`}
           >
             {i + 1}. {sectionTitle(s)}
@@ -327,55 +562,57 @@ export default function EmployeeOnboarding() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        {/* Section 1 — System Access */}
+        {/* ── Section 1 — System Access ── */}
         {activeSection === 'systemAccess' && (
           <div className="card p-6 space-y-4">
             <h2 className="text-lg font-semibold text-text-primary">1. {t('employees.sections.systemAccess')}</h2>
 
             <div>
               <label className="input-label">{t('employees.fields.fullName')} *</label>
-              <input className="input-field" {...register('full_name', { required: true })} />
-              {errors.full_name && <p className="text-error text-xs mt-1">{t('common.required')}</p>}
+              <input className="input-field" {...register('full_name')}
+                onChange={e => { register('full_name').onChange(e); clearSectionError('full_name') }} />
+              {sectionErrors.full_name && <p className="text-error text-xs mt-1">{sectionErrors.full_name}</p>}
             </div>
 
             <div>
               <label className="input-label">{t('employees.fields.phone')} *</label>
-              <input
-                className="input-field"
-                type="tel"
-                placeholder="9876543210"
-                {...register('phone', { required: true })}
+              <input className="input-field" type="tel" placeholder="9876543210"
+                {...register('phone')}
+                onChange={e => { register('phone').onChange(e); clearSectionError('phone'); setPhoneError('') }}
                 onBlur={e => checkPhoneDuplicate(e.target.value)}
               />
-              {errors.phone && <p className="text-error text-xs mt-1">{t('common.required')}</p>}
-              {/* Bug 7A: duplicate phone inline error */}
+              {sectionErrors.phone && <p className="text-error text-xs mt-1">{sectionErrors.phone}</p>}
               {phoneChecking && <p className="text-text-secondary text-xs mt-1">Checking...</p>}
               {phoneError && <p className="text-error text-xs mt-1">{phoneError}</p>}
-              {/* Bug 6: editable with warning instead of locked */}
               {isEdit && <p className="text-yellow-600 text-xs mt-1">Changing phone number will update the login username</p>}
             </div>
 
             <div>
               <label className="input-label">{t('employees.fields.role')} *</label>
-              <select className="input-field" {...register('role', { required: true })}>
+              <select className="input-field" {...register('role')}
+                onChange={e => { register('role').onChange(e); clearSectionError('role') }}>
                 <option value="staff">{t('employees.roles.staff')}</option>
                 <option value="supervisor">{t('employees.roles.supervisor')}</option>
                 <option value="owner">{t('employees.roles.owner')}</option>
               </select>
+              {sectionErrors.role && <p className="text-error text-xs mt-1">{sectionErrors.role}</p>}
             </div>
 
             <div>
               <label className="input-label">{t('employees.fields.branchAccess')} *</label>
               <div className="flex gap-4 mt-2">
                 <label className="flex items-center gap-2 cursor-pointer min-h-tap">
-                  <input type="checkbox" className="w-5 h-5" {...register('branch_kr')} />
+                  <input type="checkbox" className="w-5 h-5" {...register('branch_kr')}
+                    onChange={e => { register('branch_kr').onChange(e); clearSectionError('branch') }} />
                   <span className="text-sm font-medium">{t('branch.KR')}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer min-h-tap">
-                  <input type="checkbox" className="w-5 h-5" {...register('branch_c2')} />
+                  <input type="checkbox" className="w-5 h-5" {...register('branch_c2')}
+                    onChange={e => { register('branch_c2').onChange(e); clearSectionError('branch') }} />
                   <span className="text-sm font-medium">{t('branch.C2')}</span>
                 </label>
               </div>
+              {sectionErrors.branch && <p className="text-error text-xs mt-1">{sectionErrors.branch}</p>}
             </div>
 
             <div>
@@ -396,10 +633,65 @@ export default function EmployeeOnboarding() {
                 <input className="input-field" placeholder="Auto-generated" {...register('employee_id')} />
               </div>
             </div>
+
+            {/* Bug 6: password fields — only for new employee */}
+            {!isEdit && !restoringDeletedId && (
+              <>
+                <hr className="border-border" />
+                <h3 className="font-medium text-text-primary text-sm">Set Login Password</h3>
+                <div>
+                  <label className="input-label">Password * <span className="text-text-secondary font-normal">(min. 6 characters)</span></label>
+                  <input className="input-field" type="password"
+                    {...register('password')}
+                    onChange={e => { register('password').onChange(e); clearSectionError('password') }}
+                  />
+                  {sectionErrors.password && <p className="text-error text-xs mt-1">{sectionErrors.password}</p>}
+                </div>
+                <div>
+                  <label className="input-label">Confirm Password *</label>
+                  <input className="input-field" type="password"
+                    {...register('confirmPassword')}
+                    onChange={e => { register('confirmPassword').onChange(e); clearSectionError('confirmPassword') }}
+                  />
+                  {sectionErrors.confirmPassword && <p className="text-error text-xs mt-1">{sectionErrors.confirmPassword}</p>}
+                </div>
+              </>
+            )}
+
+            {/* Bug 6: reset password — only in edit mode */}
+            {isEdit && (
+              <>
+                <hr className="border-border" />
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-text-primary text-sm">Reset Password</h3>
+                  <button type="button" onClick={() => setShowResetPassword(v => !v)}
+                    className="text-xs text-primary hover:underline">
+                    {showResetPassword ? 'Cancel' : 'Change Password'}
+                  </button>
+                </div>
+                {showResetPassword && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="input-label">New Password * <span className="text-text-secondary font-normal">(min. 6 characters)</span></label>
+                      <input className="input-field" type="password" {...register('reset_password')} />
+                    </div>
+                    <div>
+                      <label className="input-label">Confirm New Password *</label>
+                      <input className="input-field" type="password" {...register('reset_confirm_password')} />
+                    </div>
+                    {resetPwError && <p className="text-error text-xs">{resetPwError}</p>}
+                    <button type="button" onClick={handleResetPassword} disabled={resetPwSaving}
+                      className="btn-primary text-sm px-4 py-2">
+                      {resetPwSaving ? 'Saving...' : 'Set New Password'}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
-        {/* Section 2 — Personal Details */}
+        {/* ── Section 2 — Personal Details ── */}
         {activeSection === 'personal' && (
           <div className="card p-6 space-y-4">
             <h2 className="text-lg font-semibold text-text-primary">2. {t('employees.sections.personal')}</h2>
@@ -448,7 +740,7 @@ export default function EmployeeOnboarding() {
           </div>
         )}
 
-        {/* Section 3 — Identity Documents */}
+        {/* ── Section 3 — Identity Documents ── */}
         {activeSection === 'identity' && (
           <div className="card p-6 space-y-4">
             <h2 className="text-lg font-semibold text-text-primary">3. {t('employees.sections.identity')}</h2>
@@ -496,14 +788,14 @@ export default function EmployeeOnboarding() {
           </div>
         )}
 
-        {/* Section 4 — Emergency Contact */}
+        {/* ── Section 4 — Emergency Contact ── */}
         {activeSection === 'emergency' && (
           <div className="card p-6 space-y-4">
             <h2 className="text-lg font-semibold text-text-primary">4. {t('employees.sections.emergency')}</h2>
 
             <div>
-              <label className="input-label">{t('employees.fields.emergencyName')} *</label>
-              <input className="input-field" {...register('emergency_name', { required: true })} />
+              <label className="input-label">{t('employees.fields.emergencyName')}</label>
+              <input className="input-field" {...register('emergency_name')} />
             </div>
             <div>
               <label className="input-label">{t('employees.fields.relationship')}</label>
@@ -517,13 +809,13 @@ export default function EmployeeOnboarding() {
               </select>
             </div>
             <div>
-              <label className="input-label">{t('employees.fields.emergencyPhone')} *</label>
-              <input className="input-field" type="tel" {...register('emergency_phone', { required: true })} />
+              <label className="input-label">{t('employees.fields.emergencyPhone')}</label>
+              <input className="input-field" type="tel" {...register('emergency_phone')} />
             </div>
           </div>
         )}
 
-        {/* Section 5 — Work Background */}
+        {/* ── Section 5 — Work Background ── */}
         {activeSection === 'work' && (
           <div className="card p-6 space-y-4">
             <h2 className="text-lg font-semibold text-text-primary">5. {t('employees.sections.work')}</h2>
@@ -545,7 +837,7 @@ export default function EmployeeOnboarding() {
           </div>
         )}
 
-        {/* Section 6 — Bank Details */}
+        {/* ── Section 6 — Bank Details ── */}
         {activeSection === 'bank' && (
           <div className="card p-6 space-y-4">
             <h2 className="text-lg font-semibold text-text-primary">6. {t('employees.sections.bank')}</h2>
@@ -579,10 +871,11 @@ export default function EmployeeOnboarding() {
           </div>
         )}
 
-        {/* Navigation + Submit */}
+        {/* Error display */}
         {error && <div className="mt-4 p-3 bg-red-50 rounded-lg text-error text-sm">{error}</div>}
 
-        <div className="flex justify-between mt-6 gap-3">
+        {/* Navigation + Submit */}
+        <div className="flex justify-between mt-6 gap-3 flex-wrap">
           <button
             type="button"
             className="btn-secondary"
@@ -592,20 +885,38 @@ export default function EmployeeOnboarding() {
             ← {t('common.back')}
           </button>
 
-          {sectionIndex < SECTIONS.length - 1 ? (
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => setActiveSection(SECTIONS[sectionIndex + 1])}
-              disabled={activeSection === 'systemAccess' && !isEdit && !!phoneError}
-            >
-              {t('common.next')} →
-            </button>
-          ) : (
-            <button type="submit" className="btn-primary" disabled={submitting}>
-              {submitting ? t('common.loading') : t('common.submit')}
-            </button>
-          )}
+          <div className="flex gap-3">
+            {/* Bug 5: Save Changes button — edit mode only, saves current section immediately */}
+            {isEdit && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleSaveSection}
+                disabled={saving}
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            )}
+
+            {sectionIndex < SECTIONS.length - 1 ? (
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!!phoneError}
+                onClick={() => {
+                  // Bug 3: validate section 1 before proceeding
+                  if (activeSection === 'systemAccess' && !validateSection1()) return
+                  setActiveSection(SECTIONS[sectionIndex + 1])
+                }}
+              >
+                {t('common.next')} →
+              </button>
+            ) : (
+              <button type="submit" className="btn-primary" disabled={submitting}>
+                {submitting ? t('common.loading') : t('common.submit')}
+              </button>
+            )}
+          </div>
         </div>
       </form>
     </div>

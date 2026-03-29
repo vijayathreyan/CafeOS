@@ -1,9 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { supabase, AppUser } from '../../lib/supabase'
 import StatusChip from '../../components/StatusChip'
+
+type AppUserExt = AppUser & { deleted_at?: string | null }
 
 export default function UserManagement() {
   const { t } = useTranslation()
@@ -12,11 +14,36 @@ export default function UserManagement() {
   const [filterRole, setFilterRole] = useState<string>('all')
   const [filterBranch, setFilterBranch] = useState<string>('all')
   const [search, setSearch] = useState('')
+  const [showDeleted, setShowDeleted] = useState(false)
 
-  const { data: employees = [], isLoading } = useQuery('employees', async () => {
-    const { data } = await supabase.from('employees').select('*').order('employee_id')
-    return (data || []) as AppUser[]
-  })
+  // Bug 7: on mount, soft-delete ghost records (deactivated employees with no auth account).
+  // These are records left from pre-fix onboarding that never had an auth user created.
+  useEffect(() => {
+    const cleanupGhosts = async () => {
+      await supabase
+        .from('employees')
+        .update({ deleted_at: new Date().toISOString() })
+        .is('auth_user_id', null)
+        .eq('active', false)
+        .is('deleted_at', null)
+    }
+    cleanupGhosts()
+  }, [])
+
+  // Bug 7: active list excludes deleted; deleted list shows only deleted.
+  const { data: employees = [], isLoading } = useQuery(
+    ['employees', showDeleted],
+    async () => {
+      let q = supabase.from('employees').select('*').order('employee_id')
+      if (showDeleted) {
+        q = q.not('deleted_at', 'is', null)
+      } else {
+        q = q.is('deleted_at', null)
+      }
+      const { data } = await q
+      return (data || []) as AppUserExt[]
+    }
+  )
 
   const deactivateMutation = useMutation(
     async (id: string) => {
@@ -25,7 +52,6 @@ export default function UserManagement() {
     { onSuccess: () => qc.invalidateQueries('employees') }
   )
 
-  // Bug 5: reactivate inactive employees
   const reactivateMutation = useMutation(
     async (id: string) => {
       await supabase.from('employees').update({ active: true }).eq('id', id)
@@ -33,15 +59,20 @@ export default function UserManagement() {
     { onSuccess: () => qc.invalidateQueries('employees') }
   )
 
-  const resetPasswordMutation = useMutation(
-    async (emp: AppUser) => {
-      const tempPassword = Math.random().toString(36).slice(-8)
-      const email = `${emp.phone.replace(/\D/g, '')}@cafeos.local`
-      // In production: call Supabase admin API to reset password
-      // For now: log the action
-      console.log(`Reset password for ${emp.full_name}: ${tempPassword}`)
-      // TODO: trigger WhatsApp via alert system with new credentials
-    }
+  // Bug 7: soft-delete sets deleted_at timestamp; record is never removed from DB.
+  const deleteMutation = useMutation(
+    async (id: string) => {
+      await supabase.from('employees').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    },
+    { onSuccess: () => qc.invalidateQueries('employees') }
+  )
+
+  // Bug 7: restore a deleted employee (clear deleted_at, reactivate).
+  const restoreMutation = useMutation(
+    async (id: string) => {
+      await supabase.from('employees').update({ deleted_at: null, active: true }).eq('id', id)
+    },
+    { onSuccess: () => qc.invalidateQueries('employees') }
   )
 
   const filtered = employees.filter(e => {
@@ -83,13 +114,32 @@ export default function UserManagement() {
         </select>
       </div>
 
+      {/* Bug 7: toggle between active and deleted employee views */}
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          onClick={() => setShowDeleted(false)}
+          className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${!showDeleted ? 'bg-primary text-white' : 'bg-gray-100 text-text-secondary hover:bg-gray-200'}`}
+        >
+          Active Employees
+        </button>
+        <button
+          onClick={() => setShowDeleted(true)}
+          className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${showDeleted ? 'bg-error text-white' : 'bg-gray-100 text-text-secondary hover:bg-gray-200'}`}
+        >
+          View Deleted Employees
+        </button>
+      </div>
+
       {/* Employee list */}
       {isLoading ? (
         <div className="text-center py-12 text-text-secondary">{t('common.loading')}</div>
       ) : (
         <div className="space-y-3">
           {filtered.map(emp => (
-            <div key={emp.id} className={`card p-4 flex items-center justify-between gap-4 ${!emp.active ? 'opacity-50' : ''}`}>
+            <div
+              key={emp.id}
+              className={`card p-4 flex items-center justify-between gap-4 ${!emp.active || emp.deleted_at ? 'opacity-60' : ''}`}
+            >
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-semibold text-lg">{emp.full_name.charAt(0)}</span>
@@ -98,7 +148,8 @@ export default function UserManagement() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-text-primary">{emp.full_name}</span>
                     <span className="text-xs text-text-secondary">{emp.employee_id}</span>
-                    {!emp.active && <StatusChip variant="grey" label="Inactive" />}
+                    {!emp.active && !emp.deleted_at && <StatusChip variant="grey" label="Inactive" />}
+                    {emp.deleted_at && <StatusChip variant="error" label="Deleted" />}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap mt-1">
                     <span className="text-sm text-text-secondary">{emp.phone}</span>
@@ -111,30 +162,52 @@ export default function UserManagement() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => navigate(`/users/${emp.id}/edit`)} className="btn-secondary text-sm px-3 py-2">
-                  {t('common.edit')}
-                </button>
-                {emp.active ? (
-                  <button
-                    onClick={() => { if (confirm(`Deactivate ${emp.full_name}?`)) deactivateMutation.mutate(emp.id) }}
-                    className="btn-danger text-sm px-3 py-2"
-                  >
-                    {t('employees.deactivate')}
-                  </button>
+
+              <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+                {!emp.deleted_at ? (
+                  <>
+                    <button onClick={() => navigate(`/users/${emp.id}/edit`)} className="btn-secondary text-sm px-3 py-2">
+                      {t('common.edit')}
+                    </button>
+                    {emp.active ? (
+                      <button
+                        onClick={() => { if (confirm(`Deactivate ${emp.full_name}?`)) deactivateMutation.mutate(emp.id) }}
+                        className="btn-secondary text-sm px-3 py-2 text-warning"
+                      >
+                        {t('employees.deactivate')}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { if (confirm(`Reactivate ${emp.full_name}?`)) reactivateMutation.mutate(emp.id) }}
+                        className="bg-green-600 text-white text-sm px-3 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        {t('employees.reactivate')}
+                      </button>
+                    )}
+                    {/* Bug 7: Delete button — soft-delete, data never removed */}
+                    <button
+                      onClick={() => { if (confirm(`Delete ${emp.full_name}? Their data will be retained but hidden.`)) deleteMutation.mutate(emp.id) }}
+                      className="btn-danger text-sm px-3 py-2"
+                    >
+                      Delete
+                    </button>
+                  </>
                 ) : (
+                  /* Bug 7: restore a previously deleted employee */
                   <button
-                    onClick={() => { if (confirm(`Reactivate ${emp.full_name}?`)) reactivateMutation.mutate(emp.id) }}
+                    onClick={() => { if (confirm(`Restore ${emp.full_name}?`)) restoreMutation.mutate(emp.id) }}
                     className="bg-green-600 text-white text-sm px-3 py-2 rounded-lg hover:bg-green-700 transition-colors"
                   >
-                    {t('employees.reactivate')}
+                    Restore
                   </button>
                 )}
               </div>
             </div>
           ))}
           {filtered.length === 0 && (
-            <div className="text-center py-12 text-text-secondary">{t('common.noData')}</div>
+            <div className="text-center py-12 text-text-secondary">
+              {showDeleted ? 'No deleted employees' : t('common.noData')}
+            </div>
           )}
         </div>
       )}

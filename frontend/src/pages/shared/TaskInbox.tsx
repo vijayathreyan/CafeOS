@@ -7,21 +7,28 @@ import StatusChip from '../../components/StatusChip'
 
 export default function TaskInbox() {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
-  const { data: tasks = [], isLoading } = useQuery('tasks', async () => {
-    if (!user) return []
-    let q = supabase.from('tasks').select('*, assigned_by_emp:assigned_by(full_name), assigned_to_emp:assigned_to(full_name)')
-      .order('due_date', { ascending: true })
+  // Bug 2: enabled:!!user ensures the query never fires before auth is ready.
+  // user?.id in the key causes a refetch if the user identity changes (e.g. after logout+login).
+  const { data: tasks = [], isLoading } = useQuery(
+    ['tasks', user?.id],
+    async () => {
+      if (!user) return []
+      let q = supabase
+        .from('tasks')
+        .select('*, assigned_by_emp:assigned_by(full_name), assigned_to_emp:assigned_to(full_name)')
+        .order('due_date', { ascending: true })
 
-    if (user.role === 'staff') {
-      q = q.eq('assigned_to', user.id)
-    } else if (user.role === 'supervisor') {
-      // Supervisor sees own tasks + staff tasks for their branches
-    }
-    const { data } = await q
-    return data || []
-  })
+      if (user.role === 'staff') {
+        q = q.eq('assigned_to', user.id)
+      }
+      // supervisor: sees own tasks + staff tasks for their branches (no extra filter needed — PostgREST returns all)
+      const { data } = await q
+      return data || []
+    },
+    { enabled: !!user }
+  )
 
   const getChipVariant = (status: string, dueDate: string | null) => {
     if (status === 'done') return 'done' as const
@@ -34,7 +41,7 @@ export default function TaskInbox() {
     <div className="p-4 max-w-2xl mx-auto">
       <h1 className="section-header mb-6">{t('nav.tasks')}</h1>
 
-      {isLoading ? (
+      {authLoading || isLoading ? (
         <div className="text-center py-12 text-text-secondary">{t('common.loading')}</div>
       ) : tasks.length === 0 ? (
         <div className="card p-8 text-center">
@@ -44,7 +51,10 @@ export default function TaskInbox() {
       ) : (
         <div className="space-y-3">
           {tasks.map((task: any) => (
-            <div key={task.id} className={`card p-4 ${task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done' ? 'border-error/30' : ''}`}>
+            <div
+              key={task.id}
+              className={`card p-4 ${task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done' ? 'border-error/30' : ''}`}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <h3 className="font-medium text-text-primary">{task.title}</h3>

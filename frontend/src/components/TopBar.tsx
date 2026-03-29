@@ -1,6 +1,7 @@
 import React from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useQueryClient } from 'react-query'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LanguageContext'
 
@@ -9,9 +10,12 @@ export default function TopBar() {
   const { user, activeBranch, logout } = useAuth()
   const { lang, toggleLang } = useLang()
   const navigate = useNavigate()
+  const qc = useQueryClient()
 
-  // Bug 1: explicit navigate to /login after signOut
+  // Bug 2: clear all cached query data before logout so the next login starts clean.
+  // navigate('/login') immediately — do not wait for onAuthStateChange.
   const handleLogout = async () => {
+    qc.clear()
     await logout()
     navigate('/login')
   }
