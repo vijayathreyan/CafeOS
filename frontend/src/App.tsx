@@ -11,6 +11,7 @@ import BranchSelect from './pages/BranchSelect'
 import StaffDashboard from './pages/staff/StaffDashboard'
 import ShiftDashboard from './pages/staff/ShiftDashboard'
 import OwnerDashboard from './pages/owner/OwnerDashboard'
+import SupervisorDashboard from './pages/supervisor/SupervisorDashboard'
 import UserManagement from './pages/owner/UserManagement'
 import EmployeeOnboarding from './pages/owner/EmployeeOnboarding'
 import TaskInbox from './pages/shared/TaskInbox'
@@ -63,10 +64,28 @@ export default function App() {
 
           {/* Protected layout routes */}
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            {/* / → redirect to role-specific dashboard */}
             <Route path="/" element={<RoleHome />} />
 
+            {/* Role-specific home routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute allowedRoles={['owner']}>
+                <OwnerDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/staff-dashboard" element={
+              <ProtectedRoute allowedRoles={['staff']}>
+                <StaffDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/supervisor-dashboard" element={
+              <ProtectedRoute allowedRoles={['supervisor']}>
+                <SupervisorDashboard />
+              </ProtectedRoute>
+            } />
+
             <Route path="/shift" element={
-              <ProtectedRoute allowedRoles={['staff', 'supervisor']}>
+              <ProtectedRoute allowedRoles={['staff']}>
                 <ShiftDashboard />
               </ProtectedRoute>
             } />
@@ -107,9 +126,13 @@ export default function App() {
   )
 }
 
+// Bug 1/2: redirect to role-specific dashboard. Never renders a blank page.
+// Unknown role falls back to /login with the auth context clearing the session.
 function RoleHome() {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
-  if (user.role === 'owner') return <OwnerDashboard />
-  return <StaffDashboard />
+  if (user.role === 'owner') return <Navigate to="/dashboard" replace />
+  if (user.role === 'supervisor') return <Navigate to="/supervisor-dashboard" replace />
+  if (user.role === 'staff') return <Navigate to="/staff-dashboard" replace />
+  return <Navigate to="/login" replace />
 }
