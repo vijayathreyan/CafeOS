@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'
 import { BranchCode } from '../lib/supabase'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 export default function BranchSelect() {
   const { t } = useTranslation()
@@ -18,21 +20,23 @@ export default function BranchSelect() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="card p-8 w-full max-w-sm text-center">
-        <h2 className="text-xl font-semibold text-text-primary mb-2">{t('branch.select')}</h2>
-        <p className="text-text-secondary text-sm mb-8">Welcome, {user.full_name}</p>
-        <div className="space-y-3">
+      <Card className="w-full max-w-sm text-center">
+        <CardHeader>
+          <CardTitle>{t('branch.select')}</CardTitle>
+          <CardDescription>Welcome, {user.full_name}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
           {user.branch_access.map(branch => (
-            <button
+            <Button
               key={branch}
               onClick={() => handleSelect(branch)}
-              className="btn-primary w-full text-lg py-4"
+              className="w-full text-lg py-6 h-auto"
             >
               {t(`branch.${branch}`)}
-            </button>
+            </Button>
           ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

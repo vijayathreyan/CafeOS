@@ -4,6 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { useQueryClient } from 'react-query'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LanguageContext'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
 
 export default function TopBar() {
   const { t } = useTranslation()
@@ -13,7 +17,6 @@ export default function TopBar() {
   const qc = useQueryClient()
 
   // Bug 4: always navigate to /login regardless of whether signOut succeeds.
-  // try/catch ensures a failed signOut (network error, etc.) never leaves the user stuck.
   const handleLogout = async () => {
     qc.clear()
     try {
@@ -26,27 +29,29 @@ export default function TopBar() {
   }
 
   const ownerNavClass = ({ isActive }: { isActive: boolean }) =>
-    `px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-      isActive ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary hover:bg-gray-100'
+    `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+      isActive
+        ? 'bg-primary text-primary-foreground'
+        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
     }`
 
   return (
-    <header className="bg-surface border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 z-40">
+    <header className="bg-background border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 z-40">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-          <span className="text-white text-sm font-bold">C</span>
+          <span className="text-primary-foreground text-sm font-bold">C</span>
         </div>
-        <div>
-          <span className="text-sm font-semibold text-text-primary">{t('app.name')}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-foreground">{t('app.name')}</span>
           {activeBranch && (
-            <span className="ml-2 text-xs bg-blue-100 text-primary px-2 py-0.5 rounded-chip font-medium">
+            <Badge variant="secondary" className="text-primary">
               {t(`branch.${activeBranch}`)}
-            </span>
+            </Badge>
           )}
         </div>
       </div>
 
-      {/* Bug 2/3: Owner desktop nav — Dashboard / Employees / Tasks on all pages */}
+      {/* Bug 2/3: Owner desktop nav */}
       {user?.role === 'owner' && (
         <nav className="hidden sm:flex items-center gap-1">
           <NavLink to="/" end className={ownerNavClass}>{t('nav.dashboard')}</NavLink>
@@ -56,30 +61,31 @@ export default function TopBar() {
       )}
 
       <div className="flex items-center gap-2">
-        {/* Language toggle — only for staff/supervisor */}
         {user?.role !== 'owner' && (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={toggleLang}
-            className="min-h-tap min-w-tap px-3 py-2 rounded-lg border border-border text-text-secondary text-sm font-medium hover:bg-gray-50 transition-colors"
             aria-label="Toggle language"
           >
             {lang === 'en' ? 'தமிழ்' : 'EN'}
-          </button>
+          </Button>
         )}
 
-        {/* User chip */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-            <span className="text-white text-xs font-semibold">
+          <Avatar className="w-8 h-8">
+            <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
               {user?.full_name?.charAt(0).toUpperCase()}
-            </span>
-          </div>
-          <button
+            </AvatarFallback>
+          </Avatar>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleLogout}
-            className="text-xs text-text-secondary hover:text-error transition-colors hidden sm:block"
+            className="hidden sm:flex text-muted-foreground hover:text-destructive"
           >
             {t('auth.logout')}
-          </button>
+          </Button>
         </div>
       </div>
     </header>

@@ -1,19 +1,61 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: ["class"],
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
-        // Material Design 3 — Google exact colour palette
-        primary:    '#1A73E8',
-        secondary:  '#34A853',
+        // shadcn CSS variable colors
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        // CafeOS brand colors (kept for legacy utility classes still in use)
+        'brand-primary':    '#1A73E8',
+        'brand-secondary':  '#34A853',
         warning:    '#FBBC04',
         error:      '#EA4335',
         surface:    '#FFFFFF',
-        background: '#F8F9FA',
-        border:     '#DADCE0',
         'text-primary':   '#202124',
         'text-secondary': '#5F6368',
+        'border-legacy':  '#DADCE0',
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+        // legacy
+        'card': '12px',
+        'chip': '8px',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -27,10 +69,6 @@ export default {
         'xl':   ['20px', '28px'],
         '2xl':  ['24px', '32px'],
       },
-      borderRadius: {
-        'card': '12px',
-        'chip': '8px',
-      },
       boxShadow: {
         'card':    '0 1px 3px rgba(60,64,67,0.3), 0 4px 8px rgba(60,64,67,0.15)',
         'card-sm': '0 1px 2px rgba(60,64,67,0.3)',
@@ -42,7 +80,23 @@ export default {
       minWidth: {
         'tap': '48px',
       },
+      keyframes: {
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    require('tailwindcss-animate'),
+  ],
 }

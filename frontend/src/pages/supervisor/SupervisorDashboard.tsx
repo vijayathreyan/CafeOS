@@ -3,6 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from 'react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { ChevronDown } from 'lucide-react'
 import StatusChip from '../../components/StatusChip'
 
 export default function SupervisorDashboard() {
@@ -101,68 +108,78 @@ export default function SupervisorDashboard() {
     <div className="p-4 max-w-2xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="section-header">Supervisor Dashboard</h1>
-        <p className="text-text-secondary text-sm mt-1">
+        <h1 className="text-xl font-semibold text-foreground">Supervisor Dashboard</h1>
+        <p className="text-muted-foreground text-sm mt-1">
           {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           {' · '}{user?.full_name}
         </p>
       </div>
 
       {/* Float Balance — always visible, read-only */}
-      <div className="card p-4 mb-4 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-text-secondary font-medium uppercase tracking-wide">Vasanth Float Balance</p>
-          <p className="text-2xl font-bold text-text-primary mt-1">
-            {floatData != null
-              ? `₹${Number(floatData.current_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
-              : '—'}
-          </p>
-        </div>
-        <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-2xl">💰</div>
-      </div>
+      <Card className="mb-4">
+        <CardContent className="p-4 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Vasanth Float Balance</p>
+            <p className="text-2xl font-bold text-foreground mt-1">
+              {floatData != null
+                ? `₹${Number(floatData.current_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                : '—'}
+            </p>
+          </div>
+          <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-2xl">💰</div>
+        </CardContent>
+      </Card>
 
       {/* Expense Entry */}
       <SectionCard title="Expense Entry" open={activeSection === 'expense'} onToggle={() => toggle('expense')}>
         <div className="p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="input-label">Shop Name *</label>
-              <select className="input-field" value={expShop} onChange={e => setExpShop(e.target.value)}>
+            <div className="space-y-1.5">
+              <Label>Shop Name *</Label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                value={expShop}
+                onChange={e => setExpShop(e.target.value)}
+              >
                 <option value="">Select shop…</option>
                 {shops.map(s => <option key={s.id} value={s.shop_name}>{s.shop_name}</option>)}
               </select>
             </div>
-            <div>
-              <label className="input-label">Branch *</label>
-              <select className="input-field" value={expBranch} onChange={e => setExpBranch(e.target.value as 'KR' | 'C2')}>
+            <div className="space-y-1.5">
+              <Label>Branch *</Label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                value={expBranch}
+                onChange={e => setExpBranch(e.target.value as 'KR' | 'C2')}
+              >
                 <option value="KR">{t('branch.KR')}</option>
                 <option value="C2">{t('branch.C2')}</option>
               </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="input-label">Amount (₹) *</label>
-              <input
-                type="number" className="input-field" placeholder="0.00"
+            <div className="space-y-1.5">
+              <Label>Amount (₹) *</Label>
+              <Input
+                type="number" placeholder="0.00"
                 value={expAmount} onChange={e => setExpAmount(e.target.value)} min="0" step="0.01"
               />
             </div>
-            <div>
-              <label className="input-label">Date *</label>
-              <input type="date" className="input-field" value={expDate} onChange={e => setExpDate(e.target.value)} />
+            <div className="space-y-1.5">
+              <Label>Date *</Label>
+              <Input type="date" value={expDate} onChange={e => setExpDate(e.target.value)} />
             </div>
           </div>
           {expMsg && (
-            <p className={`text-sm ${expMsg.isError ? 'text-error' : 'text-secondary'}`}>{expMsg.text}</p>
+            <p className={`text-sm ${expMsg.isError ? 'text-destructive' : 'text-green-600'}`}>{expMsg.text}</p>
           )}
-          <button
-            className="btn-primary w-full"
+          <Button
+            className="w-full"
             onClick={() => expMutation.mutate()}
             disabled={expMutation.isLoading}
           >
             {expMutation.isLoading ? 'Saving…' : 'Record Expense'}
-          </button>
+          </Button>
         </div>
       </SectionCard>
 
@@ -170,70 +187,74 @@ export default function SupervisorDashboard() {
       <SectionCard title="Cash Deposit" open={activeSection === 'deposit'} onToggle={() => toggle('deposit')}>
         <div className="p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="input-label">Deposit Date *</label>
-              <input type="date" className="input-field" value={depDate} onChange={e => setDepDate(e.target.value)} />
+            <div className="space-y-1.5">
+              <Label>Deposit Date *</Label>
+              <Input type="date" value={depDate} onChange={e => setDepDate(e.target.value)} />
             </div>
-            <div>
-              <label className="input-label">Bank Ref / Challan No.</label>
-              <input
-                type="text" className="input-field" placeholder="Optional"
+            <div className="space-y-1.5">
+              <Label>Bank Ref / Challan No.</Label>
+              <Input
+                type="text" placeholder="Optional"
                 value={depBankRef} onChange={e => setDepBankRef(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Multi-row deposit entries */}
           <div>
-            <label className="input-label">Deposit Rows *</label>
-            <div className="space-y-2 mt-1">
+            <Label>Deposit Rows *</Label>
+            <div className="space-y-2 mt-1.5">
               {depRows.map((row, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <select
-                    className="input-field w-28 flex-shrink-0"
+                    className="h-10 w-28 flex-shrink-0 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     value={row.branch}
                     onChange={e => updateDepRow(i, 'branch', e.target.value)}
                   >
                     <option value="KR">{t('branch.KR')}</option>
                     <option value="C2">{t('branch.C2')}</option>
                   </select>
-                  <input
-                    type="number" className="input-field flex-1" placeholder="Amount"
+                  <Input
+                    type="number" className="flex-1" placeholder="Amount"
                     value={row.amount} onChange={e => updateDepRow(i, 'amount', e.target.value)}
                     min="0" step="0.01"
                   />
                   {depRows.length > 1 && (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => removeDepRow(i)}
-                      className="text-error hover:text-error/70 text-lg leading-none px-1 flex-shrink-0"
-                    >✕</button>
+                      className="text-destructive hover:text-destructive/70 flex-shrink-0"
+                    >
+                      ✕
+                    </Button>
                   )}
                 </div>
               ))}
             </div>
-            <button onClick={addDepRow} className="mt-2 text-primary text-sm font-medium hover:text-primary/80">
+            <Button variant="link" onClick={addDepRow} className="mt-1 p-0 h-auto text-sm">
               + Add Row
-            </button>
+            </Button>
           </div>
 
-          <div>
-            <label className="input-label">Notes</label>
+          <div className="space-y-1.5">
+            <Label>Notes</Label>
             <textarea
-              className="input-field" rows={2} placeholder="Optional"
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              rows={2} placeholder="Optional"
               value={depNotes} onChange={e => setDepNotes(e.target.value)}
             />
           </div>
 
           {depMsg && (
-            <p className={`text-sm ${depMsg.isError ? 'text-error' : 'text-secondary'}`}>{depMsg.text}</p>
+            <p className={`text-sm ${depMsg.isError ? 'text-destructive' : 'text-green-600'}`}>{depMsg.text}</p>
           )}
-          <button
-            className="btn-primary w-full"
+          <Button
+            className="w-full"
             onClick={() => depMutation.mutate()}
             disabled={depMutation.isLoading}
           >
             {depMutation.isLoading ? 'Saving…' : 'Submit Deposit'}
-          </button>
+          </Button>
         </div>
       </SectionCard>
 
@@ -245,7 +266,7 @@ export default function SupervisorDashboard() {
       >
         <div className="p-4">
           {tasks.length === 0 ? (
-            <p className="text-text-secondary text-sm text-center py-4">No tasks assigned</p>
+            <p className="text-muted-foreground text-sm text-center py-4">No tasks assigned</p>
           ) : (
             <div className="space-y-2">
               {tasks.map((task: any) => {
@@ -253,15 +274,15 @@ export default function SupervisorDashboard() {
                 return (
                   <div
                     key={task.id}
-                    className={`rounded-lg border p-3 ${isOverdue ? 'border-error/30 bg-red-50' : 'border-border'}`}
+                    className={`rounded-lg border p-3 ${isOverdue ? 'border-destructive/30 bg-red-50' : 'border-border'}`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-text-primary text-sm">{task.title}</p>
+                        <p className="font-medium text-foreground text-sm">{task.title}</p>
                         {task.description && (
-                          <p className="text-text-secondary text-xs mt-0.5 truncate">{task.description}</p>
+                          <p className="text-muted-foreground text-xs mt-0.5 truncate">{task.description}</p>
                         )}
-                        <div className="flex flex-wrap gap-2 mt-1 text-xs text-text-secondary">
+                        <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
                           {task.due_date && (
                             <span>Due: {new Date(task.due_date).toLocaleDateString('en-IN')}</span>
                           )}
@@ -298,20 +319,22 @@ function SectionCard({
   title: string; open: boolean; onToggle: () => void; children: React.ReactNode
 }) {
   return (
-    <div className="card mb-3 overflow-hidden">
+    <Card className="mb-3 overflow-hidden">
       <button
-        className="w-full flex items-center justify-between p-4 min-h-tap text-left"
+        className="w-full flex items-center justify-between p-4 min-h-[48px] text-left hover:bg-accent/50 transition-colors"
         onClick={onToggle}
       >
-        <span className="font-medium text-text-primary">{title}</span>
-        <svg
-          className={`w-5 h-5 text-text-secondary transition-transform ${open ? 'rotate-180' : ''}`}
-          fill="none" stroke="currentColor" viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <span className="font-medium text-foreground">{title}</span>
+        <ChevronDown
+          className={`w-5 h-5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+        />
       </button>
-      {open && <div className="border-t border-border">{children}</div>}
-    </div>
+      {open && (
+        <>
+          <Separator />
+          {children}
+        </>
+      )}
+    </Card>
   )
 }

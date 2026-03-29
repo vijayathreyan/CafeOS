@@ -5,6 +5,7 @@ import { supabase } from './lib/supabase'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import ProtectedRoute from './components/ProtectedRoute'
+import { Toaster } from './components/ui/toaster'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import BranchSelect from './pages/BranchSelect'
@@ -52,6 +53,7 @@ export default function App() {
   return (
     <AuthProvider>
       <LanguageProvider>
+        <Toaster />
         <Routes>
           {/* /login: Login.tsx's useEffect handles redirect when user is already authenticated.
               Removing the session-based Navigate here prevents a race where App.tsx sets

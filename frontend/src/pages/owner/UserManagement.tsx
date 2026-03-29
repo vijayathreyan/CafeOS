@@ -3,6 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { supabase, AppUser } from '../../lib/supabase'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Card, CardContent } from '@/components/ui/card'
 import StatusChip from '../../components/StatusChip'
 
 type AppUserExt = AppUser & { deleted_at?: string | null }
@@ -18,7 +23,6 @@ export default function UserManagement() {
   const [deleteError, setDeleteError] = useState('')
 
   // Bug 7: on mount, soft-delete ghost records (deactivated employees with no auth account).
-  // These are records left from pre-fix onboarding that never had an auth user created.
   useEffect(() => {
     const cleanupGhosts = async () => {
       await supabase
@@ -31,7 +35,6 @@ export default function UserManagement() {
     cleanupGhosts()
   }, [])
 
-  // Bug 7: active list excludes deleted; deleted list shows only deleted.
   const { data: employees = [], isLoading } = useQuery(
     ['employees', showDeleted],
     async () => {
@@ -60,7 +63,6 @@ export default function UserManagement() {
     { onSuccess: () => qc.invalidateQueries('employees') }
   )
 
-  // Bug 1: check for error from update; throw so react-query calls onError, not onSuccess.
   const deleteMutation = useMutation(
     async (id: string) => {
       const { error } = await supabase.from('employees').update({ deleted_at: new Date().toISOString() }).eq('id', id)
@@ -72,7 +74,6 @@ export default function UserManagement() {
     }
   )
 
-  // Bug 7: restore a deleted employee (clear deleted_at, reactivate).
   const restoreMutation = useMutation(
     async (id: string) => {
       await supabase.from('employees').update({ deleted_at: null, active: true }).eq('id', id)
@@ -92,129 +93,154 @@ export default function UserManagement() {
     <div className="p-4 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="section-header">{t('employees.title')}</h1>
-        <button onClick={() => navigate('/users/new')} className="btn-primary">
+        <h1 className="text-xl font-semibold text-foreground">{t('employees.title')}</h1>
+        <Button onClick={() => navigate('/users/new')}>
           + {t('employees.add')}
-        </button>
+        </Button>
       </div>
 
       {/* Filters */}
-      <div className="card p-4 mb-4 flex flex-wrap gap-3">
-        <input
-          className="input-field flex-1 min-w-40"
-          placeholder={t('common.search')}
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-        <select className="input-field w-36" value={filterRole} onChange={e => setFilterRole(e.target.value)}>
-          <option value="all">{t('common.all')} Roles</option>
-          <option value="staff">{t('employees.roles.staff')}</option>
-          <option value="supervisor">{t('employees.roles.supervisor')}</option>
-          <option value="owner">{t('employees.roles.owner')}</option>
-        </select>
-        <select className="input-field w-36" value={filterBranch} onChange={e => setFilterBranch(e.target.value)}>
-          <option value="all">{t('common.all')} Branches</option>
-          <option value="KR">{t('branch.KR')}</option>
-          <option value="C2">{t('branch.C2')}</option>
-        </select>
-      </div>
+      <Card className="mb-4">
+        <CardContent className="p-4 flex flex-wrap gap-3">
+          <Input
+            className="flex-1 min-w-40"
+            placeholder={t('common.search')}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          <select
+            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-ring"
+            value={filterRole}
+            onChange={e => setFilterRole(e.target.value)}
+          >
+            <option value="all">{t('common.all')} Roles</option>
+            <option value="staff">{t('employees.roles.staff')}</option>
+            <option value="supervisor">{t('employees.roles.supervisor')}</option>
+            <option value="owner">{t('employees.roles.owner')}</option>
+          </select>
+          <select
+            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-ring"
+            value={filterBranch}
+            onChange={e => setFilterBranch(e.target.value)}
+          >
+            <option value="all">{t('common.all')} Branches</option>
+            <option value="KR">{t('branch.KR')}</option>
+            <option value="C2">{t('branch.C2')}</option>
+          </select>
+        </CardContent>
+      </Card>
 
       {deleteError && (
-        <div className="mb-4 p-3 bg-red-50 border border-error/30 rounded-lg text-error text-sm">{deleteError}</div>
+        <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">{deleteError}</div>
       )}
 
-      {/* Bug 7: toggle between active and deleted employee views */}
+      {/* View toggle */}
       <div className="flex items-center gap-3 mb-4">
-        <button
+        <Button
+          variant={!showDeleted ? 'default' : 'outline'}
+          size="sm"
           onClick={() => setShowDeleted(false)}
-          className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${!showDeleted ? 'bg-primary text-white' : 'bg-gray-100 text-text-secondary hover:bg-gray-200'}`}
         >
           Active Employees
-        </button>
-        <button
+        </Button>
+        <Button
+          variant={showDeleted ? 'destructive' : 'outline'}
+          size="sm"
           onClick={() => setShowDeleted(true)}
-          className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${showDeleted ? 'bg-error text-white' : 'bg-gray-100 text-text-secondary hover:bg-gray-200'}`}
         >
           View Deleted Employees
-        </button>
+        </Button>
       </div>
 
       {/* Employee list */}
       {isLoading ? (
-        <div className="text-center py-12 text-text-secondary">{t('common.loading')}</div>
+        <div className="text-center py-12 text-muted-foreground">{t('common.loading')}</div>
       ) : (
         <div className="space-y-3">
           {filtered.map(emp => (
-            <div
+            <Card
               key={emp.id}
-              className={`card p-4 flex items-center justify-between gap-4 ${!emp.active || emp.deleted_at ? 'opacity-60' : ''}`}
+              className={`${!emp.active || emp.deleted_at ? 'opacity-60' : ''}`}
             >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-semibold text-lg">{emp.full_name.charAt(0)}</span>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-text-primary">{emp.full_name}</span>
-                    <span className="text-xs text-text-secondary">{emp.employee_id}</span>
-                    {!emp.active && !emp.deleted_at && <StatusChip variant="grey" label="Inactive" />}
-                    {emp.deleted_at && <StatusChip variant="error" label="Deleted" />}
+              <CardContent className="p-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="w-12 h-12">
+                    <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-lg">
+                      {emp.full_name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-foreground">{emp.full_name}</span>
+                      <span className="text-xs text-muted-foreground">{emp.employee_id}</span>
+                      {!emp.active && !emp.deleted_at && <StatusChip variant="grey" label="Inactive" />}
+                      {emp.deleted_at && <StatusChip variant="error" label="Deleted" />}
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap mt-1">
+                      <span className="text-sm text-muted-foreground">{emp.phone}</span>
+                      <Badge variant="secondary" className="capitalize">{emp.role}</Badge>
+                      {emp.branch_access.map(b => (
+                        <Badge key={b} variant="outline" className="text-primary border-primary/30">
+                          {t(`branch.${b}`)}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap mt-1">
-                    <span className="text-sm text-text-secondary">{emp.phone}</span>
-                    <span className="chip-grey capitalize">{emp.role}</span>
-                    {emp.branch_access.map(b => (
-                      <span key={b} className="text-xs bg-blue-50 text-primary px-2 py-0.5 rounded-chip font-medium">
-                        {t(`branch.${b}`)}
-                      </span>
-                    ))}
-                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-                {!emp.deleted_at ? (
-                  <>
-                    <button onClick={() => navigate(`/users/${emp.id}/edit`)} className="btn-secondary text-sm px-3 py-2">
-                      {t('common.edit')}
-                    </button>
-                    {emp.active ? (
-                      <button
-                        onClick={() => { if (confirm(`Deactivate ${emp.full_name}?`)) deactivateMutation.mutate(emp.id) }}
-                        className="btn-secondary text-sm px-3 py-2 text-warning"
+                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+                  {!emp.deleted_at ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/users/${emp.id}/edit`)}
                       >
-                        {t('employees.deactivate')}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => { if (confirm(`Reactivate ${emp.full_name}?`)) reactivateMutation.mutate(emp.id) }}
-                        className="bg-green-600 text-white text-sm px-3 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                        {t('common.edit')}
+                      </Button>
+                      {emp.active ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-yellow-600 hover:text-yellow-700"
+                          onClick={() => { if (confirm(`Deactivate ${emp.full_name}?`)) deactivateMutation.mutate(emp.id) }}
+                        >
+                          {t('employees.deactivate')}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-green-600 hover:text-green-700"
+                          onClick={() => { if (confirm(`Reactivate ${emp.full_name}?`)) reactivateMutation.mutate(emp.id) }}
+                        >
+                          {t('employees.reactivate')}
+                        </Button>
+                      )}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => { if (confirm(`Delete ${emp.full_name}? Their data will be retained but hidden.`)) deleteMutation.mutate(emp.id) }}
                       >
-                        {t('employees.reactivate')}
-                      </button>
-                    )}
-                    {/* Bug 7: Delete button — soft-delete, data never removed */}
-                    <button
-                      onClick={() => { if (confirm(`Delete ${emp.full_name}? Their data will be retained but hidden.`)) deleteMutation.mutate(emp.id) }}
-                      className="btn-danger text-sm px-3 py-2"
+                        Delete
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-green-600 hover:text-green-700"
+                      onClick={() => { if (confirm(`Restore ${emp.full_name}?`)) restoreMutation.mutate(emp.id) }}
                     >
-                      Delete
-                    </button>
-                  </>
-                ) : (
-                  /* Bug 7: restore a previously deleted employee */
-                  <button
-                    onClick={() => { if (confirm(`Restore ${emp.full_name}?`)) restoreMutation.mutate(emp.id) }}
-                    className="bg-green-600 text-white text-sm px-3 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    Restore
-                  </button>
-                )}
-              </div>
-            </div>
+                      Restore
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           ))}
           {filtered.length === 0 && (
-            <div className="text-center py-12 text-text-secondary">
+            <div className="text-center py-12 text-muted-foreground">
               {showDeleted ? 'No deleted employees' : t('common.noData')}
             </div>
           )}
