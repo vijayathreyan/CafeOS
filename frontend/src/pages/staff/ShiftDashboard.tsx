@@ -53,7 +53,7 @@ export default function ShiftDashboard() {
 
   // Load or create today's daily entry
   const { data: dailyEntry, isLoading } = useQuery(
-    ['daily_entry', branch, today],
+    ['daily_entry', user?.id, branch, today],
     async () => {
       if (!branch || !user) return null
       const { data } = await supabase
@@ -65,7 +65,7 @@ export default function ShiftDashboard() {
         .maybeSingle()
       return data as DailyEntry | null
     },
-    { enabled: Boolean(branch && user) }
+    { enabled: !!user && !!branch, retry: 2, staleTime: 30_000 }
   )
 
   const createEntryMutation = useMutation(
@@ -82,7 +82,7 @@ export default function ShiftDashboard() {
       if (error) throw error
       return data as DailyEntry
     },
-    { onSuccess: () => qc.invalidateQueries(['daily_entry', branch, today]) }
+    { onSuccess: () => qc.invalidateQueries(['daily_entry', user?.id, branch, today]) }
   )
 
   // Auto-save draft every 30 seconds
@@ -308,7 +308,7 @@ export default function ShiftDashboard() {
           onClose={() => setShowCloseModal(false)}
           onConfirmed={() => {
             setShowCloseModal(false)
-            qc.invalidateQueries(['daily_entry', branch, today])
+            qc.invalidateQueries(['daily_entry', user?.id, branch, today])
           }}
         />
       )}

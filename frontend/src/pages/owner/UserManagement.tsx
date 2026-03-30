@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { supabase, AppUser } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import StatusChip from '../../components/StatusChip'
+import { useConfirm, showToast } from '@/lib/dialogs'
 
 type AppUserExt = AppUser & { deleted_at?: string | null }
 
@@ -16,11 +18,12 @@ export default function UserManagement() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const { confirm, ConfirmDialog } = useConfirm()
+  const { user } = useAuth()
   const [filterRole, setFilterRole] = useState<string>('all')
   const [filterBranch, setFilterBranch] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [showDeleted, setShowDeleted] = useState(false)
-  const [deleteError, setDeleteError] = useState('')
 
   // Bug 7: on mount, soft-delete ghost records (deactivated employees with no auth account).
   useEffect(() => {
@@ -36,7 +39,7 @@ export default function UserManagement() {
   }, [])
 
   const { data: employees = [], isLoading } = useQuery(
-    ['employees', showDeleted],
+    ['employees', user?.id, showDeleted],
     async () => {
       let q = supabase.from('employees').select('*').order('employee_id')
       if (showDeleted) {
@@ -46,21 +49,28 @@ export default function UserManagement() {
       }
       const { data } = await q
       return (data || []) as AppUserExt[]
-    }
+    },
+    { enabled: !!user, retry: 2, staleTime: 30_000 }
   )
 
   const deactivateMutation = useMutation(
     async (id: string) => {
       await supabase.from('employees').update({ active: false }).eq('id', id)
     },
-    { onSuccess: () => qc.invalidateQueries('employees') }
+    {
+      onSuccess: () => { qc.invalidateQueries('employees'); showToast('Employee deactivated', 'info') },
+      onError: () => showToast('Failed to deactivate employee', 'error'),
+    }
   )
 
   const reactivateMutation = useMutation(
     async (id: string) => {
       await supabase.from('employees').update({ active: true }).eq('id', id)
     },
-    { onSuccess: () => qc.invalidateQueries('employees') }
+    {
+      onSuccess: () => { qc.invalidateQueries('employees'); showToast('Employee reactivated', 'success') },
+      onError: () => showToast('Failed to reactivate employee', 'error'),
+    }
   )
 
   const deleteMutation = useMutation(
@@ -69,8 +79,8 @@ export default function UserManagement() {
       if (error) throw new Error(error.message)
     },
     {
-      onSuccess: () => { setDeleteError(''); qc.invalidateQueries('employees') },
-      onError: (e: any) => setDeleteError(e.message || 'Failed to delete employee'),
+      onSuccess: () => { qc.invalidateQueries('employees'); showToast('Employee deleted', 'info') },
+      onError: (e: any) => showToast(e.message || 'Failed to delete employee', 'error'),
     }
   )
 
@@ -78,7 +88,10 @@ export default function UserManagement() {
     async (id: string) => {
       await supabase.from('employees').update({ deleted_at: null, active: true }).eq('id', id)
     },
-    { onSuccess: () => qc.invalidateQueries('employees') }
+    {
+      onSuccess: () => { qc.invalidateQueries('employees'); showToast('Employee restored', 'success') },
+      onError: () => showToast('Failed to restore employee', 'error'),
+    }
   )
 
   const filtered = employees.filter(e => {
@@ -129,10 +142,6 @@ export default function UserManagement() {
           </select>
         </CardContent>
       </Card>
-
-      {deleteError && (
-        <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">{deleteError}</div>
-      )}
 
       {/* View toggle */}
       <div className="flex items-center gap-3 mb-4">
@@ -203,7 +212,14 @@ export default function UserManagement() {
                           variant="outline"
                           size="sm"
                           className="text-yellow-600 hover:text-yellow-700"
-                          onClick={() => { if (confirm(`Deactivate ${emp.full_name}?`)) deactivateMutation.mutate(emp.id) }}
+                          onClick={async () => {
+                            const ok = await confirm({
+                              title: 'Deactivate Employee',
+                              description: `Deactivate ${emp.full_name}? They will lose access to the system.`,
+                              confirmLabel: 'Deactivate',
+                            })
+                            if (ok) deactivateMutation.mutate(emp.id)
+                          }}
                         >
                           {t('employees.deactivate')}
                         </Button>
@@ -212,7 +228,14 @@ export default function UserManagement() {
                           variant="outline"
                           size="sm"
                           className="text-green-600 hover:text-green-700"
-                          onClick={() => { if (confirm(`Reactivate ${emp.full_name}?`)) reactivateMutation.mutate(emp.id) }}
+                          onClick={async () => {
+                            const ok = await confirm({
+                              title: 'Reactivate Employee',
+                              description: `Reactivate ${emp.full_name}? They will regain access to the system.`,
+                              confirmLabel: 'Reactivate',
+                            })
+                            if (ok) reactivateMutation.mutate(emp.id)
+                          }}
                         >
                           {t('employees.reactivate')}
                         </Button>
@@ -220,7 +243,15 @@ export default function UserManagement() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => { if (confirm(`Delete ${emp.full_name}? Their data will be retained but hidden.`)) deleteMutation.mutate(emp.id) }}
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: 'Delete Employee',
+                            description: `Delete ${emp.full_name}? Their data will be retained but hidden.`,
+                            confirmLabel: 'Delete',
+                            confirmVariant: 'destructive',
+                          })
+                          if (ok) deleteMutation.mutate(emp.id)
+                        }}
                       >
                         Delete
                       </Button>
@@ -230,7 +261,14 @@ export default function UserManagement() {
                       variant="outline"
                       size="sm"
                       className="text-green-600 hover:text-green-700"
-                      onClick={() => { if (confirm(`Restore ${emp.full_name}?`)) restoreMutation.mutate(emp.id) }}
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: 'Restore Employee',
+                          description: `Restore ${emp.full_name}? They will be reactivated and visible again.`,
+                          confirmLabel: 'Restore',
+                        })
+                        if (ok) restoreMutation.mutate(emp.id)
+                      }}
                     >
                       Restore
                     </Button>
@@ -246,6 +284,7 @@ export default function UserManagement() {
           )}
         </div>
       )}
+      {ConfirmDialog}
     </div>
   )
 }

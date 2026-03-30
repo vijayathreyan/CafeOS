@@ -2,26 +2,33 @@ import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from 'react-query'
 import { supabase } from '../../../lib/supabase'
+import { useAuth } from '../../../contexts/AuthContext'
 import { saveDraft, loadDraft } from '../../../lib/offlineQueue'
 
 interface CustomerEntry { customer_id: string; name: string; shift1: number; shift2: number }
+
+const INPUT = 'w-20 h-9 sm:w-24 sm:h-10 rounded-md border border-input bg-background text-center text-sm px-1 focus:outline-none focus:ring-2 focus:ring-ring'
 
 interface Props { dailyEntryId: string; onDone: (done: boolean) => void }
 
 export default function PostPaidCard({ dailyEntryId, onDone }: Props) {
   const { t } = useTranslation()
+  const { user } = useAuth()
 
-  const { data: customers = [] } = useQuery('postpaid_customers_kr', async () => {
-    const { data } = await supabase.from('postpaid_customers').select('*').eq('branch', 'KR').eq('active', true)
-    return data || []
-  })
+  const { data: customers = [] } = useQuery(
+    ['postpaid_customers', user?.id],
+    async () => {
+      const { data } = await supabase.from('postpaid_customers').select('*').eq('branch', 'KR').eq('active', true)
+      return data || []
+    },
+    { enabled: !!user, retry: 2, staleTime: 30_000 }
+  )
 
   const [entries, setEntries] = useState<CustomerEntry[]>(() =>
     loadDraft(`postpaid_${dailyEntryId}`) || []
   )
   const [saving, setSaving] = useState(false); const [saved, setSaved] = useState(false)
 
-  // Sync with loaded customers
   useEffect(() => {
     if (customers.length > 0 && entries.length === 0) {
       setEntries(customers.map(c => ({ customer_id: c.id, name: c.name, shift1: 0, shift2: 0 })))
@@ -55,37 +62,43 @@ export default function PostPaidCard({ dailyEntryId, onDone }: Props) {
   }
 
   return (
-    <div className="p-4">
+    <div className="px-4 pb-4 pt-2">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-text-secondary text-xs border-b border-border">
-            <th className="text-left pb-2 font-medium">{t('postpaid.customer')}</th>
-            <th className="text-center pb-2 font-medium w-28">{t('postpaid.shift1')}</th>
-            <th className="text-center pb-2 font-medium w-28">{t('postpaid.shift2')}</th>
-            <th className="text-right pb-2 font-medium w-24">{t('postpaid.dailyTotal')}</th>
+          <tr className="text-muted-foreground text-xs bg-muted/50">
+            <th className="text-left py-2 pl-1 font-semibold rounded-l">{t('postpaid.customer')}</th>
+            <th className="text-center py-2 font-semibold w-24 sm:w-28">{t('postpaid.shift1')}</th>
+            <th className="text-center py-2 font-semibold w-24 sm:w-28">{t('postpaid.shift2')}</th>
+            <th className="text-right py-2 font-semibold w-24 rounded-r">{t('postpaid.dailyTotal')}</th>
           </tr>
         </thead>
         <tbody>
           {entries.map((e, i) => (
-            <tr key={e.customer_id} className="border-t border-border">
-              <td className="py-2 font-medium text-text-primary">{e.name}</td>
-              <td className="py-2 px-1">
-                <input type="number" min={0} className="input-field text-center p-2 text-sm w-28"
-                  value={e.shift1} onChange={ev => update(i, 'shift1', Number(ev.target.value))} />
+            <tr key={e.customer_id} className="border-b border-border last:border-b-0">
+              <td className="py-3 font-medium text-foreground pl-1">{e.name}</td>
+              <td className="py-3 px-1 text-center">
+                <input type="number" min={0} className={INPUT}
+                  placeholder="0"
+                  value={e.shift1 || ''}
+                  onFocus={ev => ev.target.select()}
+                  onChange={ev => update(i, 'shift1', Number(ev.target.value))} />
               </td>
-              <td className="py-2 px-1">
-                <input type="number" min={0} className="input-field text-center p-2 text-sm w-28"
-                  value={e.shift2} onChange={ev => update(i, 'shift2', Number(ev.target.value))} />
+              <td className="py-3 px-1 text-center">
+                <input type="number" min={0} className={INPUT}
+                  placeholder="0"
+                  value={e.shift2 || ''}
+                  onFocus={ev => ev.target.select()}
+                  onChange={ev => update(i, 'shift2', Number(ev.target.value))} />
               </td>
-              <td className="py-2 text-right font-semibold text-text-primary">
+              <td className="py-3 text-right font-semibold text-foreground">
                 ₹{(e.shift1 + e.shift2).toLocaleString('en-IN')}
               </td>
             </tr>
           ))}
         </tbody>
         <tfoot>
-          <tr className="border-t-2 border-border bg-gray-50">
-            <td className="py-3 font-semibold">Total</td>
+          <tr className="border-t-2 border-border bg-muted/30">
+            <td className="py-3 font-semibold pl-1">Total</td>
             <td className="py-3 text-center font-semibold">
               ₹{entries.reduce((s,e) => s+e.shift1, 0).toLocaleString('en-IN')}
             </td>

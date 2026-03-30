@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useQuery } from 'react-query'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
 import { supabaseAdmin } from '../../lib/supabase-admin'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { CheckCircle2 } from 'lucide-react'
+import { showToast } from '@/lib/dialogs'
 
 const SECTIONS = ['systemAccess', 'personal', 'identity', 'emergency', 'work', 'bank'] as const
 type Section = typeof SECTIONS[number]
@@ -61,12 +63,12 @@ export default function EmployeeOnboarding() {
   const navigate = useNavigate()
   const { id } = useParams()
   const isEdit = Boolean(id)
+  const { user } = useAuth()
   const [activeSection, setActiveSection] = useState<Section>('systemAccess')
   const [submitting, setSubmitting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const [toast, setToast] = useState('')
   const [sectionErrors, setSectionErrors] = useState<Record<string, string>>({})
   const [phoneError, setPhoneError] = useState('')
   const [phoneChecking, setPhoneChecking] = useState(false)
@@ -76,19 +78,12 @@ export default function EmployeeOnboarding() {
   const [resetPwError, setResetPwError] = useState('')
   const [resetPwSaving, setResetPwSaving] = useState(false)
 
-  useEffect(() => {
-    if (toast) {
-      const t = setTimeout(() => setToast(''), 3000)
-      return () => clearTimeout(t)
-    }
-  }, [toast])
-
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
     defaultValues: { language_pref: 'en', branch_kr: false, branch_c2: false, role: 'staff' }
   })
 
   const { data: existing } = useQuery(
-    ['employee', id],
+    ['employee', user?.id, id],
     async () => {
       if (!id) return null
       const { data } = await supabase
@@ -98,7 +93,7 @@ export default function EmployeeOnboarding() {
         .single()
       return data
     },
-    { enabled: isEdit }
+    { enabled: isEdit && !!user, retry: 2, staleTime: 30_000 }
   )
 
   useEffect(() => {
@@ -221,7 +216,7 @@ export default function EmployeeOnboarding() {
     try {
       if (activeSection === 'systemAccess') {
         const branch_access = [v.branch_kr && 'KR', v.branch_c2 && 'C2'].filter(Boolean) as string[]
-        if (branch_access.length === 0) { setToast('Select at least one branch'); setSaving(false); return }
+        if (branch_access.length === 0) { showToast('Select at least one branch', 'warning'); setSaving(false); return }
         const { error } = await supabase.from('employees').update({
           full_name: v.full_name, phone: v.phone, role: v.role,
           branch_access, language_pref: v.language_pref,
@@ -269,9 +264,9 @@ export default function EmployeeOnboarding() {
           if (error) throw error
         }
       }
-      setToast('Saved successfully')
+      showToast('Saved successfully', 'success')
     } catch (e: any) {
-      setToast('Error: ' + (e.message || 'Failed to save'))
+      showToast('Error: ' + (e.message || 'Failed to save'), 'error')
     } finally {
       setSaving(false)
     }
@@ -292,11 +287,11 @@ export default function EmployeeOnboarding() {
       if (createErr) { setResetPwError('Failed to create auth account: ' + createErr.message); setResetPwSaving(false); return }
       const { error: linkErr } = await supabase.from('employees').update({ auth_user_id: authData.user.id }).eq('id', id)
       if (linkErr) { setResetPwError('Auth account created but failed to link: ' + linkErr.message); setResetPwSaving(false); return }
-      setToast('Auth account created and password set')
+      showToast('Auth account created and password set', 'success')
     } else {
       const { error } = await supabaseAdmin.auth.admin.updateUserById(existing.auth_user_id, { password: v.reset_password })
       if (error) { setResetPwError(error.message); setResetPwSaving(false); return }
-      setToast('Password reset successfully')
+      showToast('Password reset successfully', 'success')
     }
     setResetPwSaving(false)
     setValue('reset_password', '')
@@ -460,13 +455,6 @@ export default function EmployeeOnboarding() {
 
   return (
     <div className="p-4 max-w-2xl mx-auto pb-24">
-      {/* Toast notification */}
-      {toast && (
-        <div className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 text-white text-sm font-medium ${toast.startsWith('Error') ? 'bg-destructive' : 'bg-green-600'}`}>
-          {toast}
-        </div>
-      )}
-
       <div className="flex items-center gap-3 mb-6">
         <Button variant="ghost" size="sm" onClick={() => navigate('/users')}>
           ← {t('common.back')}

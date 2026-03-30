@@ -26,7 +26,7 @@ export default function TaskInbox() {
       const { data } = await q
       return data || []
     },
-    { enabled: !!user }
+    { enabled: !!user, retry: 2, staleTime: 30_000 }
   )
 
   const getChipVariant = (status: string, dueDate: string | null) => {
