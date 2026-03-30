@@ -4,8 +4,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { saveDraft, loadDraft, enqueue, flushQueue } from '../../lib/offlineQueue'
-import StatusChip from '../../components/StatusChip'
-import { Coffee, CheckCircle2, ChevronDown } from 'lucide-react'
+import { Coffee, CheckCircle2, ChevronDown, Clock, Circle } from 'lucide-react'
 import SnacksCard from './cards/SnacksCard'
 import CashCard from './cards/CashCard'
 import MilkCard from './cards/MilkCard'
@@ -341,11 +340,20 @@ function SectionCard({ title, done, expanded, onToggle, required, optional, chil
         </div>
         <div className="flex items-center gap-2">
           {done ? (
-            <StatusChip variant="done" label={t('shift.status.done')} />
+            <span className="flex items-center gap-1.5 text-green-600">
+              <CheckCircle2 className="h-4 w-4" />
+              <span className="text-sm font-medium">{t('shift.status.done')}</span>
+            </span>
           ) : optional ? (
-            <StatusChip variant="grey" label={t('shift.status.optional')} />
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <Circle className="h-4 w-4" />
+              <span className="text-sm font-medium">{t('shift.status.optional')}</span>
+            </span>
           ) : (
-            <StatusChip variant="pending" label={t('shift.status.pending')} />
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span className="text-sm font-medium">{t('shift.status.pending')}</span>
+            </span>
           )}
           <ChevronDown className={`w-5 h-5 text-text-secondary transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
