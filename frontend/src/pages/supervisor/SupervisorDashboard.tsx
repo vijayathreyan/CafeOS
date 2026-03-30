@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from 'react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -9,15 +10,21 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { ChevronDown, Banknote } from 'lucide-react'
+import { ChevronDown, Banknote, ClipboardList } from 'lucide-react'
 import StatusChip from '../../components/StatusChip'
 
 export default function SupervisorDashboard() {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const { user, setActiveBranch } = useAuth()
+  const navigate = useNavigate()
   const today = new Date().toISOString().split('T')[0]
   const [activeSection, setActiveSection] = useState<string | null>(null)
   const toggle = (s: string) => setActiveSection(prev => prev === s ? null : s)
+
+  const handleEnterShift = (branch: 'KR' | 'C2') => {
+    setActiveBranch(branch)
+    navigate('/supervisor-shift')
+  }
 
   // ── Vasanth Float Balance ──
   const { data: floatData } = useQuery('vasanth_float', async () => {
@@ -255,6 +262,23 @@ export default function SupervisorDashboard() {
           >
             {depMutation.isLoading ? 'Saving…' : 'Submit Deposit'}
           </Button>
+        </div>
+      </SectionCard>
+
+      {/* Enter Shift Data */}
+      <SectionCard title="Enter Shift Data" open={activeSection === 'shift'} onToggle={() => toggle('shift')}>
+        <div className="p-4 space-y-3">
+          <p className="text-sm text-muted-foreground">Select the branch to enter shift data for:</p>
+          <div className="flex gap-3">
+            <Button className="flex-1" onClick={() => handleEnterShift('KR')}>
+              <ClipboardList className="w-4 h-4 mr-2" />
+              Kaappi Ready
+            </Button>
+            <Button className="flex-1" variant="outline" onClick={() => handleEnterShift('C2')}>
+              <ClipboardList className="w-4 h-4 mr-2" />
+              Coffee Mate C2
+            </Button>
+          </div>
         </div>
       </SectionCard>
 

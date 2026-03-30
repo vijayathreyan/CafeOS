@@ -94,6 +94,12 @@ export default function App() {
               </ProtectedRoute>
             } />
 
+            <Route path="/supervisor-shift" element={
+              <ProtectedRoute allowedRoles={['supervisor']}>
+                <ShiftDashboard />
+              </ProtectedRoute>
+            } />
+
             <Route path="/reports" element={
               <ProtectedRoute allowedRoles={['owner']}>
                 <PlaceholderPage title="Reports" subtitle="Phase 7–9" />
