@@ -16,15 +16,23 @@ export async function searchEmployee(page: Page, name: string) {
   const searchInput = page.locator('input[placeholder*="Search"]')
   await searchInput.clear()
   await searchInput.fill(name)
+  // Small wait for the filter to apply
+  await page.waitForTimeout(400)
 }
 
-/** Open a shift at /shift if no active shift exists today. */
+/** Navigate to /shift and ensure a shift is open.
+ *  If no active shift exists, clicks "Open New Shift" to create one.
+ *  Always waits until the 6 section cards are visible before returning. */
 export async function ensureShiftOpen(page: Page) {
   await page.goto('/shift')
+  await page.waitForLoadState('networkidle')
+
+  // If no active shift, open one
   const openBtn = page.locator('button:has-text("Open New Shift")')
-  if (await openBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+  if (await openBtn.isVisible({ timeout: 4000 }).catch(() => false)) {
     await openBtn.click()
-    // Wait for shift to be created and cards to appear
-    await page.waitForSelector('text=Snacks', { timeout: 10000 })
   }
+
+  // Always wait for the Snacks section card to confirm the dashboard is rendered
+  await page.waitForSelector('text=Snacks', { timeout: 12000 })
 }

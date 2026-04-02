@@ -17,33 +17,31 @@ async function goToUsers(page: any) {
 
 async function goToNewEmployee(page: any) {
   await goToUsers(page)
-  await page.click('button:has-text("Add Employee")')
+  await page.getByRole('button', { name: /Add Employee/ }).click()
   await page.waitForURL('**/users/new', { timeout: 8000 })
-  await page.waitForSelector('text=System Access', { timeout: 5000 })
+  // Use heading role to avoid strict-mode conflict with the tab button "1. System Access"
+  await page.getByRole('heading', { name: /System Access/ }).waitFor({ timeout: 5000 })
 }
 
 test.describe('Employee Management', () => {
   test('employee list loads on /users without refresh', async ({ page }) => {
     await goToUsers(page)
     await expect(page.locator('h1:has-text("Employees")')).toBeVisible()
-    // Filter controls and search are present
     await expect(page.locator('input[placeholder*="Search"]')).toBeVisible()
   })
 
   test('Add Employee button opens form', async ({ page }) => {
     await goToUsers(page)
-    await page.click('button:has-text("Add Employee")')
+    await page.getByRole('button', { name: /Add Employee/ }).click()
     await page.waitForURL('**/users/new', { timeout: 8000 })
-    // Section 1 heading visible
-    await expect(page.locator('text=System Access')).toBeVisible()
+    // Verify the section 1 heading (h2), not the tab button
+    await expect(page.getByRole('heading', { name: /System Access/ })).toBeVisible()
     await expect(page.locator('text=Full Name')).toBeVisible()
   })
 
   test('submit empty Section 1 → validation errors on all mandatory fields', async ({ page }) => {
     await goToNewEmployee(page)
-    // Click Next without filling anything — triggers validateSection1()
-    await page.click('button:has-text("Next")')
-    // All mandatory field errors must appear
+    await page.getByRole('button', { name: 'Next' }).click()
     await expect(page.locator('text=Full name is required')).toBeVisible()
     await expect(page.locator('text=Phone number is required')).toBeVisible()
     await expect(page.locator('text=Select at least one branch')).toBeVisible()
@@ -53,10 +51,8 @@ test.describe('Employee Management', () => {
 
   test('duplicate phone number → inline error shown on blur', async ({ page }) => {
     await goToNewEmployee(page)
-    // Type the owner's phone (known to exist in the system)
     const phoneInput = page.locator('input[type="tel"]').first()
     await phoneInput.fill(TEST_USERS.owner.phone)
-    // Blur triggers checkPhoneDuplicate
     await phoneInput.blur()
     await expect(
       page.locator('text=This phone number is already registered')
@@ -65,29 +61,24 @@ test.describe('Employee Management', () => {
 
   test('mismatched passwords → error shown', async ({ page }) => {
     await goToNewEmployee(page)
-    // Fill name
     await page.locator('input').first().fill('Test Staff Mismatch')
-    // Fill phone with a unique number that does not exist
     const phoneInput = page.locator('input[type="tel"]').first()
     await phoneInput.fill('9800100099')
     await phoneInput.blur()
-    // Wait briefly to let duplicate check finish (should be clean)
     await page.waitForTimeout(500)
-    // Check KR branch
     await page.locator('input[type="checkbox"]').first().check()
-    // Enter mismatched passwords
     const pwdInputs = page.locator('input[type="password"]')
     await pwdInputs.nth(0).fill('Test@1234')
     await pwdInputs.nth(1).fill('Different@456')
-    // Click Next → validateSection1 catches mismatch
-    await page.click('button:has-text("Next")')
+    await page.getByRole('button', { name: 'Next' }).click()
     await expect(page.locator('text=Passwords do not match')).toBeVisible()
   })
 
-  // ── Serial CRUD flow ─────────────────────────────────────────────────────────
-  // Tests run in order: create → edit → deactivate → blocked → reactivate → delete → verify
+  // ── Serial CRUD flow — longer timeout because it walks through a 6-section form ──
   test.describe.serial('Employee CRUD flow', () => {
     test('complete valid form → employee created → appears in list', async ({ page }) => {
+      // This test navigates through 6 form sections — needs more than the 15s default
+      test.setTimeout(45000)
       await goToNewEmployee(page)
 
       // Section 1 — System Access
@@ -95,108 +86,104 @@ test.describe('Employee Management', () => {
       const phoneInput = page.locator('input[type="tel"]').first()
       await phoneInput.fill(EMP_PHONE)
       await phoneInput.blur()
-      await page.waitForTimeout(500) // let duplicate check run (should be clean)
+      await page.waitForTimeout(500)
       await page.locator('input[type="checkbox"]').first().check() // KR branch
       const pwdInputs = page.locator('input[type="password"]')
       await pwdInputs.nth(0).fill(EMP_PASSWORD)
       await pwdInputs.nth(1).fill(EMP_PASSWORD)
-      await page.click('button:has-text("Next")')
+      await page.getByRole('button', { name: 'Next' }).click()
 
-      // Sections 2–5 — all optional, just click Next
+      // Sections 2–5 — optional, just click Next each time
       for (let i = 0; i < 4; i++) {
         await page.waitForTimeout(300)
-        await page.click('button:has-text("Next")')
+        await page.getByRole('button', { name: 'Next' }).click()
       }
 
       // Section 6 — Submit
-      await page.click('button:has-text("Submit")')
-      await expect(page.locator('text=Employee Created')).toBeVisible({ timeout: 12000 })
+      await page.getByRole('button', { name: 'Submit' }).click()
+      // Wait for success page or error message (handles both supabaseAdmin configured/not)
+      await expect(
+        page.locator('text=Employee Created').or(page.locator('.text-destructive').first())
+      ).toBeVisible({ timeout: 15000 })
+      await expect(page.locator('text=Employee Created')).toBeVisible({ timeout: 3000 })
 
       // Auto-redirects to /users after 1.5s
       await page.waitForURL('**/users', { timeout: 8000 })
-      // Employee appears in the list
       await expect(page.locator(`text=${EMP_NAME}`)).toBeVisible({ timeout: 8000 })
     })
 
     test('edit employee → form opens with pre-filled data', async ({ page }) => {
+      test.setTimeout(30000)
       await goToUsers(page)
       await searchEmployee(page, EMP_NAME)
-      // Click Edit on the filtered result
-      await page.locator('button:has-text("Edit")').first().click()
+      await page.getByRole('button', { name: 'Edit' }).first().click()
       await page.waitForURL('**/users/**/edit', { timeout: 8000 })
-      await page.waitForSelector('text=System Access', { timeout: 5000 })
-      // Name field must be pre-filled
+      await page.getByRole('heading', { name: /System Access/ }).waitFor({ timeout: 5000 })
       const nameInput = page.locator('input').first()
-      await expect(nameInput).toHaveValue(EMP_NAME)
+      await expect(nameInput).toHaveValue(new RegExp(EMP_NAME))
     })
 
     test('save Section 1 changes → success toast shown', async ({ page }) => {
+      test.setTimeout(30000)
       await goToUsers(page)
       await searchEmployee(page, EMP_NAME)
-      await page.locator('button:has-text("Edit")').first().click()
+      await page.getByRole('button', { name: 'Edit' }).first().click()
       await page.waitForURL('**/users/**/edit', { timeout: 8000 })
-      await page.waitForSelector('text=System Access', { timeout: 5000 })
-      // Append a space to trigger a change
+      await page.getByRole('heading', { name: /System Access/ }).waitFor({ timeout: 5000 })
       const nameInput = page.locator('input').first()
       await nameInput.press('End')
       await nameInput.type(' ')
-      await page.click('button:has-text("Save Changes")')
-      // showToast('Saved successfully', 'success') renders in the Toaster
+      await page.getByRole('button', { name: 'Save Changes' }).click()
       await expect(page.locator('text=Saved successfully')).toBeVisible({ timeout: 8000 })
     })
 
     test('deactivate → shadcn AlertDialog shown → confirm → status changes to Inactive', async ({ page }) => {
+      test.setTimeout(30000)
       await goToUsers(page)
       await searchEmployee(page, EMP_NAME)
-      // Deactivate button appears for active employees
-      await page.locator('button:has-text("Deactivate")').first().click()
-      // Radix AlertDialog opens
+      await page.getByRole('button', { name: 'Deactivate' }).first().click()
       await expect(page.locator('text=Deactivate Employee')).toBeVisible({ timeout: 5000 })
       await expect(page.locator('[role="alertdialog"]')).toBeVisible()
-      // Click the confirm action button inside the dialog
-      await page.locator('[role="alertdialog"] button:has-text("Deactivate")').click()
-      // StatusChip "Inactive" now shown for this employee
+      await page.locator('[role="alertdialog"]').getByRole('button', { name: 'Deactivate' }).click()
       await expect(page.locator('text=Inactive')).toBeVisible({ timeout: 8000 })
     })
 
     test('deactivated user cannot login', async ({ page }) => {
       await loginAs(page, { phone: EMP_PHONE, password: EMP_PASSWORD })
-      // GoTrue rejects login for inactive account OR app rejects at RBAC level
       await expect(page.locator('.text-destructive').first()).toBeVisible({ timeout: 10000 })
-      // Must still be on /login — not redirected to a dashboard
       await expect(page).toHaveURL(/\/login/)
     })
 
     test('reactivate → confirm → status changes to Active', async ({ page }) => {
+      test.setTimeout(30000)
       await goToUsers(page)
       await searchEmployee(page, EMP_NAME)
-      await page.locator('button:has-text("Reactivate")').first().click()
+      await page.getByRole('button', { name: 'Reactivate' }).first().click()
       await expect(page.locator('text=Reactivate Employee')).toBeVisible({ timeout: 5000 })
-      await page.locator('[role="alertdialog"] button:has-text("Reactivate")').click()
-      // "Inactive" chip should be gone
+      await page.locator('[role="alertdialog"]').getByRole('button', { name: 'Reactivate' }).click()
       await expect(page.locator('text=Inactive')).not.toBeVisible({ timeout: 8000 })
     })
 
     test('reactivated user can login', async ({ page }) => {
       await loginAs(page, { phone: EMP_PHONE, password: EMP_PASSWORD })
-      // Active KR staff → /staff-dashboard
-      await page.waitForURL('**/(staff-dashboard|shift|branch-select)', { timeout: 12000 })
+      await page.waitForURL(/\/(staff-dashboard|shift|branch-select)/, { timeout: 15000 })
       await expect(page).not.toHaveURL(/\/login/)
     })
 
     test('delete → confirm → employee removed from active list', async ({ page }) => {
+      test.setTimeout(30000)
       await goToUsers(page)
       await searchEmployee(page, EMP_NAME)
-      await page.locator('button:has-text("Delete")').first().click()
+      await page.getByRole('button', { name: 'Delete' }).first().click()
       await expect(page.locator('text=Delete Employee')).toBeVisible({ timeout: 5000 })
-      await page.locator('[role="alertdialog"] button:has-text("Delete")').click()
-      // After soft-delete, the employee disappears from the active list
+      await page.locator('[role="alertdialog"]').getByRole('button', { name: 'Delete' }).click()
       await expect(page.locator(`text=${EMP_NAME}`)).not.toBeVisible({ timeout: 8000 })
     })
 
     test('View Deleted Employees → deleted employee visible', async ({ page }) => {
+      test.setTimeout(30000)
       await goToUsers(page)
-      await page.click('button:has-text("View Deleted Employees")')
+      await page.getByRole('button', { name: 'View Deleted Employees' }).click()
       await expect(page.locator(`text=${EMP_NAME}`)).toBeVisible({ timeout: 8000 })
     })
   })

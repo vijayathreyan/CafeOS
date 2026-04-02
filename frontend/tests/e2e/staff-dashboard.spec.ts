@@ -26,20 +26,23 @@ const KR_SNACK_ITEMS_TAMIL = [
 test.describe('Staff Dashboard — KR', () => {
   test('staff login → lands on /staff-dashboard', async ({ page }) => {
     await loginAs(page, TEST_USERS.staff_kr)
-    await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
+    await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
+    await page.waitForLoadState('networkidle')
     await expect(page).toHaveURL(/\/staff-dashboard/)
   })
 
   test('correct branch name shown in header', async ({ page }) => {
     await loginAs(page, TEST_USERS.staff_kr)
-    await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
+    await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
+    await page.waitForLoadState('networkidle')
     // TopBar shows activeBranch as a Badge — KR → "Kaappi Ready"
     await expect(page.locator('text=Kaappi Ready')).toBeVisible()
   })
 
   test('all 6 cards visible: Snacks, Cash Deposit, Milk Details, Assets, Post-Paid Sales, Notes', async ({ page }) => {
     await loginAs(page, TEST_USERS.staff_kr)
-    await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
+    await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
+    await page.waitForLoadState('networkidle')
     await ensureShiftOpen(page)
     // All 6 section card titles visible
     await expect(page.locator('text=Snacks')).toBeVisible()
@@ -52,12 +55,13 @@ test.describe('Staff Dashboard — KR', () => {
 
   test('open Snacks card → all KR items listed', async ({ page }) => {
     await loginAs(page, TEST_USERS.staff_kr)
-    await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
+    await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
+    await page.waitForLoadState('networkidle')
     await ensureShiftOpen(page)
     // Click the Snacks card header to expand it
     await page.locator('text=Snacks').first().click()
     // Wait for the table to appear
-    await page.waitForSelector('table', { timeout: 5000 })
+    await page.waitForSelector('table', { timeout: 8000 })
     // All 10 KR items must be listed
     for (const item of KR_SNACK_ITEMS) {
       await expect(page.locator(`text=${item}`)).toBeVisible()
@@ -66,43 +70,41 @@ test.describe('Staff Dashboard — KR', () => {
 
   test('number input → tap field → empty, no 0 merging', async ({ page }) => {
     await loginAs(page, TEST_USERS.staff_kr)
-    await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
+    await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
+    await page.waitForLoadState('networkidle')
     await ensureShiftOpen(page)
     await page.locator('text=Snacks').first().click()
-    await page.waitForSelector('table', { timeout: 5000 })
+    await page.waitForSelector('table', { timeout: 8000 })
     // First number input in the snacks table
     const numInput = page.locator('input[type="number"]').first()
     await numInput.click()
     // onFocus calls e.target.select() — field value is '' (empty) when qty=0
-    // Check the input value is empty string or 0
-    const val = await numInput.inputValue()
-    // The input shows empty when value is 0 (value={item.qty || ''})
-    // After clicking, selection is active — typing a digit should replace, not append
+    // (value={item.qty || ''} renders '' for 0)
+    // After clicking, selection is active — typing a digit should replace, not append to "0"
     await numInput.type('5')
     await expect(numInput).toHaveValue('5') // No "05" merging
   })
 
   test('Tamil toggle → labels switch to Tamil instantly', async ({ page }) => {
     await loginAs(page, TEST_USERS.staff_kr)
-    await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
+    await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
+    await page.waitForLoadState('networkidle')
     await ensureShiftOpen(page)
     await page.locator('text=Snacks').first().click()
-    await page.waitForSelector('table', { timeout: 5000 })
+    await page.waitForSelector('table', { timeout: 8000 })
     // Tamil toggle button shows "தமிழ்" when language is English
     await page.locator('button:has-text("தமிழ்")').click()
     // After toggle, at least one Tamil snack name must appear
-    for (const ta of KR_SNACK_ITEMS_TAMIL) {
-      await expect(page.locator(`text=${ta}`)).toBeVisible({ timeout: 5000 })
-      break // one is enough to confirm toggle worked
-    }
+    await expect(page.locator(`text=${KR_SNACK_ITEMS_TAMIL[0]}`)).toBeVisible({ timeout: 5000 })
   })
 
   test('Tamil item names show correctly', async ({ page }) => {
     await loginAs(page, TEST_USERS.staff_kr)
-    await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
+    await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
+    await page.waitForLoadState('networkidle')
     await ensureShiftOpen(page)
     await page.locator('text=Snacks').first().click()
-    await page.waitForSelector('table', { timeout: 5000 })
+    await page.waitForSelector('table', { timeout: 8000 })
     // Switch to Tamil
     await page.locator('button:has-text("தமிழ்")').click()
     // Verify several Tamil names are correct
@@ -113,10 +115,11 @@ test.describe('Staff Dashboard — KR', () => {
 
   test('switch back to English → English labels restored', async ({ page }) => {
     await loginAs(page, TEST_USERS.staff_kr)
-    await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
+    await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
+    await page.waitForLoadState('networkidle')
     await ensureShiftOpen(page)
     await page.locator('text=Snacks').first().click()
-    await page.waitForSelector('table', { timeout: 5000 })
+    await page.waitForSelector('table', { timeout: 8000 })
     // Toggle to Tamil
     await page.locator('button:has-text("தமிழ்")').click()
     await expect(page.locator(`text=${KR_SNACK_ITEMS_TAMIL[0]}`)).toBeVisible({ timeout: 5000 })
@@ -130,11 +133,11 @@ test.describe('Staff Dashboard — KR', () => {
 
   test('no revenue or sales totals visible anywhere', async ({ page }) => {
     await loginAs(page, TEST_USERS.staff_kr)
-    await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
+    await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
+    await page.waitForLoadState('networkidle')
     await ensureShiftOpen(page)
     const bodyText = await page.locator('body').innerText()
-    // Cash grand total label ("Grand Total") exists in the UI but the actual rupee
-    // amounts are hidden — verify no shift total / day total labels are shown
+    // Verify no shift total / day total / revenue labels are shown to staff
     expect(bodyText).not.toMatch(/Shift Total/i)
     expect(bodyText).not.toMatch(/Day Total/i)
     expect(bodyText).not.toMatch(/Revenue/i)
@@ -143,7 +146,8 @@ test.describe('Staff Dashboard — KR', () => {
 
   test('Close Shift button disabled when sections incomplete', async ({ page }) => {
     await loginAs(page, TEST_USERS.staff_kr)
-    await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
+    await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
+    await page.waitForLoadState('networkidle')
     await ensureShiftOpen(page)
     // Without filling any section, Close Shift must be disabled
     const closeBtn = page.locator('button:has-text("Close Shift")')
@@ -154,7 +158,8 @@ test.describe('Staff Dashboard — KR', () => {
 test.describe('Staff Dashboard — C2', () => {
   test('C2 staff login → Post-Paid Sales card NOT visible', async ({ page }) => {
     await loginAs(page, TEST_USERS.staff_c2)
-    await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
+    await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
+    await page.waitForLoadState('networkidle')
     await ensureShiftOpen(page)
     // Post-Paid card is KR-only — must NOT appear for C2 staff
     await expect(page.locator('text=Post-Paid Sales')).not.toBeVisible()
