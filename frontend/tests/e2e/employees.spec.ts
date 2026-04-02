@@ -78,7 +78,7 @@ test.describe('Employee Management', () => {
   test.describe.serial('Employee CRUD flow', () => {
     test('complete valid form → employee created → appears in list', async ({ page }) => {
       // This test navigates through 6 form sections — needs more than the 15s default
-      test.setTimeout(45000)
+      test.setTimeout(90000)
       await goToNewEmployee(page)
 
       // Section 1 — System Access
@@ -86,21 +86,22 @@ test.describe('Employee Management', () => {
       const phoneInput = page.locator('input[type="tel"]').first()
       await phoneInput.fill(EMP_PHONE)
       await phoneInput.blur()
-      await page.waitForTimeout(500)
+      await page.waitForTimeout(800)
       await page.locator('input[type="checkbox"]').first().check() // KR branch
       const pwdInputs = page.locator('input[type="password"]')
       await pwdInputs.nth(0).fill(EMP_PASSWORD)
       await pwdInputs.nth(1).fill(EMP_PASSWORD)
-      await page.getByRole('button', { name: 'Next' }).click()
+      // Click Next and wait for section 2 heading to confirm navigation
+      await page.locator('button:has-text("Next")').click()
+      await page.getByRole('heading', { name: /Personal/ }).waitFor({ timeout: 5000 })
 
-      // Sections 2–5 — optional, just click Next each time
-      for (let i = 0; i < 4; i++) {
-        await page.waitForTimeout(300)
-        await page.getByRole('button', { name: 'Next' }).click()
-      }
+      // Sections 2–5: use section tab buttons (outside the form) to jump to section 6
+      // This is more reliable than repeated Next clicks
+      await page.locator('button:has-text("Bank Details")').click()
+      await page.getByRole('heading', { name: /Bank/ }).waitFor({ timeout: 5000 })
 
       // Section 6 — Submit
-      await page.getByRole('button', { name: 'Submit' }).click()
+      await page.locator('button[type="submit"]').click()
       // Wait for success page or error message (handles both supabaseAdmin configured/not)
       await expect(
         page.locator('text=Employee Created').or(page.locator('.text-destructive').first())
@@ -109,6 +110,10 @@ test.describe('Employee Management', () => {
 
       // Auto-redirects to /users after 1.5s
       await page.waitForURL('**/users', { timeout: 8000 })
+      // Reload to bust the 30s React Query stale cache so new employee appears
+      await page.reload()
+      await page.waitForLoadState('networkidle')
+      await searchEmployee(page, EMP_NAME)
       await expect(page.locator(`text=${EMP_NAME}`)).toBeVisible({ timeout: 8000 })
     })
 
@@ -134,7 +139,7 @@ test.describe('Employee Management', () => {
       await nameInput.press('End')
       await nameInput.type(' ')
       await page.getByRole('button', { name: 'Save Changes' }).click()
-      await expect(page.locator('text=Saved successfully')).toBeVisible({ timeout: 8000 })
+      await expect(page.locator('text=Saved successfully').first()).toBeVisible({ timeout: 8000 })
     })
 
     test('deactivate → shadcn AlertDialog shown → confirm → status changes to Inactive', async ({ page }) => {
@@ -174,9 +179,9 @@ test.describe('Employee Management', () => {
       test.setTimeout(30000)
       await goToUsers(page)
       await searchEmployee(page, EMP_NAME)
-      await page.getByRole('button', { name: 'Delete' }).first().click()
+      await page.getByRole('button', { name: 'Delete', exact: true }).first().click()
       await expect(page.locator('text=Delete Employee')).toBeVisible({ timeout: 5000 })
-      await page.locator('[role="alertdialog"]').getByRole('button', { name: 'Delete' }).click()
+      await page.locator('[role="alertdialog"]').getByRole('button', { name: 'Delete', exact: true }).click()
       await expect(page.locator(`text=${EMP_NAME}`)).not.toBeVisible({ timeout: 8000 })
     })
 

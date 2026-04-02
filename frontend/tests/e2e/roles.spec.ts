@@ -45,7 +45,7 @@ test.describe('Role-Based Access', () => {
     await expect(page.locator('text=Snacks')).toBeVisible()
     await expect(page.locator('text=Post-Paid Sales')).toBeVisible()
     // Branch shown in header is Kaappi Ready
-    await expect(page.locator('text=Kaappi Ready')).toBeVisible()
+    await expect(page.locator('text=Kaappi Ready').first()).toBeVisible()
   })
 
   test('C2 staff → sees C2 shift dashboard, no Post-Paid card', async ({ page }) => {
@@ -55,7 +55,7 @@ test.describe('Role-Based Access', () => {
     await page.waitForTimeout(2000)
     await ensureShiftOpen(page)
     // C2 branch shown in header
-    await expect(page.locator('text=Coffee Mate C2')).toBeVisible()
+    await expect(page.locator('text=Coffee Mate C2').first()).toBeVisible()
     // Post-Paid Sales card must NOT appear for C2
     await expect(page.locator('text=Post-Paid Sales')).not.toBeVisible()
   })

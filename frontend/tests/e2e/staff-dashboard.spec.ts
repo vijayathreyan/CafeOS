@@ -36,7 +36,7 @@ test.describe('Staff Dashboard — KR', () => {
     await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
     await page.waitForLoadState('networkidle')
     // TopBar shows activeBranch as a Badge — KR → "Kaappi Ready"
-    await expect(page.locator('text=Kaappi Ready')).toBeVisible()
+    await expect(page.locator('text=Kaappi Ready').first()).toBeVisible()
   })
 
   test('all 6 cards visible: Snacks, Cash Deposit, Milk Details, Assets, Post-Paid Sales, Notes', async ({ page }) => {
