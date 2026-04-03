@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 
 interface Task {
   id: string
@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { ChevronDown, Banknote, ClipboardList } from 'lucide-react'
+import { ChevronDown, Banknote, ClipboardList, Camera } from 'lucide-react'
 import StatusChip from '../../components/StatusChip'
 
 export default function SupervisorDashboard() {
@@ -71,17 +71,31 @@ export default function SupervisorDashboard() {
   const [expBranch, setExpBranch] = useState<'KR' | 'C2'>('KR')
   const [expAmount, setExpAmount] = useState('')
   const [expDate, setExpDate] = useState(today)
+  const [expPhoto, setExpPhoto] = useState<File | null>(null)
+  const [expPhotoPreview, setExpPhotoPreview] = useState<string | null>(null)
+  const expPhotoRef = useRef<HTMLInputElement>(null)
   const [expMsg, setExpMsg] = useState<{ text: string; isError: boolean } | null>(null)
 
   const expMutation = useMutation(
     async () => {
       if (!expShop) throw new Error('Select a shop')
       if (!expAmount || parseFloat(expAmount) <= 0) throw new Error('Enter a valid amount')
+      if (!expPhoto) throw new Error('Bill photo is required')
+
+      // Upload photo to private bill-photos bucket
+      const ext = expPhoto.name.split('.').pop() ?? 'jpg'
+      const path = `${user?.id}/${Date.now()}.${ext}`
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('bill-photos')
+        .upload(path, expPhoto, { contentType: expPhoto.type, upsert: false })
+      if (uploadError) throw new Error(`Photo upload failed: ${uploadError.message}`)
+
       const { error } = await supabase.from('supervisor_expenses').insert({
         expense_date: expDate,
         shop_name: expShop,
         branch: expBranch,
         amount: parseFloat(expAmount),
+        bill_photo_url: uploadData.path,
         submitted_by: user?.id,
         float_used: true,
       })
@@ -92,6 +106,9 @@ export default function SupervisorDashboard() {
         setExpShop('')
         setExpAmount('')
         setExpDate(today)
+        setExpPhoto(null)
+        setExpPhotoPreview(null)
+        if (expPhotoRef.current) expPhotoRef.current.value = ''
         setExpMsg({ text: 'Expense recorded', isError: false })
         setTimeout(() => setExpMsg(null), 3000)
       },
@@ -228,6 +245,37 @@ export default function SupervisorDashboard() {
               <Label>Date *</Label>
               <Input type="date" value={expDate} onChange={(e) => setExpDate(e.target.value)} />
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Bill Photo *</Label>
+            <input
+              ref={expPhotoRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null
+                setExpPhoto(file)
+                if (expPhotoPreview) URL.revokeObjectURL(expPhotoPreview)
+                setExpPhotoPreview(file ? URL.createObjectURL(file) : null)
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => expPhotoRef.current?.click()}
+              className="flex items-center gap-2 h-10 w-full rounded-md border border-dashed border-input bg-background px-3 py-2 text-sm text-muted-foreground hover:bg-accent/50 transition-colors"
+            >
+              <Camera className="w-4 h-4 flex-shrink-0" />
+              {expPhoto ? expPhoto.name : 'Tap to take photo or choose from gallery'}
+            </button>
+            {expPhotoPreview && (
+              <img
+                src={expPhotoPreview}
+                alt="Bill preview"
+                className="mt-1.5 h-24 w-auto rounded-md border border-border object-cover"
+              />
+            )}
           </div>
           {expMsg && (
             <p className={`text-sm ${expMsg.isError ? 'text-destructive' : 'text-green-600'}`}>

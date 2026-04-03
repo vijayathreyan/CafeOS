@@ -18,6 +18,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/00_init.sql:ro
       - ./supabase/migrations/001_complete_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./supabase/migrations/004_bill_photos_bucket.sql:/docker-entrypoint-initdb.d/04_bill_photos_bucket.sql:ro
     networks:
       - cafeos_net
     healthcheck:
