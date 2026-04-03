@@ -17,11 +17,7 @@ const KR_SNACK_ITEMS = [
 ]
 
 // Tamil names for select KR items (from SnacksCard.tsx)
-const KR_SNACK_ITEMS_TAMIL = [
-  'மேது வடை',
-  'வெங்காய சமோசா',
-  'பஜ்ஜி',
-]
+const KR_SNACK_ITEMS_TAMIL = ['மேது வடை', 'வெங்காய சமோசா', 'பஜ்ஜி']
 
 test.describe('Staff Dashboard — KR', () => {
   test('staff login → lands on /staff-dashboard', async ({ page }) => {
@@ -39,7 +35,9 @@ test.describe('Staff Dashboard — KR', () => {
     await expect(page.locator('text=Kaappi Ready').first()).toBeVisible()
   })
 
-  test('all 6 cards visible: Snacks, Cash Deposit, Milk Details, Assets, Post-Paid Sales, Notes', async ({ page }) => {
+  test('all 6 cards visible: Snacks, Cash Deposit, Milk Details, Assets, Post-Paid Sales, Notes', async ({
+    page,
+  }) => {
     await loginAs(page, TEST_USERS.staff_kr)
     await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
     await page.waitForLoadState('networkidle')

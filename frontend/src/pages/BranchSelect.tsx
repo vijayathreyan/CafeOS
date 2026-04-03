@@ -26,7 +26,7 @@ export default function BranchSelect() {
           <CardDescription>Welcome, {user.full_name}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {user.branch_access.map(branch => (
+          {user.branch_access.map((branch) => (
             <Button
               key={branch}
               onClick={() => handleSelect(branch)}

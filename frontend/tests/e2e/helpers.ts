@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test'
+import { Page, expect } from '@playwright/test'
 
 /** Navigate to /login, wait for form, fill credentials, submit. Does NOT wait for redirect. */
 export async function loginAs(page: Page, user: { phone: string; password: string }) {
@@ -16,8 +16,8 @@ export async function searchEmployee(page: Page, name: string) {
   const searchInput = page.locator('input[placeholder*="Search"]')
   await searchInput.clear()
   await searchInput.fill(name)
-  // Small wait for the filter to apply
-  await page.waitForTimeout(400)
+  // React re-renders the filtered list synchronously; wait for the input value to settle
+  await expect(searchInput).toHaveValue(name)
 }
 
 /** Navigate to /shift and ensure a shift is open.

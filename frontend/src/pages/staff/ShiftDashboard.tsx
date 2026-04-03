@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { saveDraft, loadDraft, enqueue, flushQueue } from '../../lib/offlineQueue'
+import { loadDraft, flushQueue } from '../../lib/offlineQueue'
 import { Coffee, CheckCircle2, ChevronDown, Clock, Circle } from 'lucide-react'
 import SnacksCard from './cards/SnacksCard'
 import CashCard from './cards/CashCard'
@@ -43,7 +43,12 @@ export default function ShiftDashboard() {
   const [draftSaved, setDraftSaved] = useState(false)
   const [showCloseModal, setShowCloseModal] = useState(false)
   const [sectionStatus, setSectionStatus] = useState<SectionStatus>({
-    snacks: false, cash: false, milk: false, assets: false, postpaid: false, notes: true
+    snacks: false,
+    cash: false,
+    milk: false,
+    assets: false,
+    postpaid: false,
+    notes: true,
   })
 
   const today = new Date().toISOString().split('T')[0]
@@ -70,14 +75,18 @@ export default function ShiftDashboard() {
   const createEntryMutation = useMutation(
     async () => {
       if (!branch || !user) return null
-      const { data, error } = await supabase.from('daily_entries').insert({
-        branch,
-        entry_date: today,
-        shift_number: 1,
-        staff_id: user.id,
-        staff_name: user.full_name,
-        opened_at: new Date().toISOString(),
-      }).select().single()
+      const { data, error } = await supabase
+        .from('daily_entries')
+        .insert({
+          branch,
+          entry_date: today,
+          shift_number: 1,
+          staff_id: user.id,
+          staff_name: user.full_name,
+          opened_at: new Date().toISOString(),
+        })
+        .select()
+        .single()
       if (error) throw error
       return data as DailyEntry
     },
@@ -99,14 +108,16 @@ export default function ShiftDashboard() {
 
   // Online sync listener
   useEffect(() => {
-    const cleanup = flushQueue().then(() => {})
-    const handler = async () => { await flushQueue() }
+    flushQueue().catch(() => {})
+    const handler = async () => {
+      await flushQueue()
+    }
     window.addEventListener('online', handler)
     return () => window.removeEventListener('online', handler)
   }, [])
 
   const markSectionDone = useCallback((section: keyof SectionStatus, done: boolean) => {
-    setSectionStatus(prev => ({ ...prev, [section]: done }))
+    setSectionStatus((prev) => ({ ...prev, [section]: done }))
   }, [])
 
   const allRequiredDone =
@@ -135,8 +146,12 @@ export default function ShiftDashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <div className="card p-8 text-center max-w-sm">
-          <div className="flex justify-center mb-4"><Coffee className="w-12 h-12 text-muted-foreground" /></div>
-          <h2 className="text-xl font-semibold text-text-primary mb-2">{t('shift.noActiveShift')}</h2>
+          <div className="flex justify-center mb-4">
+            <Coffee className="w-12 h-12 text-muted-foreground" />
+          </div>
+          <h2 className="text-xl font-semibold text-text-primary mb-2">
+            {t('shift.noActiveShift')}
+          </h2>
           <p className="text-text-secondary text-sm mb-6">
             {branch ? t(`branch.${branch}`) : ''} · {today}
           </p>
@@ -156,7 +171,9 @@ export default function ShiftDashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <div className="card p-8 text-center max-w-sm">
-          <div className="flex justify-center mb-4"><CheckCircle2 className="w-12 h-12 text-green-600" /></div>
+          <div className="flex justify-center mb-4">
+            <CheckCircle2 className="w-12 h-12 text-green-600" />
+          </div>
           <h2 className="text-xl font-semibold text-text-primary mb-2">Shift Closed</h2>
           <p className="text-text-secondary text-sm">
             {t('shift.closedAt')} {activeEntry.is_closed ? 'today' : ''}
@@ -198,7 +215,7 @@ export default function ShiftDashboard() {
           <SnacksCard
             dailyEntryId={activeEntry.id}
             branch={branch!}
-            onDone={done => markSectionDone('snacks', done)}
+            onDone={(done) => markSectionDone('snacks', done)}
           />
         </SectionCard>
 
@@ -213,7 +230,7 @@ export default function ShiftDashboard() {
         >
           <CashCard
             dailyEntryId={activeEntry.id}
-            onDone={done => markSectionDone('cash', done)}
+            onDone={(done) => markSectionDone('cash', done)}
           />
         </SectionCard>
 
@@ -228,7 +245,7 @@ export default function ShiftDashboard() {
         >
           <MilkCard
             dailyEntryId={activeEntry.id}
-            onDone={done => markSectionDone('milk', done)}
+            onDone={(done) => markSectionDone('milk', done)}
           />
         </SectionCard>
 
@@ -243,7 +260,7 @@ export default function ShiftDashboard() {
         >
           <AssetsCard
             dailyEntryId={activeEntry.id}
-            onDone={done => markSectionDone('assets', done)}
+            onDone={(done) => markSectionDone('assets', done)}
           />
         </SectionCard>
 
@@ -259,7 +276,7 @@ export default function ShiftDashboard() {
           >
             <PostPaidCard
               dailyEntryId={activeEntry.id}
-              onDone={done => markSectionDone('postpaid', done)}
+              onDone={(done) => markSectionDone('postpaid', done)}
             />
           </SectionCard>
         )}
@@ -273,9 +290,7 @@ export default function ShiftDashboard() {
           onToggle={() => setExpandedCard(expandedCard === 'notes' ? null : 'notes')}
           optional
         >
-          <NotesCard
-            dailyEntryId={activeEntry.id}
-          />
+          <NotesCard dailyEntryId={activeEntry.id} />
         </SectionCard>
       </div>
 
@@ -283,9 +298,7 @@ export default function ShiftDashboard() {
       <div className="mt-6 pb-8">
         <button
           className={`w-full py-4 rounded-lg text-lg font-semibold transition-all ${
-            allRequiredDone
-              ? 'btn-primary'
-              : 'bg-gray-100 text-text-secondary cursor-not-allowed'
+            allRequiredDone ? 'btn-primary' : 'bg-gray-100 text-text-secondary cursor-not-allowed'
           }`}
           disabled={!allRequiredDone}
           onClick={() => setShowCloseModal(true)}
@@ -326,7 +339,7 @@ interface SectionCardProps {
   children: React.ReactNode
 }
 
-function SectionCard({ title, done, expanded, onToggle, required, optional, children }: SectionCardProps) {
+function SectionCard({ title, done, expanded, onToggle, optional, children }: SectionCardProps) {
   const { t } = useTranslation()
   return (
     <div className="card overflow-hidden">
@@ -336,7 +349,9 @@ function SectionCard({ title, done, expanded, onToggle, required, optional, chil
       >
         <div className="flex items-center gap-3">
           <span className="font-medium text-text-primary">{title}</span>
-          {optional && <span className="text-xs text-text-secondary">({t('common.optional')})</span>}
+          {optional && (
+            <span className="text-xs text-text-secondary">({t('common.optional')})</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {done ? (
@@ -355,15 +370,13 @@ function SectionCard({ title, done, expanded, onToggle, required, optional, chil
               <span className="text-sm font-medium">{t('shift.status.pending')}</span>
             </span>
           )}
-          <ChevronDown className={`w-5 h-5 text-text-secondary transition-transform ${expanded ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`w-5 h-5 text-text-secondary transition-transform ${expanded ? 'rotate-180' : ''}`}
+          />
         </div>
       </button>
 
-      {expanded && (
-        <div className="border-t border-border">
-          {children}
-        </div>
-      )}
+      {expanded && <div className="border-t border-border">{children}</div>}
     </div>
   )
 }

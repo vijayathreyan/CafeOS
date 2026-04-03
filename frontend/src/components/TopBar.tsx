@@ -6,7 +6,6 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LanguageContext'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 
 export default function TopBar() {
@@ -54,20 +53,21 @@ export default function TopBar() {
       {/* Bug 2/3: Owner desktop nav */}
       {user?.role === 'owner' && (
         <nav className="hidden sm:flex items-center gap-1">
-          <NavLink to="/" end className={ownerNavClass}>{t('nav.dashboard')}</NavLink>
-          <NavLink to="/users" className={ownerNavClass}>{t('employees.title')}</NavLink>
-          <NavLink to="/tasks" className={ownerNavClass}>{t('nav.tasks')}</NavLink>
+          <NavLink to="/" end className={ownerNavClass}>
+            {t('nav.dashboard')}
+          </NavLink>
+          <NavLink to="/users" className={ownerNavClass}>
+            {t('employees.title')}
+          </NavLink>
+          <NavLink to="/tasks" className={ownerNavClass}>
+            {t('nav.tasks')}
+          </NavLink>
         </nav>
       )}
 
       <div className="flex items-center gap-2">
         {user?.role !== 'owner' && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleLang}
-            aria-label="Toggle language"
-          >
+          <Button variant="outline" size="sm" onClick={toggleLang} aria-label="Toggle language">
             {lang === 'en' ? 'தமிழ்' : 'EN'}
           </Button>
         )}

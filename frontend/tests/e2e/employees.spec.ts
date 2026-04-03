@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { TEST_USERS } from './test-data'
 import { loginAs, searchEmployee } from './helpers'
 
@@ -7,7 +7,7 @@ const EMP_NAME = `E2E Staff ${Date.now()}`
 const EMP_PHONE = `980${Date.now().toString().slice(-7)}`
 const EMP_PASSWORD = 'Test@1234'
 
-async function goToUsers(page: any) {
+async function goToUsers(page: Page) {
   await loginAs(page, TEST_USERS.owner)
   await page.waitForURL('**/dashboard', { timeout: 12000 })
   await page.goto('/users')
@@ -15,7 +15,7 @@ async function goToUsers(page: any) {
   await page.waitForSelector('h1:has-text("Employees")', { timeout: 8000 })
 }
 
-async function goToNewEmployee(page: any) {
+async function goToNewEmployee(page: Page) {
   await goToUsers(page)
   await page.getByRole('button', { name: /Add Employee/ }).click()
   await page.waitForURL('**/users/new', { timeout: 8000 })
@@ -54,9 +54,9 @@ test.describe('Employee Management', () => {
     const phoneInput = page.locator('input[type="tel"]').first()
     await phoneInput.fill(TEST_USERS.owner.phone)
     await phoneInput.blur()
-    await expect(
-      page.locator('text=This phone number is already registered')
-    ).toBeVisible({ timeout: 8000 })
+    await expect(page.locator('text=This phone number is already registered')).toBeVisible({
+      timeout: 8000,
+    })
   })
 
   test('mismatched passwords → error shown', async ({ page }) => {
@@ -65,7 +65,7 @@ test.describe('Employee Management', () => {
     const phoneInput = page.locator('input[type="tel"]').first()
     await phoneInput.fill('9800100099')
     await phoneInput.blur()
-    await page.waitForTimeout(500)
+    await page.waitForResponse('**/rest/v1/**', { timeout: 10000 }).catch(() => null)
     await page.locator('input[type="checkbox"]').first().check()
     const pwdInputs = page.locator('input[type="password"]')
     await pwdInputs.nth(0).fill('Test@1234')
@@ -86,7 +86,7 @@ test.describe('Employee Management', () => {
       const phoneInput = page.locator('input[type="tel"]').first()
       await phoneInput.fill(EMP_PHONE)
       await phoneInput.blur()
-      await page.waitForTimeout(800)
+      await page.waitForResponse('**/rest/v1/**', { timeout: 10000 }).catch(() => null)
       await page.locator('input[type="checkbox"]').first().check() // KR branch
       const pwdInputs = page.locator('input[type="password"]')
       await pwdInputs.nth(0).fill(EMP_PASSWORD)
@@ -142,7 +142,9 @@ test.describe('Employee Management', () => {
       await expect(page.locator('text=Saved successfully').first()).toBeVisible({ timeout: 8000 })
     })
 
-    test('deactivate → shadcn AlertDialog shown → confirm → status changes to Inactive', async ({ page }) => {
+    test('deactivate → shadcn AlertDialog shown → confirm → status changes to Inactive', async ({
+      page,
+    }) => {
       test.setTimeout(30000)
       await goToUsers(page)
       await searchEmployee(page, EMP_NAME)
@@ -181,7 +183,10 @@ test.describe('Employee Management', () => {
       await searchEmployee(page, EMP_NAME)
       await page.getByRole('button', { name: 'Delete', exact: true }).first().click()
       await expect(page.locator('text=Delete Employee')).toBeVisible({ timeout: 5000 })
-      await page.locator('[role="alertdialog"]').getByRole('button', { name: 'Delete', exact: true }).click()
+      await page
+        .locator('[role="alertdialog"]')
+        .getByRole('button', { name: 'Delete', exact: true })
+        .click()
       await expect(page.locator(`text=${EMP_NAME}`)).not.toBeVisible({ timeout: 8000 })
     })
 

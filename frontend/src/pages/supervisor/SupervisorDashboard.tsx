@@ -1,14 +1,23 @@
 import React, { useState } from 'react'
+
+interface Task {
+  id: string
+  title: string
+  description?: string | null
+  status: string
+  due_date?: string | null
+  branch?: string | null
+  assigned_by_emp?: { full_name: string } | null
+}
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from 'react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ChevronDown, Banknote, ClipboardList } from 'lucide-react'
 import StatusChip from '../../components/StatusChip'
@@ -19,7 +28,7 @@ export default function SupervisorDashboard() {
   const navigate = useNavigate()
   const today = new Date().toISOString().split('T')[0]
   const [activeSection, setActiveSection] = useState<string | null>(null)
-  const toggle = (s: string) => setActiveSection(prev => prev === s ? null : s)
+  const toggle = (s: string) => setActiveSection((prev) => (prev === s ? null : s))
 
   const handleEnterShift = (branch: 'KR' | 'C2') => {
     setActiveBranch(branch)
@@ -34,20 +43,28 @@ export default function SupervisorDashboard() {
 
   // ── Expense shops dropdown ──
   const { data: shops = [] } = useQuery('expense_shops', async () => {
-    const { data } = await supabase.from('supervisor_expense_shops').select('*').eq('active', true).order('shop_name')
+    const { data } = await supabase
+      .from('supervisor_expense_shops')
+      .select('*')
+      .eq('active', true)
+      .order('shop_name')
     return (data || []) as { id: string; shop_name: string }[]
   })
 
   // ── Tasks assigned to this supervisor ──
-  const { data: tasks = [] } = useQuery(['sup_tasks', user?.id], async () => {
-    if (!user) return []
-    const { data } = await supabase
-      .from('tasks')
-      .select('*, assigned_by_emp:assigned_by(full_name)')
-      .eq('assigned_to', user.id)
-      .order('due_date', { ascending: true })
-    return data || []
-  }, { enabled: !!user })
+  const { data: tasks = [] } = useQuery(
+    ['sup_tasks', user?.id],
+    async () => {
+      if (!user) return []
+      const { data } = await supabase
+        .from('tasks')
+        .select('*, assigned_by_emp:assigned_by(full_name)')
+        .eq('assigned_to', user.id)
+        .order('due_date', { ascending: true })
+      return data || []
+    },
+    { enabled: !!user }
+  )
 
   // ── Expense form ──
   const [expShop, setExpShop] = useState('')
@@ -56,26 +73,32 @@ export default function SupervisorDashboard() {
   const [expDate, setExpDate] = useState(today)
   const [expMsg, setExpMsg] = useState<{ text: string; isError: boolean } | null>(null)
 
-  const expMutation = useMutation(async () => {
-    if (!expShop) throw new Error('Select a shop')
-    if (!expAmount || parseFloat(expAmount) <= 0) throw new Error('Enter a valid amount')
-    const { error } = await supabase.from('supervisor_expenses').insert({
-      expense_date: expDate,
-      shop_name: expShop,
-      branch: expBranch,
-      amount: parseFloat(expAmount),
-      submitted_by: user?.id,
-      float_used: true,
-    })
-    if (error) throw new Error(error.message)
-  }, {
-    onSuccess: () => {
-      setExpShop(''); setExpAmount(''); setExpDate(today)
-      setExpMsg({ text: 'Expense recorded', isError: false })
-      setTimeout(() => setExpMsg(null), 3000)
+  const expMutation = useMutation(
+    async () => {
+      if (!expShop) throw new Error('Select a shop')
+      if (!expAmount || parseFloat(expAmount) <= 0) throw new Error('Enter a valid amount')
+      const { error } = await supabase.from('supervisor_expenses').insert({
+        expense_date: expDate,
+        shop_name: expShop,
+        branch: expBranch,
+        amount: parseFloat(expAmount),
+        submitted_by: user?.id,
+        float_used: true,
+      })
+      if (error) throw new Error(error.message)
     },
-    onError: (e: any) => setExpMsg({ text: e.message, isError: true }),
-  })
+    {
+      onSuccess: () => {
+        setExpShop('')
+        setExpAmount('')
+        setExpDate(today)
+        setExpMsg({ text: 'Expense recorded', isError: false })
+        setTimeout(() => setExpMsg(null), 3000)
+      },
+      onError: (e: unknown) =>
+        setExpMsg({ text: e instanceof Error ? e.message : 'Failed', isError: true }),
+    }
+  )
 
   // ── Cash Deposit form ──
   const [depDate, setDepDate] = useState(today)
@@ -84,32 +107,39 @@ export default function SupervisorDashboard() {
   const [depRows, setDepRows] = useState([{ branch: 'KR', amount: '' }])
   const [depMsg, setDepMsg] = useState<{ text: string; isError: boolean } | null>(null)
 
-  const addDepRow = () => setDepRows(r => [...r, { branch: 'KR', amount: '' }])
-  const removeDepRow = (i: number) => setDepRows(r => r.filter((_, idx) => idx !== i))
+  const addDepRow = () => setDepRows((r) => [...r, { branch: 'KR', amount: '' }])
+  const removeDepRow = (i: number) => setDepRows((r) => r.filter((_, idx) => idx !== i))
   const updateDepRow = (i: number, field: string, val: string) =>
-    setDepRows(r => r.map((row, idx) => idx === i ? { ...row, [field]: val } : row))
+    setDepRows((r) => r.map((row, idx) => (idx === i ? { ...row, [field]: val } : row)))
 
-  const depMutation = useMutation(async () => {
-    const validRows = depRows.filter(r => r.amount && parseFloat(r.amount) > 0)
-    if (validRows.length === 0) throw new Error('Add at least one row with an amount')
-    const totalAmount = validRows.reduce((sum, r) => sum + parseFloat(r.amount), 0)
-    const { error } = await supabase.from('cash_deposits').insert({
-      deposit_date: depDate,
-      bank_ref: depBankRef || null,
-      notes: depNotes || null,
-      rows: validRows.map(r => ({ branch: r.branch, amount: parseFloat(r.amount) })),
-      total_amount: totalAmount,
-      submitted_by: user?.id,
-    })
-    if (error) throw new Error(error.message)
-  }, {
-    onSuccess: () => {
-      setDepDate(today); setDepBankRef(''); setDepNotes(''); setDepRows([{ branch: 'KR', amount: '' }])
-      setDepMsg({ text: 'Cash deposit recorded', isError: false })
-      setTimeout(() => setDepMsg(null), 3000)
+  const depMutation = useMutation(
+    async () => {
+      const validRows = depRows.filter((r) => r.amount && parseFloat(r.amount) > 0)
+      if (validRows.length === 0) throw new Error('Add at least one row with an amount')
+      const totalAmount = validRows.reduce((sum, r) => sum + parseFloat(r.amount), 0)
+      const { error } = await supabase.from('cash_deposits').insert({
+        deposit_date: depDate,
+        bank_ref: depBankRef || null,
+        notes: depNotes || null,
+        rows: validRows.map((r) => ({ branch: r.branch, amount: parseFloat(r.amount) })),
+        total_amount: totalAmount,
+        submitted_by: user?.id,
+      })
+      if (error) throw new Error(error.message)
     },
-    onError: (e: any) => setDepMsg({ text: e.message, isError: true }),
-  })
+    {
+      onSuccess: () => {
+        setDepDate(today)
+        setDepBankRef('')
+        setDepNotes('')
+        setDepRows([{ branch: 'KR', amount: '' }])
+        setDepMsg({ text: 'Cash deposit recorded', isError: false })
+        setTimeout(() => setDepMsg(null), 3000)
+      },
+      onError: (e: unknown) =>
+        setDepMsg({ text: e instanceof Error ? e.message : 'Failed', isError: true }),
+    }
+  )
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
@@ -117,8 +147,14 @@ export default function SupervisorDashboard() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-foreground">Supervisor Dashboard</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          {' · '}{user?.full_name}
+          {new Date().toLocaleDateString('en-IN', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          })}
+          {' · '}
+          {user?.full_name}
         </p>
       </div>
 
@@ -126,19 +162,27 @@ export default function SupervisorDashboard() {
       <Card className="mb-4">
         <CardContent className="p-4 flex items-center justify-between">
           <div>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Vasanth Float Balance</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+              Vasanth Float Balance
+            </p>
             <p className="text-2xl font-bold text-foreground mt-1">
               {floatData != null
                 ? `₹${Number(floatData.current_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
                 : '—'}
             </p>
           </div>
-          <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center"><Banknote className="w-6 h-6 text-primary" /></div>
+          <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
+            <Banknote className="w-6 h-6 text-primary" />
+          </div>
         </CardContent>
       </Card>
 
       {/* Expense Entry */}
-      <SectionCard title="Expense Entry" open={activeSection === 'expense'} onToggle={() => toggle('expense')}>
+      <SectionCard
+        title="Expense Entry"
+        open={activeSection === 'expense'}
+        onToggle={() => toggle('expense')}
+      >
         <div className="p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -146,10 +190,14 @@ export default function SupervisorDashboard() {
               <select
                 className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={expShop}
-                onChange={e => setExpShop(e.target.value)}
+                onChange={(e) => setExpShop(e.target.value)}
               >
                 <option value="">Select shop…</option>
-                {shops.map(s => <option key={s.id} value={s.shop_name}>{s.shop_name}</option>)}
+                {shops.map((s) => (
+                  <option key={s.id} value={s.shop_name}>
+                    {s.shop_name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-1.5">
@@ -157,7 +205,7 @@ export default function SupervisorDashboard() {
               <select
                 className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={expBranch}
-                onChange={e => setExpBranch(e.target.value as 'KR' | 'C2')}
+                onChange={(e) => setExpBranch(e.target.value as 'KR' | 'C2')}
               >
                 <option value="KR">{t('branch.KR')}</option>
                 <option value="C2">{t('branch.C2')}</option>
@@ -168,17 +216,23 @@ export default function SupervisorDashboard() {
             <div className="space-y-1.5">
               <Label>Amount (₹) *</Label>
               <Input
-                type="number" placeholder="0.00"
-                value={expAmount} onChange={e => setExpAmount(e.target.value)} min="0" step="0.01"
+                type="number"
+                placeholder="0.00"
+                value={expAmount}
+                onChange={(e) => setExpAmount(e.target.value)}
+                min="0"
+                step="0.01"
               />
             </div>
             <div className="space-y-1.5">
               <Label>Date *</Label>
-              <Input type="date" value={expDate} onChange={e => setExpDate(e.target.value)} />
+              <Input type="date" value={expDate} onChange={(e) => setExpDate(e.target.value)} />
             </div>
           </div>
           {expMsg && (
-            <p className={`text-sm ${expMsg.isError ? 'text-destructive' : 'text-green-600'}`}>{expMsg.text}</p>
+            <p className={`text-sm ${expMsg.isError ? 'text-destructive' : 'text-green-600'}`}>
+              {expMsg.text}
+            </p>
           )}
           <Button
             className="w-full"
@@ -191,18 +245,24 @@ export default function SupervisorDashboard() {
       </SectionCard>
 
       {/* Cash Deposit */}
-      <SectionCard title="Cash Deposit" open={activeSection === 'deposit'} onToggle={() => toggle('deposit')}>
+      <SectionCard
+        title="Cash Deposit"
+        open={activeSection === 'deposit'}
+        onToggle={() => toggle('deposit')}
+      >
         <div className="p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Deposit Date *</Label>
-              <Input type="date" value={depDate} onChange={e => setDepDate(e.target.value)} />
+              <Input type="date" value={depDate} onChange={(e) => setDepDate(e.target.value)} />
             </div>
             <div className="space-y-1.5">
               <Label>Bank Ref / Challan No.</Label>
               <Input
-                type="text" placeholder="Optional"
-                value={depBankRef} onChange={e => setDepBankRef(e.target.value)}
+                type="text"
+                placeholder="Optional"
+                value={depBankRef}
+                onChange={(e) => setDepBankRef(e.target.value)}
               />
             </div>
           </div>
@@ -215,15 +275,19 @@ export default function SupervisorDashboard() {
                   <select
                     className="h-10 w-28 flex-shrink-0 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     value={row.branch}
-                    onChange={e => updateDepRow(i, 'branch', e.target.value)}
+                    onChange={(e) => updateDepRow(i, 'branch', e.target.value)}
                   >
                     <option value="KR">{t('branch.KR')}</option>
                     <option value="C2">{t('branch.C2')}</option>
                   </select>
                   <Input
-                    type="number" className="flex-1" placeholder="Amount"
-                    value={row.amount} onChange={e => updateDepRow(i, 'amount', e.target.value)}
-                    min="0" step="0.01"
+                    type="number"
+                    className="flex-1"
+                    placeholder="Amount"
+                    value={row.amount}
+                    onChange={(e) => updateDepRow(i, 'amount', e.target.value)}
+                    min="0"
+                    step="0.01"
                   />
                   {depRows.length > 1 && (
                     <Button
@@ -247,13 +311,17 @@ export default function SupervisorDashboard() {
             <Label>Notes</Label>
             <textarea
               className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              rows={2} placeholder="Optional"
-              value={depNotes} onChange={e => setDepNotes(e.target.value)}
+              rows={2}
+              placeholder="Optional"
+              value={depNotes}
+              onChange={(e) => setDepNotes(e.target.value)}
             />
           </div>
 
           {depMsg && (
-            <p className={`text-sm ${depMsg.isError ? 'text-destructive' : 'text-green-600'}`}>{depMsg.text}</p>
+            <p className={`text-sm ${depMsg.isError ? 'text-destructive' : 'text-green-600'}`}>
+              {depMsg.text}
+            </p>
           )}
           <Button
             className="w-full"
@@ -266,9 +334,15 @@ export default function SupervisorDashboard() {
       </SectionCard>
 
       {/* Enter Shift Data */}
-      <SectionCard title="Enter Shift Data" open={activeSection === 'shift'} onToggle={() => toggle('shift')}>
+      <SectionCard
+        title="Enter Shift Data"
+        open={activeSection === 'shift'}
+        onToggle={() => toggle('shift')}
+      >
         <div className="p-4 space-y-3">
-          <p className="text-sm text-muted-foreground">Select the branch to enter shift data for:</p>
+          <p className="text-sm text-muted-foreground">
+            Select the branch to enter shift data for:
+          </p>
           <div className="flex gap-3">
             <Button className="flex-1" onClick={() => handleEnterShift('KR')}>
               <ClipboardList className="w-4 h-4 mr-2" />
@@ -293,8 +367,9 @@ export default function SupervisorDashboard() {
             <p className="text-muted-foreground text-sm text-center py-4">No tasks assigned</p>
           ) : (
             <div className="space-y-2">
-              {tasks.map((task: any) => {
-                const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done'
+              {tasks.map((task: Task) => {
+                const isOverdue =
+                  task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done'
                 return (
                   <div
                     key={task.id}
@@ -304,7 +379,9 @@ export default function SupervisorDashboard() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-foreground text-sm">{task.title}</p>
                         {task.description && (
-                          <p className="text-muted-foreground text-xs mt-0.5 truncate">{task.description}</p>
+                          <p className="text-muted-foreground text-xs mt-0.5 truncate">
+                            {task.description}
+                          </p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
                           {task.due_date && (
@@ -318,10 +395,13 @@ export default function SupervisorDashboard() {
                       </div>
                       <StatusChip
                         variant={
-                          task.status === 'done' ? 'done'
-                          : isOverdue ? 'error'
-                          : task.status === 'in_progress' ? 'pending'
-                          : 'grey'
+                          task.status === 'done'
+                            ? 'done'
+                            : isOverdue
+                              ? 'error'
+                              : task.status === 'in_progress'
+                                ? 'pending'
+                                : 'grey'
                         }
                         label={task.status}
                       />
@@ -338,9 +418,15 @@ export default function SupervisorDashboard() {
 }
 
 function SectionCard({
-  title, open, onToggle, children,
+  title,
+  open,
+  onToggle,
+  children,
 }: {
-  title: string; open: boolean; onToggle: () => void; children: React.ReactNode
+  title: string
+  open: boolean
+  onToggle: () => void
+  children: React.ReactNode
 }) {
   return (
     <Card className="mb-3 overflow-hidden">

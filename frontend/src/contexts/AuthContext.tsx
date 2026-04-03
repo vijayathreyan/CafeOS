@@ -51,7 +51,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (mounted) setLoading(false)
     }, 3000)
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
 
       if (event === 'INITIAL_SESSION') {
@@ -105,7 +107,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, activeBranch, loading, login, logout, setActiveBranch, setFirstLoginDone }}>
+    <AuthContext.Provider
+      value={{ user, activeBranch, loading, login, logout, setActiveBranch, setFirstLoginDone }}
+    >
       {children}
     </AuthContext.Provider>
   )

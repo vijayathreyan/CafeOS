@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { LanguageProvider } from './contexts/LanguageContext'
@@ -19,7 +18,6 @@ import TaskInbox from './pages/shared/TaskInbox'
 import PlaceholderPage from './pages/PlaceholderPage'
 
 export default function App() {
-  const [session, setSession] = useState<Session | null>(null)
   const [authReady, setAuthReady] = useState(false)
 
   useEffect(() => {
@@ -29,9 +27,10 @@ export default function App() {
     // Use ONLY onAuthStateChange — no getSession() call.
     // INITIAL_SESSION fires once on mount with the current session (or null),
     // which is the reliable signal that the client is fully initialised.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, _session) => {
       clearTimeout(timeout)
-      setSession(session)
       setAuthReady(true)
     })
 
@@ -60,71 +59,110 @@ export default function App() {
               session before AuthContext finishes fetchEmployee, causing a redirect loop. */}
           <Route path="/login" element={<Login />} />
 
-          <Route path="/branch-select" element={
-            <ProtectedRoute>
-              <BranchSelect />
-            </ProtectedRoute>
-          } />
+          <Route
+            path="/branch-select"
+            element={
+              <ProtectedRoute>
+                <BranchSelect />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Protected layout routes */}
-          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
             {/* / → redirect to role-specific dashboard */}
             <Route path="/" element={<RoleHome />} />
 
             {/* Role-specific home routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <OwnerDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/staff-dashboard" element={
-              <ProtectedRoute allowedRoles={['staff']}>
-                <StaffDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/supervisor-dashboard" element={
-              <ProtectedRoute allowedRoles={['supervisor']}>
-                <SupervisorDashboard />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <OwnerDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/staff-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['staff']}>
+                  <StaffDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/supervisor-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['supervisor']}>
+                  <SupervisorDashboard />
+                </ProtectedRoute>
+              }
+            />
 
-            <Route path="/shift" element={
-              <ProtectedRoute allowedRoles={['staff']}>
-                <ShiftDashboard />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/shift"
+              element={
+                <ProtectedRoute allowedRoles={['staff']}>
+                  <ShiftDashboard />
+                </ProtectedRoute>
+              }
+            />
 
-            <Route path="/supervisor-shift" element={
-              <ProtectedRoute allowedRoles={['supervisor']}>
-                <ShiftDashboard />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/supervisor-shift"
+              element={
+                <ProtectedRoute allowedRoles={['supervisor']}>
+                  <ShiftDashboard />
+                </ProtectedRoute>
+              }
+            />
 
-            <Route path="/reports" element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <PlaceholderPage title="Reports" subtitle="Phase 7–9" />
-              </ProtectedRoute>
-            } />
-            <Route path="/settings" element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <PlaceholderPage title="Admin Settings" subtitle="Phase 11" />
-              </ProtectedRoute>
-            } />
-            <Route path="/users" element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <UserManagement />
-              </ProtectedRoute>
-            } />
-            <Route path="/users/new" element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <EmployeeOnboarding />
-              </ProtectedRoute>
-            } />
-            <Route path="/users/:id/edit" element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <EmployeeOnboarding />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <PlaceholderPage title="Reports" subtitle="Phase 7–9" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <PlaceholderPage title="Admin Settings" subtitle="Phase 11" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <UserManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users/new"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <EmployeeOnboarding />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users/:id/edit"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <EmployeeOnboarding />
+                </ProtectedRoute>
+              }
+            />
 
             <Route path="/tasks" element={<TaskInbox />} />
           </Route>

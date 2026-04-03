@@ -97,7 +97,9 @@ CafeOS/
 │
 ├── supabase/
 │   └── migrations/
-│       └── 001_complete_schema.sql  # ALL database tables (Phases 1–16)
+│       ├── 001_complete_schema.sql  # ALL database tables (Phases 1–16)
+│       ├── 002_add_deleted_at.sql   # Soft-delete: adds deleted_at to employees
+│       └── 003_snack_tamil_names.sql  # Inserts snack items into item_master with Tamil names; links snack_entries.item_id
 │
 ├── scripts/
 │   ├── backup_daily.sh         # pg_dump cron (2am daily)
@@ -340,6 +342,50 @@ Branch: main
 - **UPI shows "—"** (dash) for days not yet entered — never zero if not entered
 - **Shift-wise sales** — owner-only visibility. Staff never see shift or day totals.
 - **RLS disabled** — all access control at React app level
+
+---
+
+## Tooling & Standards
+
+### Code Quality
+- ESLint configured — no-any, no-unused-vars enforced
+- Prettier configured — single quotes, no semi, 100 char width
+- Husky pre-commit hook — blocks commits that fail lint
+- Run manually: `npm run lint`, `npm run format`
+
+### Environment Validation
+- All VITE_ env vars validated at startup in `src/lib/env.ts`
+- Missing env vars throw clear error message with variable name
+- Import env from `src/lib/env.ts` — never use `import.meta.env` directly
+
+### Database Migrations
+- Numbered sequentially: 000, 001, 002...
+- NEVER modify existing migration files
+- Next migration for Phase 2: `004_phase2_additions.sql`
+- Track all migrations in `migrations_log` table
+- See `supabase/migrations/README.md` for full rules
+
+### Testing
+- Playwright E2E tests in `frontend/tests/e2e/`
+- All 46 tests passing
+- Test data uses `00000` prefix — auto-cleaned before/after each run
+- Protected accounts never deleted: `9999999999`, `9876543210`, `8888888888`, `9876543211`
+- Run: `npx playwright test`
+- Report: `npx playwright show-report`
+
+### JSDoc Standard
+- All hooks and lib functions have JSDoc comments
+- Components do not need JSDoc
+
+### Phase 2 Coding Standards
+Every component built in Phase 2 onwards must follow:
+- shadcn/ui for all UI components
+- React Query (`useQuery`, `useMutation`) for all data fetching
+- `react-hook-form` + zod for all forms
+- Custom hooks pattern — no data fetching in components directly
+- TypeScript strict — no `any` types
+- One component per file
+- JSDoc on all hooks and utilities
 
 ---
 

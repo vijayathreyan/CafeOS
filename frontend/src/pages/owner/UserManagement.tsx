@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
-import { supabase, AppUser } from '../../lib/supabase'
+import { supabase, AppUser, BranchCode } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -58,7 +58,10 @@ export default function UserManagement() {
       await supabase.from('employees').update({ active: false }).eq('id', id)
     },
     {
-      onSuccess: () => { qc.invalidateQueries('employees'); showToast('Employee deactivated', 'info') },
+      onSuccess: () => {
+        qc.invalidateQueries('employees')
+        showToast('Employee deactivated', 'info')
+      },
       onError: () => showToast('Failed to deactivate employee', 'error'),
     }
   )
@@ -68,19 +71,29 @@ export default function UserManagement() {
       await supabase.from('employees').update({ active: true }).eq('id', id)
     },
     {
-      onSuccess: () => { qc.invalidateQueries('employees'); showToast('Employee reactivated', 'success') },
+      onSuccess: () => {
+        qc.invalidateQueries('employees')
+        showToast('Employee reactivated', 'success')
+      },
       onError: () => showToast('Failed to reactivate employee', 'error'),
     }
   )
 
   const deleteMutation = useMutation(
     async (id: string) => {
-      const { error } = await supabase.from('employees').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+      const { error } = await supabase
+        .from('employees')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id)
       if (error) throw new Error(error.message)
     },
     {
-      onSuccess: () => { qc.invalidateQueries('employees'); showToast('Employee deleted', 'info') },
-      onError: (e: any) => showToast(e.message || 'Failed to delete employee', 'error'),
+      onSuccess: () => {
+        qc.invalidateQueries('employees')
+        showToast('Employee deleted', 'info')
+      },
+      onError: (e: unknown) =>
+        showToast(e instanceof Error ? e.message : 'Failed to delete employee', 'error'),
     }
   )
 
@@ -89,16 +102,25 @@ export default function UserManagement() {
       await supabase.from('employees').update({ deleted_at: null, active: true }).eq('id', id)
     },
     {
-      onSuccess: () => { qc.invalidateQueries('employees'); showToast('Employee restored', 'success') },
+      onSuccess: () => {
+        qc.invalidateQueries('employees')
+        showToast('Employee restored', 'success')
+      },
       onError: () => showToast('Failed to restore employee', 'error'),
     }
   )
 
-  const filtered = employees.filter(e => {
+  const filtered = employees.filter((e) => {
     if (filterRole !== 'all' && e.role !== filterRole) return false
-    if (filterBranch !== 'all' && !e.branch_access.includes(filterBranch as any)) return false
-    if (search && !e.full_name.toLowerCase().includes(search.toLowerCase()) &&
-        !e.phone.includes(search) && !e.employee_id.toLowerCase().includes(search.toLowerCase())) return false
+    if (filterBranch !== 'all' && !e.branch_access.includes(filterBranch as BranchCode))
+      return false
+    if (
+      search &&
+      !e.full_name.toLowerCase().includes(search.toLowerCase()) &&
+      !e.phone.includes(search) &&
+      !e.employee_id.toLowerCase().includes(search.toLowerCase())
+    )
+      return false
     return true
   })
 
@@ -107,9 +129,7 @@ export default function UserManagement() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-foreground">{t('employees.title')}</h1>
-        <Button onClick={() => navigate('/users/new')}>
-          + {t('employees.add')}
-        </Button>
+        <Button onClick={() => navigate('/users/new')}>+ {t('employees.add')}</Button>
       </div>
 
       {/* Filters */}
@@ -119,12 +139,12 @@ export default function UserManagement() {
             className="flex-1 min-w-40"
             placeholder={t('common.search')}
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
           />
           <select
             className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-ring"
             value={filterRole}
-            onChange={e => setFilterRole(e.target.value)}
+            onChange={(e) => setFilterRole(e.target.value)}
           >
             <option value="all">{t('common.all')} Roles</option>
             <option value="staff">{t('employees.roles.staff')}</option>
@@ -134,7 +154,7 @@ export default function UserManagement() {
           <select
             className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-ring"
             value={filterBranch}
-            onChange={e => setFilterBranch(e.target.value)}
+            onChange={(e) => setFilterBranch(e.target.value)}
           >
             <option value="all">{t('common.all')} Branches</option>
             <option value="KR">{t('branch.KR')}</option>
@@ -166,11 +186,8 @@ export default function UserManagement() {
         <div className="text-center py-12 text-muted-foreground">{t('common.loading')}</div>
       ) : (
         <div className="space-y-3">
-          {filtered.map(emp => (
-            <Card
-              key={emp.id}
-              className={`${!emp.active || emp.deleted_at ? 'opacity-60' : ''}`}
-            >
+          {filtered.map((emp) => (
+            <Card key={emp.id} className={`${!emp.active || emp.deleted_at ? 'opacity-60' : ''}`}>
               <CardContent className="p-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <Avatar className="w-12 h-12">
@@ -182,13 +199,17 @@ export default function UserManagement() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-foreground">{emp.full_name}</span>
                       <span className="text-xs text-muted-foreground">{emp.employee_id}</span>
-                      {!emp.active && !emp.deleted_at && <StatusChip variant="grey" label="Inactive" />}
+                      {!emp.active && !emp.deleted_at && (
+                        <StatusChip variant="grey" label="Inactive" />
+                      )}
                       {emp.deleted_at && <StatusChip variant="error" label="Deleted" />}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap mt-1">
                       <span className="text-sm text-muted-foreground">{emp.phone}</span>
-                      <Badge variant="secondary" className="capitalize">{emp.role}</Badge>
-                      {emp.branch_access.map(b => (
+                      <Badge variant="secondary" className="capitalize">
+                        {emp.role}
+                      </Badge>
+                      {emp.branch_access.map((b) => (
                         <Badge key={b} variant="outline" className="text-primary border-primary/30">
                           {t(`branch.${b}`)}
                         </Badge>

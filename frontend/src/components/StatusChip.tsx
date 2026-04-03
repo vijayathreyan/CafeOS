@@ -9,11 +9,11 @@ interface Props {
 }
 
 const icons: Record<ChipVariant, React.ReactNode> = {
-  done:    <CheckCircle2 className="w-3.5 h-3.5" />,
+  done: <CheckCircle2 className="w-3.5 h-3.5" />,
   pending: <Clock className="w-3.5 h-3.5" />,
   warning: <AlertTriangle className="w-3.5 h-3.5" />,
-  error:   <XCircle className="w-3.5 h-3.5" />,
-  grey:    <Circle className="w-3.5 h-3.5" />,
+  error: <XCircle className="w-3.5 h-3.5" />,
+  grey: <Circle className="w-3.5 h-3.5" />,
 }
 
 export default function StatusChip({ variant, label }: Props) {

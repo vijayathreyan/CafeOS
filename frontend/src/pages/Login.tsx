@@ -50,7 +50,7 @@ export default function Login() {
                 type="tel"
                 placeholder="9876543210"
                 value={phone}
-                onChange={e => setPhone(e.target.value)}
+                onChange={(e) => setPhone(e.target.value)}
                 required
                 autoComplete="username"
               />
@@ -61,7 +61,7 @@ export default function Login() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
               />

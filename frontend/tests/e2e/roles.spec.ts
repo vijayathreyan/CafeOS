@@ -7,7 +7,6 @@ test.describe('Role-Based Access', () => {
     await loginAs(page, TEST_USERS.owner)
     await page.waitForURL('**/dashboard', { timeout: 12000 })
     await page.waitForLoadState('networkidle')
-    await page.waitForTimeout(2000)
     await expect(page).toHaveURL(/\/dashboard/)
     // Owner desktop nav has Employees link — scoped to header to avoid strict-mode
     await expect(page.locator('header').getByRole('link', { name: 'Employees' })).toBeVisible()
@@ -17,7 +16,6 @@ test.describe('Role-Based Access', () => {
     await loginAs(page, TEST_USERS.staff_kr)
     await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
     await page.waitForLoadState('networkidle')
-    await page.waitForTimeout(2000)
     await expect(page).toHaveURL(/\/staff-dashboard/)
     // Owner dashboard must not be reachable — ProtectedRoute blocks it
     await page.goto('/dashboard')
@@ -30,7 +28,6 @@ test.describe('Role-Based Access', () => {
     // Supervisor may land on branch-select first, then supervisor-dashboard
     await page.waitForURL(/\/(supervisor-dashboard|branch-select)/, { timeout: 15000 })
     await page.waitForLoadState('networkidle')
-    await page.waitForTimeout(2000)
     await expect(page).not.toHaveURL(/\/dashboard$/)
     await expect(page).not.toHaveURL(/\/staff-dashboard/)
   })
@@ -39,7 +36,6 @@ test.describe('Role-Based Access', () => {
     await loginAs(page, TEST_USERS.staff_kr)
     await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
     await page.waitForLoadState('networkidle')
-    await page.waitForTimeout(2000)
     await ensureShiftOpen(page)
     // KR-specific: all 6 cards including Post-Paid Sales
     await expect(page.locator('text=Snacks')).toBeVisible()
@@ -52,7 +48,6 @@ test.describe('Role-Based Access', () => {
     await loginAs(page, TEST_USERS.staff_c2)
     await page.waitForURL('**/staff-dashboard', { timeout: 15000 })
     await page.waitForLoadState('networkidle')
-    await page.waitForTimeout(2000)
     await ensureShiftOpen(page)
     // C2 branch shown in header
     await expect(page.locator('text=Coffee Mate C2').first()).toBeVisible()

@@ -62,7 +62,12 @@ export function useConfirm() {
   }
 
   const ConfirmDialog = state ? (
-    <AlertDialog open={state.open} onOpenChange={(open: boolean) => { if (!open) handleClose(false) }}>
+    <AlertDialog
+      open={state.open}
+      onOpenChange={(open: boolean) => {
+        if (!open) handleClose(false)
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{state.title}</AlertDialogTitle>
@@ -71,9 +76,11 @@ export function useConfirm() {
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => handleClose(false)}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            className={state.confirmVariant === 'destructive'
-              ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-              : undefined}
+            className={
+              state.confirmVariant === 'destructive'
+                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                : undefined
+            }
             onClick={() => handleClose(true)}
           >
             {state.confirmLabel}

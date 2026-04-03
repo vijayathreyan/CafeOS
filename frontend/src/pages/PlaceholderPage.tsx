@@ -1,6 +1,9 @@
 import React from 'react'
 
-interface Props { title: string; subtitle?: string }
+interface Props {
+  title: string
+  subtitle?: string
+}
 
 export default function PlaceholderPage({ title, subtitle }: Props) {
   return (

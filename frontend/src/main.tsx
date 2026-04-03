@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from 'react-query'
+import './lib/env' // validate required env vars at startup
 import './i18n/i18n'
 import './index.css'
 import App from './App'
