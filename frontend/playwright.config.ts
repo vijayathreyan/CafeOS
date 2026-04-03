@@ -5,7 +5,7 @@ export default defineConfig({
   globalTeardown: './tests/e2e/global-teardown.ts',
   timeout: 30000,
   retries: 0,
-  reporter: 'list',
+  reporter: [['list'], ['html', { outputFolder: 'tests/html-report', open: 'never' }]],
   outputDir: 'tests/results/',
   use: {
     baseURL: 'http://localhost',

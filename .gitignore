@@ -35,4 +35,5 @@ backups/
 
 # Playwright test results (generated artifacts)
 frontend/tests/results/
+frontend/tests/html-report/
 frontend/playwright-report/
