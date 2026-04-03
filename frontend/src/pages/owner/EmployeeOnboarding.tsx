@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
@@ -80,9 +80,12 @@ export default function EmployeeOnboarding() {
   const [resetPwError, setResetPwError] = useState('')
   const [resetPwSaving, setResetPwSaving] = useState(false)
 
-  const { register, handleSubmit, reset, watch, setValue } = useForm<FormData>({
+  const { register, handleSubmit, reset, watch, getValues, setValue } = useForm<FormData>({
     defaultValues: { language_pref: 'en', branch_kr: false, branch_c2: false, role: 'staff' },
   })
+  // Tracks phone input value synchronously — getValues('phone') is unreliable when the field
+  // value is set via pressSequentially (Playwright) or other non-fill input methods.
+  const phoneValueRef = useRef<string>('')
 
   const { data: existing } = useQuery(
     ['employee', user?.id, id],
@@ -100,6 +103,7 @@ export default function EmployeeOnboarding() {
 
   useEffect(() => {
     if (existing) {
+      phoneValueRef.current = existing.phone ?? ''
       reset({
         full_name: existing.full_name,
         phone: existing.phone,
@@ -206,10 +210,14 @@ export default function EmployeeOnboarding() {
   }
 
   const validateSection1 = (): boolean => {
-    const v = watch()
+    const v = getValues()
     const errs: Record<string, string> = {}
     if (!v.full_name?.trim()) errs.full_name = 'Full name is required'
-    if (!v.phone?.trim()) errs.phone = 'Phone number is required'
+    // Use phoneValueRef (updated on every keystroke) because getValues('phone') is unreliable
+    // when the field value originates from keyboard events rather than fill().
+    const phone = phoneValueRef.current
+    if (!phone.trim()) errs.phone = 'Phone number is required'
+    else if (!/^\d{10}$/.test(phone.trim())) errs.phone = 'Enter a valid 10-digit phone number'
     if (!v.role) errs.role = 'Role is required'
     if (!v.branch_kr && !v.branch_c2) errs.branch = 'Select at least one branch'
     if (!isEdit && !restoringDeletedId) {
@@ -234,7 +242,7 @@ export default function EmployeeOnboarding() {
   const handleSaveSection = async () => {
     if (!id) return
     setSaving(true)
-    const v = watch()
+    const v = getValues()
     try {
       if (activeSection === 'systemAccess') {
         const branch_access = [v.branch_kr && 'KR', v.branch_c2 && 'C2'].filter(Boolean) as string[]
@@ -702,7 +710,8 @@ export default function EmployeeOnboarding() {
                   placeholder="9876543210"
                   {...register('phone')}
                   onChange={(e) => {
-                    register('phone').onChange(e)
+                    phoneValueRef.current = e.target.value
+                    setValue('phone', e.target.value, { shouldDirty: true })
                     clearSectionError('phone')
                     setPhoneError('')
                   }}
