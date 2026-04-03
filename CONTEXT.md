@@ -1,5 +1,7 @@
 # CafeOS — Project Context
 
+> **Session Start:** At the start of every session read `CONTEXT.md`, `UFW_Requirements_v3.6_Final.docx`, and `STANDARDS.md`.
+
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
 **Build Phase:** Phase 1 complete
@@ -367,7 +369,7 @@ Branch: main
 
 ### Testing
 - Playwright E2E tests in `frontend/tests/e2e/`
-- All 46 tests passing
+- All 65 tests passing
 - Test data uses `00000` prefix — auto-cleaned before/after each run
 - Protected accounts never deleted: `9999999999`, `9876543210`, `8888888888`, `9876543211`
 - Run: `npx playwright test`
