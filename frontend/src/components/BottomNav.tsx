@@ -2,7 +2,16 @@ import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'
-import { Home, Users, ClipboardList, BarChart2, Settings, CheckSquare } from 'lucide-react'
+import {
+  Home,
+  Users,
+  ClipboardList,
+  BarChart2,
+  Settings,
+  CheckSquare,
+  Package,
+  Wallet,
+} from 'lucide-react'
 
 export default function BottomNav() {
   const { t } = useTranslation()
@@ -22,10 +31,38 @@ export default function BottomNav() {
           <span className="text-xs font-medium">{t('nav.dashboard')}</span>
         </NavLink>
 
-        {(user.role === 'staff' || user.role === 'supervisor') && (
+        {user.role === 'staff' && (
           <NavLink to="/shift" className={navClass}>
             <ClipboardList className="w-6 h-6" />
             <span className="text-xs font-medium">{t('nav.shift')}</span>
+          </NavLink>
+        )}
+
+        {user.role === 'staff' && (
+          <NavLink to="/stock-entry" className={navClass}>
+            <Package className="w-6 h-6" />
+            <span className="text-xs font-medium">Stock</span>
+          </NavLink>
+        )}
+
+        {user.role === 'staff' && (
+          <NavLink to="/expense-entry" className={navClass}>
+            <Wallet className="w-6 h-6" />
+            <span className="text-xs font-medium">Expenses</span>
+          </NavLink>
+        )}
+
+        {user.role === 'supervisor' && (
+          <NavLink to="/supervisor-shift" className={navClass}>
+            <ClipboardList className="w-6 h-6" />
+            <span className="text-xs font-medium">{t('nav.shift')}</span>
+          </NavLink>
+        )}
+
+        {user.role === 'supervisor' && (
+          <NavLink to="/supervisor-entry" className={navClass}>
+            <Package className="w-6 h-6" />
+            <span className="text-xs font-medium">Stock & Exp</span>
           </NavLink>
         )}
 

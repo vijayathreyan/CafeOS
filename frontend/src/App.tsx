@@ -16,6 +16,10 @@ import UserManagement from './pages/owner/UserManagement'
 import EmployeeOnboarding from './pages/owner/EmployeeOnboarding'
 import TaskInbox from './pages/shared/TaskInbox'
 import PlaceholderPage from './pages/PlaceholderPage'
+import StockEntry from './pages/staff/StockEntry'
+import ExpenseEntry from './pages/staff/ExpenseEntry'
+import SupervisorEntry from './pages/supervisor/SupervisorEntry'
+import AdminSettings from './pages/owner/AdminSettings'
 
 export default function App() {
   const [authReady, setAuthReady] = useState(false)
@@ -123,6 +127,34 @@ export default function App() {
               }
             />
 
+            {/* Phase 2 — Stock & Expense Entry (Staff) */}
+            <Route
+              path="/stock-entry"
+              element={
+                <ProtectedRoute allowedRoles={['staff']}>
+                  <StockEntry />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/expense-entry"
+              element={
+                <ProtectedRoute allowedRoles={['staff']}>
+                  <ExpenseEntry />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Phase 2 — Supervisor Data Entry (both branches) */}
+            <Route
+              path="/supervisor-entry"
+              element={
+                <ProtectedRoute allowedRoles={['supervisor']}>
+                  <SupervisorEntry />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/reports"
               element={
@@ -135,7 +167,7 @@ export default function App() {
               path="/settings"
               element={
                 <ProtectedRoute allowedRoles={['owner']}>
-                  <PlaceholderPage title="Admin Settings" subtitle="Phase 11" />
+                  <AdminSettings />
                 </ProtectedRoute>
               }
             />

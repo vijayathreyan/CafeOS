@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 1 complete
+**Build Phase:** Phase 2 complete
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -101,7 +101,8 @@ CafeOS/
 │   └── migrations/
 │       ├── 001_complete_schema.sql  # ALL database tables (Phases 1–16)
 │       ├── 002_add_deleted_at.sql   # Soft-delete: adds deleted_at to employees
-│       └── 003_snack_tamil_names.sql  # Inserts snack items into item_master with Tamil names; links snack_entries.item_id
+│       ├── 003_snack_tamil_names.sql  # Inserts snack items into item_master with Tamil names; links snack_entries.item_id
+│       └── 005_phase2_additions.sql   # branch/entry_date/entered_by on stock+expense; item_master + stock_item_config seeds
 │
 ├── scripts/
 │   ├── backup_daily.sh         # pg_dump cron (2am daily)
@@ -128,18 +129,34 @@ CafeOS/
         │
         ├── lib/
         │   ├── supabase.ts      # Supabase client + AppUser type
-        │   └── offlineQueue.ts  # localStorage queue + auto-sync
+        │   ├── offlineQueue.ts  # localStorage queue + auto-sync
+        │   └── dailyEntry.ts    # getOrCreateDailyEntry utility
         │
         ├── contexts/
         │   ├── AuthContext.tsx   # Auth state, login/logout, session
         │   └── LanguageContext.tsx  # EN/Tamil toggle
+        │
+        ├── types/
+        │   ├── stock.ts          # StockFormRow, StockEntryRecord, StockItemConfig
+        │   └── expense.ts        # ExpenseFormRow, ExpenseEntryRecord
+        │
+        ├── hooks/
+        │   ├── useStockEntries.ts       # fetch + save stock entries
+        │   ├── useExpenseEntries.ts     # fetch + save expense entries
+        │   └── useStockItemConfig.ts    # fetch + update weight-per-unit config
         │
         ├── components/
         │   ├── Layout.tsx        # App shell with TopBar + BottomNav
         │   ├── TopBar.tsx        # Header — branch chip + lang toggle + user
         │   ├── BottomNav.tsx     # Mobile navigation bar
         │   ├── StatusChip.tsx    # Done/Pending/Warning/Error/Grey chips
-        │   └── ProtectedRoute.tsx  # Role-based route guard
+        │   ├── ProtectedRoute.tsx  # Role-based route guard
+        │   ├── StockForm.tsx     # ★ Phase 2 — branch-aware stock entry table
+        │   ├── ExpenseForm.tsx   # ★ Phase 2 — branch-aware expense entry
+        │   ├── KgGramsInput.tsx  # Dual kg+grams input with auto-convert
+        │   ├── DraftRestorationDialog.tsx  # Dialog on draft detection
+        │   └── ui/
+        │       └── skeleton.tsx  # Loading skeleton
         │
         └── pages/
             ├── Login.tsx          # Login + first-login password change
@@ -150,6 +167,8 @@ CafeOS/
             │   ├── StaffDashboard.tsx
             │   ├── ShiftDashboard.tsx    # ★ Main Phase 1 feature
             │   ├── ShiftCloseModal.tsx   # 3-step closure (no amounts shown)
+            │   ├── StockEntry.tsx        # ★ Phase 2 — /stock-entry
+            │   ├── ExpenseEntry.tsx      # ★ Phase 2 — /expense-entry
             │   └── cards/
             │       ├── SnacksCard.tsx    # Qty/Prepared + Sold/Wastage/Comp
             │       ├── CashCard.tsx      # Denomination count (Shift 1+2)
@@ -158,10 +177,15 @@ CafeOS/
             │       ├── PostPaidCard.tsx  # KR only — ITI/Ramco/Arun/Ajith
             │       └── NotesCard.tsx
             │
+            ├── supervisor/
+            │   ├── SupervisorDashboard.tsx
+            │   └── SupervisorEntry.tsx   # ★ Phase 2 — branch selector + tabs
+            │
             ├── owner/
             │   ├── OwnerDashboard.tsx
             │   ├── UserManagement.tsx    # List + filter employees
-            │   └── EmployeeOnboarding.tsx  # 6-section form
+            │   ├── EmployeeOnboarding.tsx  # 6-section form
+            │   └── AdminSettings.tsx     # ★ Phase 2 — weight-per-unit config
             │
             └── shared/
                 └── TaskInbox.tsx
@@ -283,11 +307,61 @@ WhatsApp credential delivery on creation (hook ready — requires alert module P
 
 ---
 
-## What's NOT Built Yet (Phase 2 onwards)
+## What Was Built in Phase 2
+
+### ✅ Migration 005 — stock_entries / expense_entries schema additions
+- Added `branch`, `entry_date`, `entered_by`, `entered_by_role` columns to `stock_entries` and `expense_entries`
+- Seeded `item_master` with 6 weight-tracked items (Peanut/DryFruit/Rava Ladoo Bottles, Sundal, Sweet Corn, White Channa)
+- Seeded `stock_item_config` with default weights per unit; history preserved via `weight_per_unit_effective_from`
+
+### ✅ KR + C2 Stock Levels Entry
+- `StockForm` component — shared, branch-aware (23 KR items / 22 C2 items)
+- Coffee Powder + Tea Powder: `KgGramsInput` dual-field with auto-convert and total-grams display
+- Opening / Purchase / Closing columns; Used column computed from `opening + purchase − closing`
+- Routes: `/stock-entry` (staff only), `/supervisor-entry` (supervisor, includes branch selector + Tabs)
+
+### ✅ KR + C2 Cash Expenses Entry
+- `ExpenseForm` component — branch-aware categories (16 KR / 12 C2)
+- Gas row flagged `is_gas=true` → flows to P&L Gas Bill
+- Ad-hoc rows via "+ Add Row"; Shop / Gas / Grand totals auto-calculated
+- Route: `/expense-entry` (staff only)
+
+### ✅ Supervisor Data Entry — both branches
+- `SupervisorEntry` page — branch selector (KR / C2 buttons) → Tabs (Stock Levels + Cash Expenses)
+- Reuses `StockForm` and `ExpenseForm` with `enteredByRole="supervisor"`
+
+### ✅ Draft Persistence
+- `saveDraft` / `loadDraft` / `clearDraft` from `offlineQueue.ts`
+- Auto-save every 30 s via `setInterval` + `rowsRef` pattern (avoids react-hooks/refs lint)
+- `DraftRestorationDialog` (shadcn Dialog, non-dismissible) shown on page load when draft exists
+
+### ✅ Weight-Based Item Admin Settings
+- `AdminSettings` page at `/settings` (owner only)
+- Inline edit per item: Pencil → Input (g) + Check/X buttons
+- Deduplication: shows latest active config per item; each save inserts new history row
+
+### ✅ Supporting
+- `KgGramsInput` component — dual number inputs with kg auto-carry
+- `Skeleton` shadcn component
+- `getOrCreateDailyEntry` utility (`lib/dailyEntry.ts`)
+- `useStockEntries`, `useSaveStockEntries`, `useExpenseEntries`, `useSaveExpenseEntries`, `useStockItemConfig`, `useUpdateStockItemConfig` hooks
+- `StockEntry.tsx`, `ExpenseEntry.tsx` staff pages
+- BottomNav updated: staff gets Stock + Expenses links; supervisor gets combined entry link
+- StaffDashboard + SupervisorDashboard quick-action cards added
+- **34 Playwright E2E tests** — all passing (99 total including Phase 1)
+
+### ⚠️ PostgREST schema cache
+After applying migration 005, restart `supabase-api` to reload the schema:
+```bash
+docker compose restart supabase-api
+```
+
+---
+
+## What's NOT Built Yet (Phase 3 onwards)
 
 | Phase | Scope |
 |-------|-------|
-| 2 | Stock levels page 2 (coffee/tea powder kg+grams), C2 branch form differences, Supervisor data entry both branches |
 | 3 | Vendor Onboarding (5 sections), rate history, Vendor Master, Item Master, bulk import, seed all vendor data |
 | 4 | Owner UPI entry, Swiggy/Zomato entry, Supervisor cash deposit, Supervisor expense module, Owner Manual Expense, Salary entry, Vasanth Float |
 | 5 | Vendor Payment module (Auto-Calculated + Manual Bill Entry), Post-Paid Customer module |

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../contexts/AuthContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Package, Wallet } from 'lucide-react'
 
 export default function StaffDashboard() {
   const { t } = useTranslation()
@@ -40,6 +41,34 @@ export default function StaffDashboard() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Phase 2 quick actions */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <Card
+          className="cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={() => navigate('/stock-entry')}
+        >
+          <CardContent className="p-4 flex flex-col items-start gap-2">
+            <Package className="w-6 h-6 text-primary" />
+            <div>
+              <p className="font-medium text-sm text-foreground">Stock Levels</p>
+              <p className="text-xs text-muted-foreground">Enter today&apos;s stock</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card
+          className="cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={() => navigate('/expense-entry')}
+        >
+          <CardContent className="p-4 flex flex-col items-start gap-2">
+            <Wallet className="w-6 h-6 text-primary" />
+            <div>
+              <p className="font-medium text-sm text-foreground">Cash Expenses</p>
+              <p className="text-xs text-muted-foreground">Record today&apos;s expenses</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Maintenance contacts card */}
       <Card>

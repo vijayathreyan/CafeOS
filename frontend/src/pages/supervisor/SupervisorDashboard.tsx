@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { ChevronDown, Banknote, ClipboardList, Camera } from 'lucide-react'
+import { ChevronDown, Banknote, ClipboardList, Camera, Package } from 'lucide-react'
 import StatusChip from '../../components/StatusChip'
 
 export default function SupervisorDashboard() {
@@ -401,6 +401,23 @@ export default function SupervisorDashboard() {
               Coffee Mate C2
             </Button>
           </div>
+        </div>
+      </SectionCard>
+
+      {/* Stock & Cash Expense Entry (Phase 2) */}
+      <SectionCard
+        title="Stock & Cash Expenses"
+        open={activeSection === 'stock_expense'}
+        onToggle={() => toggle('stock_expense')}
+      >
+        <div className="p-4 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Enter stock levels and cash expenses for either branch:
+          </p>
+          <Button className="w-full" onClick={() => navigate('/supervisor-entry')}>
+            <Package className="w-4 h-4 mr-2" />
+            Open Stock & Expenses Entry
+          </Button>
         </div>
       </SectionCard>
 
