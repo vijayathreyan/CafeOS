@@ -52,27 +52,28 @@ test.describe('KR Stock Levels Entry', () => {
     await expect(page.locator('text=Sweet Corn Packet').first()).toBeVisible()
   })
 
-  test('Coffee Powder row has kg+grams dual input', async ({ page }) => {
+  test('Coffee Powder row has single grams input', async ({ page }) => {
     await loginAsStaffKR(page)
     await page.goto('/stock-entry')
     await page.waitForSelector('text=Coffee Powder', { timeout: 10000 })
 
-    // KgGramsInput renders two inputs with aria-labels containing "kg" and "grams"
-    await expect(page.locator('input[aria-label*="kg"]').first()).toBeVisible()
-    await expect(page.locator('input[aria-label*="grams"]').first()).toBeVisible()
+    // Single input field for closing stock; unit label "g" shown next to it
+    await expect(page.locator('input[aria-label="Coffee Powder closing stock"]')).toBeVisible()
   })
 
-  test('kg+grams input shows total grams below', async ({ page }) => {
+  test('grams input accepts direct grams value and updates', async ({ page }) => {
     await loginAsStaffKR(page)
     await page.goto('/stock-entry')
-    await page.waitForSelector('input[aria-label*="kg"]', { timeout: 10000 })
+    await page.waitForSelector('input[aria-label="Coffee Powder closing stock"]', {
+      timeout: 10000,
+    })
 
-    // Set kg to 1 for Coffee Powder closing
-    const kgInput = page.locator('input[aria-label="Coffee Powder kg"]').first()
-    await kgInput.fill('1')
-    await kgInput.blur()
+    const closingInput = page.locator('input[aria-label="Coffee Powder closing stock"]')
+    await closingInput.fill('1300')
+    await closingInput.blur()
 
-    await expect(page.locator('text=/= [\\d,]+ grams/').first()).toBeVisible({ timeout: 5000 })
+    // Value persists (no conversion needed)
+    await expect(closingInput).toHaveValue('1300')
   })
 
   test('stock form save button is visible', async ({ page }) => {
@@ -415,6 +416,97 @@ test.describe('Weight Per Unit Admin Settings', () => {
       })
       await expect(page.locator('button[aria-label="Cancel edit"]').first()).toBeVisible()
     }
+  })
+})
+
+// ─────────────────────────────────────────────────────────────
+// FEATURE 7B — Weight Configuration Page (/owner/stock-config)
+// ─────────────────────────────────────────────────────────────
+
+test.describe('Weight Configuration Page', () => {
+  test('Weight Config — owner can access stock configuration page', async ({ page }) => {
+    await loginAsOwner(page)
+
+    // Click the Stock Configuration card on the owner dashboard
+    await page.waitForSelector('text=Stock Configuration', { timeout: 10000 })
+    await page.locator('text=Stock Configuration').first().click()
+    await page.waitForURL('**/owner/stock-config', { timeout: 8000 })
+
+    await page.waitForSelector('h1', { timeout: 10000 })
+    await expect(page.locator('h1')).toContainText('Stock Configuration')
+
+    // Verify all 5 weight-based items are shown
+    await page.waitForSelector('text=Peanut Ladoo Bottle', { timeout: 10000 })
+    await expect(page.locator('text=Peanut Ladoo Bottle').first()).toBeVisible()
+    await expect(page.locator('text=Dry Fruit Ladoo Bottle').first()).toBeVisible()
+    await expect(page.locator('text=Rava Ladoo Bottle').first()).toBeVisible()
+    await expect(page.locator('text=Peanuts/Sundal').first()).toBeVisible()
+    await expect(page.locator('text=Sweet Corn Packet').first()).toBeVisible()
+  })
+
+  test('Weight Config — owner can edit weight per unit', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/owner/stock-config')
+    await page.waitForSelector('text=Peanut Ladoo Bottle', { timeout: 10000 })
+
+    // Click Edit on Peanut Ladoo Bottle row
+    await page.locator('button[aria-label="Edit Peanut Ladoo Bottle weight"]').click()
+
+    // Input is now visible — change value to 25
+    const input = page.locator('input[aria-label="Peanut Ladoo Bottle weight in grams"]')
+    await input.waitFor({ state: 'visible', timeout: 5000 })
+    await input.fill('25')
+
+    // Click Save (Check icon button)
+    await page.locator('button[aria-label="Save weight"]').click()
+
+    // Verify success toast
+    await expect(page.locator('text=Saved successfully').first()).toBeVisible({ timeout: 8000 })
+
+    // Verify value shows 25g in the Peanut Ladoo Bottle row
+    const row = page.locator('tr').filter({ hasText: 'Peanut Ladoo Bottle' })
+    await expect(row.locator('text=25g')).toBeVisible({ timeout: 5000 })
+
+    // Verify value persists after page refresh
+    await page.goto('/owner/stock-config')
+    await page.waitForSelector('text=Peanut Ladoo Bottle', { timeout: 10000 })
+    const rowAfterRefresh = page.locator('tr').filter({ hasText: 'Peanut Ladoo Bottle' })
+    await expect(rowAfterRefresh.locator('text=25g')).toBeVisible({ timeout: 5000 })
+  })
+
+  test('Weight Config — owner can change back to original value', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/owner/stock-config')
+    await page.waitForSelector('text=Peanut Ladoo Bottle', { timeout: 10000 })
+
+    // Click Edit on Peanut Ladoo Bottle row
+    await page.locator('button[aria-label="Edit Peanut Ladoo Bottle weight"]').click()
+
+    // Change value back to 30
+    const input = page.locator('input[aria-label="Peanut Ladoo Bottle weight in grams"]')
+    await input.waitFor({ state: 'visible', timeout: 5000 })
+    await input.fill('30')
+
+    // Click Save
+    await page.locator('button[aria-label="Save weight"]').click()
+
+    // Verify success toast
+    await expect(page.locator('text=Saved successfully').first()).toBeVisible({ timeout: 8000 })
+
+    // Verify value shows 30g in the Peanut Ladoo Bottle row
+    const row = page.locator('tr').filter({ hasText: 'Peanut Ladoo Bottle' })
+    await expect(row.locator('text=30g')).toBeVisible({ timeout: 5000 })
+  })
+
+  test('Weight Config — non-owner cannot access stock config page', async ({ page }) => {
+    await loginAs(page, TEST_USERS.staff_kr)
+    await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
+
+    // Attempt direct navigation to the owner-only page
+    await page.goto('/owner/stock-config')
+
+    // ProtectedRoute redirects staff away — ends up at staff-dashboard or login
+    await page.waitForURL(/staff-dashboard|login/, { timeout: 8000 })
   })
 })
 

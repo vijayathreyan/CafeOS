@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 2 complete
+**Build Phase:** Phase 2 complete (all features including weight config)
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -348,7 +348,9 @@ WhatsApp credential delivery on creation (hook ready — requires alert module P
 - `StockEntry.tsx`, `ExpenseEntry.tsx` staff pages
 - BottomNav updated: staff gets Stock + Expenses links; supervisor gets combined entry link
 - StaffDashboard + SupervisorDashboard quick-action cards added
-- **34 Playwright E2E tests** — all passing (99 total including Phase 1)
+- `StockConfig.tsx` — `/owner/stock-config` page with shadcn Table, inline edit, toast on save
+- "Stock Configuration" card added to OwnerDashboard (ready, no phase badge)
+- **38 Playwright E2E tests** — all passing (103 total including Phase 1)
 
 ### ⚠️ PostgREST schema cache
 After applying migration 005, restart `supabase-api` to reload the schema:
