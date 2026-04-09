@@ -20,6 +20,7 @@ import StockEntry from './pages/staff/StockEntry'
 import ExpenseEntry from './pages/staff/ExpenseEntry'
 import SupervisorEntry from './pages/supervisor/SupervisorEntry'
 import AdminSettings from './pages/owner/AdminSettings'
+import StockConfig from './pages/owner/StockConfig'
 
 export default function App() {
   const [authReady, setAuthReady] = useState(false)
@@ -168,6 +169,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner']}>
                   <AdminSettings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/stock-config"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <StockConfig />
                 </ProtectedRoute>
               }
             />

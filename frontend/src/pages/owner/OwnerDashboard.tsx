@@ -9,6 +9,7 @@ import {
   CheckSquare,
   Settings,
   Receipt,
+  Scale,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -57,6 +58,13 @@ export default function OwnerDashboard() {
       subtitle: 'Assign and track tasks',
       path: '/tasks',
       Icon: CheckSquare,
+      ready: true,
+    },
+    {
+      title: 'Stock Configuration',
+      subtitle: 'Weight per unit settings',
+      path: '/owner/stock-config',
+      Icon: Scale,
       ready: true,
     },
     {
