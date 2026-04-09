@@ -46,9 +46,16 @@ export default function OwnerDashboard() {
       phase: 'Phase 7–9',
     },
     {
+      title: 'Vendor Master',
+      subtitle: 'Manage suppliers and items',
+      path: '/vendors',
+      Icon: Handshake,
+      ready: true,
+    },
+    {
       title: 'Vendor Payments',
       subtitle: 'Mon/Thu payment cycles',
-      path: '/vendors',
+      path: '/vendor-payments',
       Icon: Handshake,
       ready: false,
       phase: 'Phase 5',

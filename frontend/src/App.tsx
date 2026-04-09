@@ -21,6 +21,10 @@ import ExpenseEntry from './pages/staff/ExpenseEntry'
 import SupervisorEntry from './pages/supervisor/SupervisorEntry'
 import AdminSettings from './pages/owner/AdminSettings'
 import StockConfig from './pages/owner/StockConfig'
+import VendorMaster from './pages/owner/VendorMaster'
+import VendorOnboarding from './pages/owner/VendorOnboarding'
+import VendorProfile from './pages/owner/VendorProfile'
+import ItemMasterPage from './pages/owner/ItemMasterPage'
 
 export default function App() {
   const [authReady, setAuthReady] = useState(false)
@@ -206,6 +210,48 @@ export default function App() {
             />
 
             <Route path="/tasks" element={<TaskInbox />} />
+
+            {/* Phase 3 — Vendor Onboarding & Master (Owner) */}
+            <Route
+              path="/vendors"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <VendorMaster />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/vendors/new"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <VendorOnboarding />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/vendors/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <VendorProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/vendors/:id/edit"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <VendorOnboarding />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/items"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <ItemMasterPage />
+                </ProtectedRoute>
+              }
+            />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

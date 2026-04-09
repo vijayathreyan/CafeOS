@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 2 complete (all features including weight config)
+**Build Phase:** Phase 3 complete (vendor onboarding, master, item master, bulk import)
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -185,7 +185,12 @@ CafeOS/
             │   ├── OwnerDashboard.tsx
             │   ├── UserManagement.tsx    # List + filter employees
             │   ├── EmployeeOnboarding.tsx  # 6-section form
-            │   └── AdminSettings.tsx     # ★ Phase 2 — weight-per-unit config
+            │   ├── AdminSettings.tsx     # ★ Phase 2 — weight-per-unit config
+            │   ├── StockConfig.tsx       # ★ Phase 2 — /owner/stock-config
+            │   ├── VendorMaster.tsx      # ★ Phase 3 — /vendors
+            │   ├── VendorOnboarding.tsx  # ★ Phase 3 — /vendors/new + /vendors/:id/edit
+            │   ├── VendorProfile.tsx     # ★ Phase 3 — /vendors/:id
+            │   └── ItemMasterPage.tsx    # ★ Phase 3 — /items
             │
             └── shared/
                 └── TaskInbox.tsx
@@ -360,11 +365,60 @@ docker compose restart supabase-api
 
 ---
 
-## What's NOT Built Yet (Phase 3 onwards)
+## What Was Built in Phase 3
+
+### ✅ Migration 006 — Vendor seed data
+- Seeds all 14 known UFW vendors (§5A) with bank details, vendor_items, and opening rates
+- Adds missing item_master entries: Coffee Powder, Tea Powder, Milk, Paal Khoa, Mineral Water Bottle, bun varieties, etc.
+- Guards: runs only if vendors table is empty; uses WHERE NOT EXISTS for items
+
+### ✅ Vendor Onboarding Form (`/vendors/new`, `/vendors/:id/edit`)
+- 4-tab form: Business, Contact, Items, Bank
+- Business: name, vendor_code (auto-generated via DB trigger), business_type, GSTIN, payment cycle radio (mon_thu / fixed_dates / prepaid / same_day_cash)
+- Contact: contact_name, WhatsApp (10-digit regex), alternate phone, email, address (Textarea), Google Maps URL
+- Items: useFieldArray with per-row item dropdown, KR/C2 branch, auto/manual calc, cost price, selling price, unit, effective_from, notes
+- Bank: payment_preference, bank details, UPI ID, payment notes
+- Edit mode: pre-fills all fields from useVendor hook; useParams for id
+- Validation: zod + zodResolver; react-hook-form v7
+
+### ✅ Vendor Master List (`/vendors`)
+- Search + filter (active/inactive/all, payment cycle type)
+- Vendor cards: business name, code, contact with clickable phone, item tags with branch badge, cycle label
+- Actions: Edit, Deactivate/Reactivate (shadcn AlertDialog confirm), View Profile
+- Bulk Import: CSV template download + CSV file upload with per-row insert + duplicate check
+- "Manage Item Master" button links to /items
+- "Vendor Master" card added to OwnerDashboard (ready, no phase badge)
+
+### ✅ Vendor Profile (`/vendors/:id`)
+- Tabbed view: Business, Contact, Items & Rates, Bank
+- Items tab: VendorItemCard per item — branch label, calc_type badge, rate history sorted descending (current rate highlighted)
+- Inline Add Rate form (zodResolver) per item card
+- Inline Add Item form for linking new items
+- Deactivate item with confirm dialog
+- Bank tab: Eye/EyeOff reveal button before showing sensitive bank fields
+
+### ✅ Item Master CRUD (`/items`)
+- Table view: Name EN, Tamil, Type, Unit, KR toggle, C2 toggle, Active toggle (confirm), Edit
+- Search + item type filter
+- ItemFormDialog (shadcn Dialog): create/edit with zodResolver; duplicate name_en check on create
+- Back button navigates to /vendors
+
+### ✅ Supporting
+- `frontend/src/types/vendor.ts` — all vendor-related TypeScript types
+- `frontend/src/components/ui/textarea.tsx` — shadcn Textarea component
+- `useVendors`, `useVendor`, `useNextVendorCode`, `useCreateVendor`, `useUpdateVendor`, `useToggleVendorActive` hooks
+- `useAddVendorItem`, `useDeactivateVendorItem` hooks
+- `useAddVendorItemRate` hook
+- `useItemMaster`, `useCreateItem`, `useUpdateItem`, `useToggleItemActive`, `useToggleItemBranch` hooks
+- Installed: zod ^4.x, @hookform/resolvers ^5.x
+- Phase 3 E2E tests in `tests/e2e/phase3.spec.ts`
+
+---
+
+## What's NOT Built Yet (Phase 4 onwards)
 
 | Phase | Scope |
 |-------|-------|
-| 3 | Vendor Onboarding (5 sections), rate history, Vendor Master, Item Master, bulk import, seed all vendor data |
 | 4 | Owner UPI entry, Swiggy/Zomato entry, Supervisor cash deposit, Supervisor expense module, Owner Manual Expense, Salary entry, Vasanth Float |
 | 5 | Vendor Payment module (Auto-Calculated + Manual Bill Entry), Post-Paid Customer module |
 | 6 | Month End Closing Stock (3-page list) |
@@ -439,7 +493,7 @@ Branch: main
 ### Database Migrations
 - Numbered sequentially: 000, 001, 002...
 - NEVER modify existing migration files
-- Next migration for Phase 2: `004_phase2_additions.sql`
+- Next migration for Phase 4: `007_phase4_additions.sql`
 - Track all migrations in `migrations_log` table
 - See `supabase/migrations/README.md` for full rules
 
