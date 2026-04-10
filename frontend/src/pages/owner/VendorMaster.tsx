@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useConfirm, showToast } from '@/lib/dialogs'
-import { Phone, Building2, Plus, Download, Upload, ChevronRight } from 'lucide-react'
+import { Phone, Plus, Download, Upload, ChevronRight } from 'lucide-react'
 import type { Vendor } from '../../types/vendor'
 
 const CYCLE_LABELS: Record<string, string> = {
@@ -91,7 +91,7 @@ export default function VendorMaster() {
   const { user } = useAuth()
   const { confirm, ConfirmDialog } = useConfirm()
   const [search, setSearch] = useState('')
-  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('active')
+  const [filterActive, setFilterActive] = useState<'active' | 'inactive'>('active')
   const [filterCycle, setFilterCycle] = useState<string>('all')
   const [importing, setImporting] = useState(false)
   const [importSummary, setImportSummary] = useState<string | null>(null)
@@ -116,19 +116,21 @@ export default function VendorMaster() {
   })
 
   async function handleToggleActive(v: Vendor) {
-    const action = v.active ? 'Deactivate' : 'Reactivate'
+    const isDeactivating = v.active
     const ok = await confirm({
-      title: `${action} Vendor`,
-      description: `${action} ${v.business_name}? ${v.active ? 'They will no longer appear in payment cycles.' : 'They will appear in payment cycles again.'}`,
-      confirmLabel: action,
-      confirmVariant: v.active ? 'destructive' : 'default',
+      title: isDeactivating ? 'Deactivate Vendor' : 'Reactivate Vendor',
+      description: isDeactivating
+        ? 'Deactivating this vendor will remove them from all payment cycles. Are you sure?'
+        : 'Reactivating this vendor will restore them to active status.',
+      confirmLabel: isDeactivating ? 'Deactivate' : 'Reactivate',
+      confirmVariant: isDeactivating ? 'destructive' : 'default',
     })
     if (!ok) return
     try {
       await toggle.mutateAsync({ id: v.id, active: !v.active })
       showToast(
-        `${v.business_name} ${v.active ? 'deactivated' : 'reactivated'}`,
-        v.active ? 'info' : 'success'
+        isDeactivating ? 'Vendor deactivated successfully' : 'Vendor reactivated successfully',
+        isDeactivating ? 'info' : 'success'
       )
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Failed to update vendor', 'error')
@@ -213,7 +215,7 @@ export default function VendorMaster() {
   return (
     <div className="p-4 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Vendor Master</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
@@ -225,6 +227,32 @@ export default function VendorMaster() {
         </Button>
       </div>
 
+      {/* Active / Inactive tabs */}
+      <div className="flex gap-1 mb-4 bg-muted rounded-lg p-1 w-fit">
+        <button
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            filterActive === 'active'
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+          onClick={() => setFilterActive('active')}
+          data-testid="tab-active-vendors"
+        >
+          Active Vendors
+        </button>
+        <button
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            filterActive === 'inactive'
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+          onClick={() => setFilterActive('inactive')}
+          data-testid="tab-inactive-vendors"
+        >
+          Inactive Vendors
+        </button>
+      </div>
+
       {/* Filters */}
       <Card className="mb-4">
         <CardContent className="p-4 flex flex-wrap gap-3">
@@ -234,15 +262,6 @@ export default function VendorMaster() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <select
-            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            value={filterActive}
-            onChange={(e) => setFilterActive(e.target.value as typeof filterActive)}
-          >
-            <option value="active">Active Only</option>
-            <option value="inactive">Inactive Only</option>
-            <option value="all">All</option>
-          </select>
           <select
             className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             value={filterCycle}
@@ -280,11 +299,6 @@ export default function VendorMaster() {
         />
         {importSummary && <span className="text-sm text-muted-foreground">{importSummary}</span>}
       </div>
-
-      {/* Item Master link */}
-      <Button variant="outline" size="sm" className="mb-5" onClick={() => navigate('/items')}>
-        <Building2 className="w-4 h-4 mr-1" /> Manage Item Master
-      </Button>
 
       {/* Vendor list */}
       <div className="space-y-3">
@@ -358,18 +372,24 @@ export default function VendorMaster() {
                     >
                       Edit
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={
-                        vendor.active
-                          ? 'text-yellow-600 hover:text-yellow-700'
-                          : 'text-green-600 hover:text-green-700'
-                      }
-                      onClick={() => handleToggleActive(vendor)}
-                    >
-                      {vendor.active ? 'Deactivate' : 'Reactivate'}
-                    </Button>
+                    {vendor.active ? (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleToggleActive(vendor)}
+                      >
+                        Deactivate
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-green-600 hover:text-green-700 border-green-200 hover:border-green-300"
+                        onClick={() => handleToggleActive(vendor)}
+                      >
+                        Reactivate
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"

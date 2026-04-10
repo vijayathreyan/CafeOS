@@ -252,6 +252,14 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/owner/item-master"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <ItemMasterPage />
+                </ProtectedRoute>
+              }
+            />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

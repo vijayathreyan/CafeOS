@@ -30,7 +30,7 @@ test.describe('Vendor Master List', () => {
     await page.waitForSelector('h1', { timeout: 10000 })
     await expect(page.locator('h1')).toContainText('Vendor Master')
     // After migration 006, at least some vendors should be seeded
-    await expect(page.locator('text=active vendors')).toBeVisible()
+    await expect(page.locator('p').filter({ hasText: 'active vendors' })).toBeVisible()
   })
 
   test('search filters vendor list', async ({ page }) => {
@@ -42,21 +42,24 @@ test.describe('Vendor Master List', () => {
     await expect(page.locator('text=No vendors match')).toBeVisible()
   })
 
-  test('filter by active shows active vendors only', async ({ page }) => {
+  test('Active Vendors tab is selected by default', async ({ page }) => {
     await loginAsOwner(page)
     await page.goto('/vendors')
-    await page.waitForSelector('select', { timeout: 10000 })
-    // Default is "Active Only" — already selected
-    const select = page.locator('select').first()
-    await expect(select).toHaveValue('active')
+    await page.waitForSelector('[data-testid="tab-active-vendors"]', { timeout: 10000 })
+    // Active Vendors tab has the highlighted background by default
+    const activeTab = page.locator('[data-testid="tab-active-vendors"]')
+    await expect(activeTab).toBeVisible()
+    await expect(activeTab).toHaveClass(/bg-background/)
+    // Inactive Vendors tab is visible but not highlighted
+    await expect(page.locator('[data-testid="tab-inactive-vendors"]')).toBeVisible()
   })
 
-  test('Item Master link navigates correctly', async ({ page }) => {
+  test('Item Master tile on owner dashboard navigates correctly', async ({ page }) => {
     await loginAsOwner(page)
-    await page.goto('/vendors')
-    await page.waitForSelector('text=Manage Item Master', { timeout: 10000 })
-    await page.click('text=Manage Item Master')
-    await page.waitForURL('**/items', { timeout: 8000 })
+    await page.goto('/dashboard')
+    await page.waitForSelector('h3:has-text("Item Master")', { timeout: 10000 })
+    await page.locator('h3:has-text("Item Master")').click()
+    await page.waitForURL('**/owner/item-master', { timeout: 8000 })
     await expect(page.locator('h1')).toContainText('Item Master')
   })
 
@@ -285,6 +288,119 @@ test.describe('Bulk CSV Import', () => {
 })
 
 // ─────────────────────────────────────────────────────────────
+// FEATURE 9 — Vendor Active / Inactive Tab Visibility
+// ─────────────────────────────────────────────────────────────
+
+test.describe('Vendor Active/Inactive Tabs', () => {
+  test('Inactive Vendors tab shows only inactive vendors', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/vendors')
+    await page.waitForSelector('[data-testid="tab-inactive-vendors"]', { timeout: 10000 })
+    await page.click('[data-testid="tab-inactive-vendors"]')
+    // Inactive tab is now highlighted
+    await expect(page.locator('[data-testid="tab-inactive-vendors"]')).toHaveClass(/bg-background/)
+    // Any vendor cards shown should have the Inactive badge or Reactivate button
+    // (if no inactive vendors, the empty state message appears)
+    const reactivateButtons = page.locator('button:has-text("Reactivate")')
+    const emptyState = page.locator('text=No vendors match')
+    await expect(reactivateButtons.or(emptyState).first()).toBeVisible({ timeout: 8000 })
+  })
+
+  test('deactivate vendor — vendor moves to Inactive tab', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/vendors')
+    await page.waitForSelector('button:has-text("Deactivate")', { timeout: 10000 })
+    // Record name of the first vendor about to be deactivated
+    const firstCard = page.locator('.space-y-3 > div').first()
+    const vendorName = await firstCard.locator('span.font-semibold').first().innerText()
+    // Click Deactivate
+    await firstCard.locator('button:has-text("Deactivate")').click()
+    await expect(page.locator('[role="alertdialog"]')).toBeVisible()
+    await expect(
+      page.locator(
+        'text=Deactivating this vendor will remove them from all payment cycles. Are you sure?'
+      )
+    ).toBeVisible()
+    await page.locator('[role="alertdialog"] button:has-text("Deactivate")').click()
+    // Toast should confirm deactivation
+    await expect(
+      page.getByText('Vendor deactivated successfully', { exact: true }).first()
+    ).toBeVisible({
+      timeout: 8000,
+    })
+    // Switch to Inactive Vendors tab
+    await page.click('[data-testid="tab-inactive-vendors"]')
+    // The deactivated vendor should now appear in the Inactive tab
+    await expect(page.locator(`text=${vendorName}`).first()).toBeVisible({ timeout: 8000 })
+    // Reactivate the vendor to restore state
+    await page.locator('button:has-text("Reactivate")').first().click()
+    await page.locator('[role="alertdialog"] button:has-text("Reactivate")').click()
+    await expect(
+      page.getByText('Vendor reactivated successfully', { exact: true }).first()
+    ).toBeVisible({
+      timeout: 8000,
+    })
+  })
+
+  test('reactivate vendor — vendor moves back to Active tab', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/vendors')
+    await page.waitForSelector('[data-testid="tab-inactive-vendors"]', { timeout: 10000 })
+    await page.click('[data-testid="tab-inactive-vendors"]')
+    // If no inactive vendors, skip gracefully
+    const reactivateBtn = page.locator('button:has-text("Reactivate")').first()
+    const hasInactive = (await reactivateBtn.count()) > 0
+    if (!hasInactive) return
+    const vendorCard = page.locator('.space-y-3 > div').first()
+    const vendorName = await vendorCard.locator('span.font-semibold').first().innerText()
+    await reactivateBtn.click()
+    await expect(page.locator('[role="alertdialog"]')).toBeVisible()
+    await expect(
+      page.locator('text=Reactivating this vendor will restore them to active status.')
+    ).toBeVisible()
+    await page.locator('[role="alertdialog"] button:has-text("Reactivate")').click()
+    await expect(
+      page.getByText('Vendor reactivated successfully', { exact: true }).first()
+    ).toBeVisible({
+      timeout: 8000,
+    })
+    // Switch to Active Vendors tab — vendor should appear there
+    await page.click('[data-testid="tab-active-vendors"]')
+    await expect(page.locator(`text=${vendorName}`).first()).toBeVisible({ timeout: 8000 })
+  })
+
+  test('deactivated vendor does not appear in Active Vendors tab', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/vendors')
+    await page.waitForSelector('button:has-text("Deactivate")', { timeout: 10000 })
+    // Deactivate first vendor
+    const firstCard = page.locator('.space-y-3 > div').first()
+    const vendorName = await firstCard.locator('span.font-semibold').first().innerText()
+    await firstCard.locator('button:has-text("Deactivate")').click()
+    await page.locator('[role="alertdialog"] button:has-text("Deactivate")').click()
+    await expect(
+      page.getByText('Vendor deactivated successfully', { exact: true }).first()
+    ).toBeVisible({
+      timeout: 8000,
+    })
+    // Active tab is still selected — vendor should NOT appear
+    await expect(page.locator('[data-testid="tab-active-vendors"]')).toHaveClass(/bg-background/)
+    // Vendor moved out of Active tab — should not be visible here
+    const vendorInActive = page.getByText(vendorName, { exact: true })
+    await expect(vendorInActive).toHaveCount(0)
+    // Restore: switch to inactive and reactivate
+    await page.click('[data-testid="tab-inactive-vendors"]')
+    await page.locator('button:has-text("Reactivate")').first().click()
+    await page.locator('[role="alertdialog"] button:has-text("Reactivate")').click()
+    await expect(
+      page.getByText('Vendor reactivated successfully', { exact: true }).first()
+    ).toBeVisible({
+      timeout: 8000,
+    })
+  })
+})
+
+// ─────────────────────────────────────────────────────────────
 // FEATURE 8 — Seeded Data Verification
 // ─────────────────────────────────────────────────────────────
 
@@ -292,10 +408,8 @@ test.describe('Seeded Data (Migration 006)', () => {
   test('known vendors appear in vendor list after seeding', async ({ page }) => {
     await loginAsOwner(page)
     await page.goto('/vendors')
-    // Filter to show all vendors
-    await page.waitForSelector('select', { timeout: 10000 })
-    await page.selectOption('select', 'all')
-    // After migration 006 seeds run, at least one vendor card should render
+    // Default shows Active Vendors tab — check cards are rendered
+    await page.waitForSelector('[data-testid="tab-active-vendors"]', { timeout: 10000 })
     await page.waitForSelector('.space-y-3 > div, .space-y-3 > article', { timeout: 10000 })
     const cards = page.locator('[class*="Card"], .rounded-lg, article').filter({ hasText: /VEN-/ })
     // Check that there's at least one vendor with a code
@@ -314,5 +428,148 @@ test.describe('Seeded Data (Migration 006)', () => {
     const hasCoffee = (await coffeeRow.count()) > 0
     const hasMilk = (await milkRow.count()) > 0
     expect(hasCoffee || hasMilk).toBe(true)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────
+// FEATURE 10 — Item Master Standalone Tile + Enhanced Fields
+// ─────────────────────────────────────────────────────────────
+
+test.describe('Item Master Enhanced Fields', () => {
+  test('Item Master tile is visible on owner dashboard', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/dashboard')
+    await page.waitForSelector('h3:has-text("Item Master")', { timeout: 10000 })
+    await expect(page.locator('h3:has-text("Item Master")')).toBeVisible()
+    await expect(page.locator('text=Manage items across all modules')).toBeVisible()
+  })
+
+  test('/owner/item-master loads correctly', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/owner/item-master')
+    await page.waitForSelector('h1', { timeout: 10000 })
+    await expect(page.locator('h1')).toContainText('Item Master')
+    await expect(page.locator('p').filter({ hasText: 'active items' })).toBeVisible()
+  })
+
+  test('Item Master page has back button to Dashboard', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/owner/item-master')
+    await page.waitForSelector('button:has-text("Dashboard")', { timeout: 10000 })
+    await page.click('button:has-text("Dashboard")')
+    await page.waitForURL('**/dashboard', { timeout: 8000 })
+  })
+
+  test('Item Master is no longer linked from Vendor Master page', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/vendors')
+    await page.waitForSelector('h1', { timeout: 10000 })
+    await expect(page.locator('text=Manage Item Master')).toHaveCount(0)
+  })
+
+  test('form shows category dropdown with predefined options', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/owner/item-master')
+    await page.waitForSelector('button:has-text("Add Item")', { timeout: 10000 })
+    await page.click('button:has-text("Add Item")')
+    await expect(page.locator('[role="dialog"]')).toBeVisible()
+    // Category is now a select not a free text input
+    await expect(page.locator('[data-testid="select-category"]')).toBeVisible()
+    // Check a known category option exists
+    const categorySelect = page.locator('[data-testid="select-category"]')
+    await expect(categorySelect.locator('option[value="Snacks"]')).toHaveCount(1)
+    await expect(categorySelect.locator('option[value="Bakery"]')).toHaveCount(1)
+    await page.keyboard.press('Escape')
+  })
+
+  test('reconciliation method dropdown is present in add form', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/owner/item-master')
+    await page.waitForSelector('button:has-text("Add Item")', { timeout: 10000 })
+    await page.click('button:has-text("Add Item")')
+    await expect(page.locator('[role="dialog"]')).toBeVisible()
+    await expect(page.locator('[data-testid="select-recon-method"]')).toBeVisible()
+    const recon = page.locator('[data-testid="select-recon-method"]')
+    await expect(recon.locator('option[value="stock_balance"]')).toHaveCount(1)
+    await expect(recon.locator('option[value="preparation_staff"]')).toHaveCount(1)
+    await page.keyboard.press('Escape')
+  })
+
+  test('estimated cost field shows only for made_in_shop type', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/owner/item-master')
+    await page.waitForSelector('button:has-text("Add Item")', { timeout: 10000 })
+    await page.click('button:has-text("Add Item")')
+    await expect(page.locator('[role="dialog"]')).toBeVisible()
+    // Default type is vendor_supplied — estimated cost field should NOT be visible
+    await expect(page.locator('[data-testid="input-estimated-cost"]')).toHaveCount(0)
+    // Switch to made_in_shop
+    await page.selectOption('[data-testid="select-item-type"]', 'made_in_shop')
+    // Now the estimated cost field should appear
+    await expect(page.locator('[data-testid="input-estimated-cost"]')).toBeVisible()
+    await page.keyboard.press('Escape')
+  })
+
+  test('estimated cost field does NOT show for vendor_supplied type', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/owner/item-master')
+    await page.waitForSelector('button:has-text("Add Item")', { timeout: 10000 })
+    await page.click('button:has-text("Add Item")')
+    await expect(page.locator('[role="dialog"]')).toBeVisible()
+    await page.selectOption('[data-testid="select-item-type"]', 'vendor_supplied')
+    await expect(page.locator('[data-testid="input-estimated-cost"]')).toHaveCount(0)
+    await page.keyboard.press('Escape')
+  })
+
+  test('ml_per_serving field shows for Tea/Coffee category', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/owner/item-master')
+    await page.waitForSelector('button:has-text("Add Item")', { timeout: 10000 })
+    await page.click('button:has-text("Add Item")')
+    await expect(page.locator('[role="dialog"]')).toBeVisible()
+    // Default category — ml field should not be visible
+    await expect(page.locator('[data-testid="input-ml-per-serving"]')).toHaveCount(0)
+    // Select Tea/Coffee
+    await page.selectOption('[data-testid="select-category"]', 'Tea/Coffee')
+    await expect(page.locator('[data-testid="input-ml-per-serving"]')).toBeVisible()
+    await page.keyboard.press('Escape')
+  })
+
+  test('ml_per_serving field does NOT show for Snacks category', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/owner/item-master')
+    await page.waitForSelector('button:has-text("Add Item")', { timeout: 10000 })
+    await page.click('button:has-text("Add Item")')
+    await expect(page.locator('[role="dialog"]')).toBeVisible()
+    await page.selectOption('[data-testid="select-category"]', 'Snacks')
+    await expect(page.locator('[data-testid="input-ml-per-serving"]')).toHaveCount(0)
+    await page.keyboard.press('Escape')
+  })
+
+  test('can create item with reconciliation method and selling price', async ({ page }) => {
+    await loginAsOwner(page)
+    await page.goto('/owner/item-master')
+    await page.waitForSelector('button:has-text("Add Item")', { timeout: 10000 })
+    await page.click('button:has-text("Add Item")')
+    await expect(page.locator('[role="dialog"]')).toBeVisible()
+
+    const itemName = `00000 EnhTest ${Date.now()}`
+    await page.fill('[data-testid="input-name-en"]', itemName)
+    await page.selectOption('[data-testid="select-category"]', 'Snacks')
+    await page.selectOption('[data-testid="select-recon-method"]', 'stock_balance')
+    await page.fill('[data-testid="input-selling-price"]', '25')
+
+    await page.click('button:has-text("Create Item")')
+    await page.waitForSelector('text=Item created', { timeout: 8000 })
+    // Verify selling price shows in the table
+    await expect(page.locator(`text=${itemName}`).first()).toBeVisible()
+    await expect(page.locator('text=₹25').first()).toBeVisible()
+  })
+
+  test('non-owner cannot access /owner/item-master', async ({ page }) => {
+    await loginAs(page, TEST_USERS.staff_kr)
+    await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
+    await page.goto('/owner/item-master')
+    await expect(page).not.toHaveURL(/owner\/item-master/)
   })
 })

@@ -17,6 +17,13 @@ export interface ItemMaster {
   unit: string
   active: boolean
   ml_per_serving: number | null
+  selling_price: number | null
+  cost_price: number | null
+  reconciliation_method: string | null
+  is_pos_item: boolean
+  is_stock_item: boolean
+  is_snack_item: boolean
+  estimated_cost_per_piece: number | null
   created_at: string
 }
 

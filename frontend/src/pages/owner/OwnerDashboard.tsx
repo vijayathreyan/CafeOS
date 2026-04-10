@@ -10,6 +10,7 @@ import {
   Settings,
   Receipt,
   Scale,
+  List,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -50,6 +51,13 @@ export default function OwnerDashboard() {
       subtitle: 'Manage suppliers and items',
       path: '/vendors',
       Icon: Handshake,
+      ready: true,
+    },
+    {
+      title: 'Item Master',
+      subtitle: 'Manage items across all modules',
+      path: '/owner/item-master',
+      Icon: List,
       ready: true,
     },
     {

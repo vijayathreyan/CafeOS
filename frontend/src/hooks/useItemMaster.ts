@@ -32,6 +32,14 @@ interface CreateItemPayload {
   branch_kr: boolean
   branch_c2: boolean
   unit: string
+  selling_price?: number | null
+  cost_price?: number | null
+  reconciliation_method?: string
+  is_pos_item: boolean
+  is_stock_item: boolean
+  is_snack_item: boolean
+  ml_per_serving?: number | null
+  estimated_cost_per_piece?: number | null
 }
 
 /**
@@ -61,6 +69,14 @@ export function useCreateItem() {
         branch_kr: payload.branch_kr,
         branch_c2: payload.branch_c2,
         unit: payload.unit,
+        selling_price: payload.selling_price ?? null,
+        cost_price: payload.cost_price ?? null,
+        reconciliation_method: payload.reconciliation_method || null,
+        is_pos_item: payload.is_pos_item,
+        is_stock_item: payload.is_stock_item,
+        is_snack_item: payload.is_snack_item,
+        ml_per_serving: payload.ml_per_serving ?? null,
+        estimated_cost_per_piece: payload.estimated_cost_per_piece ?? null,
         active: true,
       })
       if (error) throw new Error(error.message)
@@ -82,6 +98,14 @@ interface UpdateItemPayload {
   branch_kr: boolean
   branch_c2: boolean
   unit: string
+  selling_price?: number | null
+  cost_price?: number | null
+  reconciliation_method?: string
+  is_pos_item: boolean
+  is_stock_item: boolean
+  is_snack_item: boolean
+  ml_per_serving?: number | null
+  estimated_cost_per_piece?: number | null
 }
 
 /**
@@ -102,6 +126,14 @@ export function useUpdateItem() {
           branch_kr: payload.branch_kr,
           branch_c2: payload.branch_c2,
           unit: payload.unit,
+          selling_price: payload.selling_price ?? null,
+          cost_price: payload.cost_price ?? null,
+          reconciliation_method: payload.reconciliation_method || null,
+          is_pos_item: payload.is_pos_item,
+          is_stock_item: payload.is_stock_item,
+          is_snack_item: payload.is_snack_item,
+          ml_per_serving: payload.ml_per_serving ?? null,
+          estimated_cost_per_piece: payload.estimated_cost_per_piece ?? null,
         })
         .eq('id', payload.id)
       if (error) throw new Error(error.message)

@@ -30,7 +30,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { useConfirm, showToast } from '@/lib/dialogs'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Pencil, ArrowLeft } from 'lucide-react'
@@ -39,18 +39,48 @@ import type { ItemMaster } from '../../types/vendor'
 
 const ITEM_TYPES = ['vendor_supplied', 'made_in_shop', 'stock', 'beverage']
 const UNITS = ['piece', 'kg', 'gram', 'packet', 'box', 'litre', 'bunch', 'cup', 'pack']
+const CATEGORIES = ['Tea/Coffee', 'Snacks', 'Buns', 'Beverages', 'Ladoos', 'Combo', 'Bakery']
+const RECON_METHODS = [
+  { value: 'consumed_litres', label: 'Consumed Litres' },
+  { value: 'received_wastage_diff', label: 'Received – Wastage Diff' },
+  { value: 'stock_balance', label: 'Stock Balance' },
+  { value: 'consumed_pieces', label: 'Consumed Pieces' },
+  { value: 'pack_of_bottle', label: 'Pack / Bottle Count' },
+  { value: 'remaining_weight_bottle', label: 'Remaining Weight (Bottle)' },
+  { value: 'remaining_weight_peanut', label: 'Remaining Weight (Peanut)' },
+  { value: 'remaining_cups', label: 'Remaining Cups' },
+  { value: 'big_box_opened', label: 'Big Box Opened' },
+  { value: 'preparation_staff', label: 'Preparation by Staff' },
+]
 
+// Numeric fields are kept as strings in the form to avoid zod inference issues,
+// and converted to numbers on submit.
 const itemSchema = z.object({
   name_en: z.string().min(1, 'English name is required'),
   name_ta: z.string().optional(),
   item_type: z.string().min(1, 'Item type is required'),
   category: z.string().optional(),
+  unit: z.string().min(1, 'Unit is required'),
+  selling_price: z.string().optional(),
+  cost_price: z.string().optional(),
+  reconciliation_method: z.string().optional(),
+  is_pos_item: z.boolean(),
+  is_stock_item: z.boolean(),
+  is_snack_item: z.boolean(),
+  ml_per_serving: z.string().optional(),
+  estimated_cost_per_piece: z.string().optional(),
   branch_kr: z.boolean(),
   branch_c2: z.boolean(),
-  unit: z.string().min(1, 'Unit is required'),
 })
 
 type ItemFormValues = z.infer<typeof itemSchema>
+
+/** Convert a string form value to a nullable number. */
+function parseOptNum(v?: string): number | null {
+  if (!v || v.trim() === '') return null
+  const n = parseFloat(v)
+  return Number.isNaN(n) ? null : n
+}
 
 function ItemFormDialog({
   open,
@@ -82,6 +112,14 @@ function ItemFormDialog({
           branch_kr: existing.branch_kr,
           branch_c2: existing.branch_c2,
           unit: existing.unit,
+          selling_price: existing.selling_price?.toString() ?? '',
+          cost_price: existing.cost_price?.toString() ?? '',
+          reconciliation_method: existing.reconciliation_method ?? '',
+          is_pos_item: existing.is_pos_item ?? true,
+          is_stock_item: existing.is_stock_item ?? true,
+          is_snack_item: existing.is_snack_item ?? true,
+          ml_per_serving: existing.ml_per_serving?.toString() ?? '',
+          estimated_cost_per_piece: existing.estimated_cost_per_piece?.toString() ?? '',
         }
       : {
           name_en: '',
@@ -91,33 +129,47 @@ function ItemFormDialog({
           branch_kr: true,
           branch_c2: true,
           unit: 'piece',
+          selling_price: '',
+          cost_price: '',
+          reconciliation_method: '',
+          is_pos_item: true,
+          is_stock_item: true,
+          is_snack_item: true,
+          ml_per_serving: '',
+          estimated_cost_per_piece: '',
         },
   })
 
+  const watchedType = useWatch({ control, name: 'item_type' })
+  const watchedCategory = useWatch({ control, name: 'category' })
+
+  const isMadeInShop = watchedType === 'made_in_shop'
+  const showMlPerServing = watchedCategory === 'Tea/Coffee' || watchedCategory === 'Beverages'
+
   async function onSubmit(values: ItemFormValues) {
     try {
+      const payload = {
+        name_en: values.name_en,
+        name_ta: values.name_ta,
+        item_type: values.item_type,
+        category: values.category,
+        branch_kr: values.branch_kr,
+        branch_c2: values.branch_c2,
+        unit: values.unit,
+        selling_price: parseOptNum(values.selling_price),
+        cost_price: parseOptNum(values.cost_price),
+        reconciliation_method: values.reconciliation_method,
+        is_pos_item: values.is_pos_item,
+        is_stock_item: values.is_stock_item,
+        is_snack_item: values.is_snack_item,
+        ml_per_serving: values.ml_per_serving ? parseInt(values.ml_per_serving, 10) : null,
+        estimated_cost_per_piece: parseOptNum(values.estimated_cost_per_piece),
+      }
       if (isEdit && existing) {
-        await updateItem.mutateAsync({
-          id: existing.id,
-          name_en: values.name_en,
-          name_ta: values.name_ta,
-          item_type: values.item_type,
-          category: values.category,
-          branch_kr: values.branch_kr,
-          branch_c2: values.branch_c2,
-          unit: values.unit,
-        })
+        await updateItem.mutateAsync({ id: existing.id, ...payload })
         showToast('Item updated', 'success')
       } else {
-        await createItem.mutateAsync({
-          name_en: values.name_en,
-          name_ta: values.name_ta,
-          item_type: values.item_type,
-          category: values.category,
-          branch_kr: values.branch_kr,
-          branch_c2: values.branch_c2,
-          unit: values.unit,
-        })
+        await createItem.mutateAsync(payload)
         showToast('Item created', 'success')
       }
       reset()
@@ -127,6 +179,9 @@ function ItemFormDialog({
     }
   }
 
+  const selectCls =
+    'mt-1 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+
   return (
     <Dialog
       open={open}
@@ -134,69 +189,227 @@ function ItemFormDialog({
         if (!o) onClose()
       }}
     >
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Edit Item' : 'Add Item to Master'}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label>
-                Name (English) <span className="text-destructive">*</span>
-              </Label>
-              <Input {...register('name_en')} className="mt-1" placeholder="e.g. Medu Vada" />
-              {errors.name_en && (
-                <p className="text-destructive text-xs mt-1">{errors.name_en.message}</p>
-              )}
-            </div>
-            <div>
-              <Label>Name (Tamil)</Label>
-              <Input {...register('name_ta')} className="mt-1" placeholder="e.g. மேது வடை" />
-            </div>
-            <div>
-              <Label>
-                Item Type <span className="text-destructive">*</span>
-              </Label>
-              <select
-                {...register('item_type')}
-                className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                {ITEM_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t.replace('_', ' ')}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label>Category</Label>
-              <Input
-                {...register('category')}
-                className="mt-1"
-                placeholder="e.g. snacks, beverages"
-              />
-            </div>
-            <div>
-              <Label>
-                Unit <span className="text-destructive">*</span>
-              </Label>
-              <select
-                {...register('unit')}
-                className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                {UNITS.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </select>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {/* ── Basic Info ────────────────────────────────────────── */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+              Basic Info
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>
+                  Name (English) <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  {...register('name_en')}
+                  className="mt-1"
+                  placeholder="e.g. Medu Vada"
+                  data-testid="input-name-en"
+                />
+                {errors.name_en && (
+                  <p className="text-destructive text-xs mt-1">{errors.name_en.message}</p>
+                )}
+              </div>
+              <div>
+                <Label>Name (Tamil)</Label>
+                <Input {...register('name_ta')} className="mt-1" placeholder="e.g. மேது வடை" />
+              </div>
+              <div>
+                <Label>
+                  Item Type <span className="text-destructive">*</span>
+                </Label>
+                <select
+                  {...register('item_type')}
+                  className={selectCls}
+                  data-testid="select-item-type"
+                >
+                  {ITEM_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t.replace(/_/g, ' ')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label>Category</Label>
+                <select
+                  {...register('category')}
+                  className={selectCls}
+                  data-testid="select-category"
+                >
+                  <option value="">— Select —</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label>
+                  Unit <span className="text-destructive">*</span>
+                </Label>
+                <select {...register('unit')} className={selectCls}>
+                  {UNITS.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
+          {/* ── Pricing ───────────────────────────────────────────── */}
           <div>
-            <Label>Branch Availability</Label>
-            <div className="flex gap-5 mt-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+              Pricing
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Selling Price (₹)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register('selling_price')}
+                  className="mt-1"
+                  placeholder="0.00"
+                  data-testid="input-selling-price"
+                />
+              </div>
+              <div>
+                <Label>
+                  Cost Price (₹)
+                  {watchedType === 'vendor_supplied' && (
+                    <span className="text-muted-foreground text-xs ml-1">
+                      (auto from vendor rates)
+                    </span>
+                  )}
+                </Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register('cost_price')}
+                  className="mt-1"
+                  placeholder="0.00"
+                />
+              </div>
+              {isMadeInShop && (
+                <div>
+                  <Label>Estimated Cost per Piece (₹)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...register('estimated_cost_per_piece')}
+                    className="mt-1"
+                    placeholder="0.00"
+                    data-testid="input-estimated-cost"
+                  />
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Approximate raw material cost for made-in-shop items
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Reconciliation ────────────────────────────────────── */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+              Reconciliation
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Reconciliation Method</Label>
+                <select
+                  {...register('reconciliation_method')}
+                  className={selectCls}
+                  data-testid="select-recon-method"
+                >
+                  <option value="">— Select —</option>
+                  {RECON_METHODS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {showMlPerServing && (
+                <div>
+                  <Label>ml per Serving</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    {...register('ml_per_serving')}
+                    className="mt-1"
+                    placeholder="e.g. 150"
+                    data-testid="input-ml-per-serving"
+                  />
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Used by Milk Report cross-check algorithm
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Module Flags ──────────────────────────────────────── */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+              Module Flags
+            </p>
+            <div className="flex flex-wrap gap-5">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Controller
+                  control={control}
+                  name="is_pos_item"
+                  render={({ field }) => (
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  )}
+                />
+                <span className="text-sm">POS Item</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Controller
+                  control={control}
+                  name="is_stock_item"
+                  render={({ field }) => (
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  )}
+                />
+                <span className="text-sm">Stock Item</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Controller
+                  control={control}
+                  name="is_snack_item"
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      data-testid="checkbox-snack-item"
+                    />
+                  )}
+                />
+                <span className="text-sm">Snack Item</span>
+              </label>
+            </div>
+          </div>
+
+          {/* ── Branch Availability ───────────────────────────────── */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+              Branch Availability
+            </p>
+            <div className="flex gap-5">
               <label className="flex items-center gap-2 cursor-pointer">
                 <Controller
                   control={control}
@@ -298,12 +511,12 @@ export default function ItemMasterPage() {
   }
 
   return (
-    <div className="p-4 max-w-5xl mx-auto">
+    <div className="p-4 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/vendors')}>
-            <ArrowLeft className="w-4 h-4 mr-1" /> Vendors
+          <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
+            <ArrowLeft className="w-4 h-4 mr-1" /> Dashboard
           </Button>
           <div>
             <h1 className="text-xl font-semibold text-foreground">Item Master</h1>
@@ -335,7 +548,7 @@ export default function ItemMasterPage() {
             <option value="all">All Types</option>
             {ITEM_TYPES.map((t) => (
               <option key={t} value={t}>
-                {t.replace('_', ' ')}
+                {t.replace(/_/g, ' ')}
               </option>
             ))}
           </select>
@@ -357,7 +570,9 @@ export default function ItemMasterPage() {
                 <TableHead>Name (EN)</TableHead>
                 <TableHead>Tamil</TableHead>
                 <TableHead>Type</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Unit</TableHead>
+                <TableHead className="text-right">Sell ₹</TableHead>
                 <TableHead className="text-center">KR</TableHead>
                 <TableHead className="text-center">C2</TableHead>
                 <TableHead className="text-center">Active</TableHead>
@@ -371,10 +586,16 @@ export default function ItemMasterPage() {
                   <TableCell className="text-muted-foreground">{item.name_ta ?? '—'}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs capitalize">
-                      {item.item_type.replace('_', ' ')}
+                      {item.item_type.replace(/_/g, ' ')}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {item.category ?? '—'}
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{item.unit}</TableCell>
+                  <TableCell className="text-right text-sm">
+                    {item.selling_price != null ? `₹${item.selling_price}` : '—'}
+                  </TableCell>
                   <TableCell className="text-center">
                     <Checkbox
                       checked={item.branch_kr}
@@ -402,7 +623,7 @@ export default function ItemMasterPage() {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                     No items found
                   </TableCell>
                 </TableRow>
