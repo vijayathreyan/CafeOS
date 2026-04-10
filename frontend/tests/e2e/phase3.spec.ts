@@ -236,6 +236,9 @@ test.describe('Item Master', () => {
     // Use timestamp suffix so each run creates a unique item name
     const itemName = `00000 Test ${Date.now()}`
     await page.fill('input[placeholder*="Medu Vada"]', itemName)
+    // Category and selling_price are now required
+    await page.selectOption('[data-testid="select-category"]', 'Snacks')
+    await page.fill('[data-testid="input-selling-price"]', '25')
     await page.click('button:has-text("Create Item")')
     await page.waitForSelector('text=Item created', { timeout: 8000 })
     await expect(page.locator(`text=${itemName}`).first()).toBeVisible()
@@ -490,7 +493,10 @@ test.describe('Item Master Enhanced Fields', () => {
     await expect(page.locator('[role="dialog"]')).toBeVisible()
     await expect(page.locator('[data-testid="select-recon-method"]')).toBeVisible()
     const recon = page.locator('[data-testid="select-recon-method"]')
+    // vendor_supplied (default) includes stock_balance
     await expect(recon.locator('option[value="stock_balance"]')).toHaveCount(1)
+    // Switch to made_in_shop to verify preparation_staff appears
+    await page.selectOption('[data-testid="select-item-type"]', 'made_in_shop')
     await expect(recon.locator('option[value="preparation_staff"]')).toHaveCount(1)
     await page.keyboard.press('Escape')
   })

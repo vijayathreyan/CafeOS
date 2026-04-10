@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   useItemMaster,
@@ -6,7 +6,9 @@ import {
   useUpdateItem,
   useToggleItemActive,
   useToggleItemBranch,
+  useItemVendorLinks,
 } from '../../hooks/useItemMaster'
+import { useVendors } from '../../hooks/useVendors'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Separator } from '@/components/ui/separator'
 import {
   Table,
   TableBody,
@@ -40,6 +43,20 @@ import type { ItemMaster } from '../../types/vendor'
 const ITEM_TYPES = ['vendor_supplied', 'made_in_shop', 'stock', 'beverage']
 const UNITS = ['piece', 'kg', 'gram', 'packet', 'box', 'litre', 'bunch', 'cup', 'pack']
 const CATEGORIES = ['Tea/Coffee', 'Snacks', 'Buns', 'Beverages', 'Ladoos', 'Combo', 'Bakery']
+
+const PRICE_GROUPS = ['₹5-10', '₹10-20', '₹20-30', '₹30-50', '₹50-100', '₹100+']
+
+function suggestPriceGroup(priceStr: string): string {
+  const p = parseFloat(priceStr)
+  if (Number.isNaN(p) || p <= 0) return ''
+  if (p <= 10) return '₹5-10'
+  if (p <= 20) return '₹10-20'
+  if (p <= 30) return '₹20-30'
+  if (p <= 50) return '₹30-50'
+  if (p <= 100) return '₹50-100'
+  return '₹100+'
+}
+
 const RECON_METHODS = [
   { value: 'consumed_litres', label: 'Consumed Litres' },
   { value: 'received_wastage_diff', label: 'Received – Wastage Diff' },
@@ -53,24 +70,55 @@ const RECON_METHODS = [
   { value: 'preparation_staff', label: 'Preparation by Staff' },
 ]
 
+const RECON_BY_TYPE: Record<string, string[]> = {
+  vendor_supplied: [
+    'stock_balance',
+    'consumed_pieces',
+    'pack_of_bottle',
+    'remaining_weight_bottle',
+    'remaining_weight_peanut',
+    'received_wastage_diff',
+  ],
+  made_in_shop: [
+    'consumed_pieces',
+    'big_box_opened',
+    'preparation_staff',
+    'remaining_weight_peanut',
+  ],
+  stock: [
+    'stock_balance',
+    'consumed_litres',
+    'remaining_weight_bottle',
+    'remaining_weight_peanut',
+    'remaining_cups',
+    'pack_of_bottle',
+    'received_wastage_diff',
+  ],
+  beverage: ['consumed_litres', 'remaining_cups', 'remaining_weight_bottle'],
+}
+
 // Numeric fields are kept as strings in the form to avoid zod inference issues,
 // and converted to numbers on submit.
 const itemSchema = z.object({
   name_en: z.string().min(1, 'English name is required'),
   name_ta: z.string().optional(),
   item_type: z.string().min(1, 'Item type is required'),
-  category: z.string().optional(),
+  category: z.string().min(1, 'Category is required'),
   unit: z.string().min(1, 'Unit is required'),
-  selling_price: z.string().optional(),
+  selling_price: z.string().min(1, 'Selling price is required'),
   cost_price: z.string().optional(),
+  price_group: z.string().optional(),
+  ml_per_serving: z.string().optional(),
+  estimated_cost_per_piece: z.string().optional(),
   reconciliation_method: z.string().optional(),
+  branch_kr: z.boolean(),
+  branch_c2: z.boolean(),
+  active_kr: z.boolean(),
+  active_c2: z.boolean(),
   is_pos_item: z.boolean(),
   is_stock_item: z.boolean(),
   is_snack_item: z.boolean(),
-  ml_per_serving: z.string().optional(),
-  estimated_cost_per_piece: z.string().optional(),
-  branch_kr: z.boolean(),
-  branch_c2: z.boolean(),
+  vendor_id: z.string().optional(),
 })
 
 type ItemFormValues = z.infer<typeof itemSchema>
@@ -91,15 +139,21 @@ function ItemFormDialog({
   onClose: () => void
   existing?: ItemMaster
 }) {
+  const { user } = useAuth()
   const isEdit = Boolean(existing)
   const createItem = useCreateItem()
   const updateItem = useUpdateItem()
+  const { data: vendors = [] } = useVendors(!!user)
+  const { data: existingVendorLink } = useItemVendorLinks(existing?.id, !!user && isEdit)
+
+  const activeVendors = vendors.filter((v) => v.active)
 
   const {
     register,
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema),
@@ -111,15 +165,19 @@ function ItemFormDialog({
           category: existing.category ?? '',
           branch_kr: existing.branch_kr,
           branch_c2: existing.branch_c2,
+          active_kr: existing.active_kr ?? true,
+          active_c2: existing.active_c2 ?? true,
           unit: existing.unit,
           selling_price: existing.selling_price?.toString() ?? '',
           cost_price: existing.cost_price?.toString() ?? '',
+          price_group: existing.price_group ?? '',
           reconciliation_method: existing.reconciliation_method ?? '',
           is_pos_item: existing.is_pos_item ?? true,
           is_stock_item: existing.is_stock_item ?? true,
-          is_snack_item: existing.is_snack_item ?? true,
+          is_snack_item: existing.is_snack_item ?? false,
           ml_per_serving: existing.ml_per_serving?.toString() ?? '',
           estimated_cost_per_piece: existing.estimated_cost_per_piece?.toString() ?? '',
+          vendor_id: '',
         }
       : {
           name_en: '',
@@ -128,23 +186,47 @@ function ItemFormDialog({
           category: '',
           branch_kr: true,
           branch_c2: true,
+          active_kr: true,
+          active_c2: true,
           unit: 'piece',
           selling_price: '',
           cost_price: '',
+          price_group: '',
           reconciliation_method: '',
           is_pos_item: true,
           is_stock_item: true,
-          is_snack_item: true,
+          is_snack_item: false,
           ml_per_serving: '',
           estimated_cost_per_piece: '',
+          vendor_id: '',
         },
   })
 
+  // Pre-fill vendor_id in edit mode once link loads
+  useEffect(() => {
+    if (existingVendorLink?.vendor_id) {
+      setValue('vendor_id', existingVendorLink.vendor_id)
+    }
+  }, [existingVendorLink, setValue])
+
   const watchedType = useWatch({ control, name: 'item_type' })
   const watchedCategory = useWatch({ control, name: 'category' })
+  const watchedSellingPrice = useWatch({ control, name: 'selling_price' })
 
   const isMadeInShop = watchedType === 'made_in_shop'
+  const isVendorSupplied = watchedType === 'vendor_supplied'
   const showMlPerServing = watchedCategory === 'Tea/Coffee' || watchedCategory === 'Beverages'
+
+  const reconOptions = RECON_BY_TYPE[watchedType] ?? RECON_METHODS.map((m) => m.value)
+  const filteredReconMethods = RECON_METHODS.filter((m) => reconOptions.includes(m.value))
+
+  // Auto-suggest price_group when selling_price changes
+  useEffect(() => {
+    if (watchedSellingPrice) {
+      const suggested = suggestPriceGroup(watchedSellingPrice)
+      if (suggested) setValue('price_group', suggested)
+    }
+  }, [watchedSellingPrice, setValue])
 
   async function onSubmit(values: ItemFormValues) {
     try {
@@ -155,15 +237,19 @@ function ItemFormDialog({
         category: values.category,
         branch_kr: values.branch_kr,
         branch_c2: values.branch_c2,
+        active_kr: values.active_kr,
+        active_c2: values.active_c2,
         unit: values.unit,
         selling_price: parseOptNum(values.selling_price),
         cost_price: parseOptNum(values.cost_price),
+        price_group: values.price_group || null,
         reconciliation_method: values.reconciliation_method,
         is_pos_item: values.is_pos_item,
         is_stock_item: values.is_stock_item,
         is_snack_item: values.is_snack_item,
         ml_per_serving: values.ml_per_serving ? parseInt(values.ml_per_serving, 10) : null,
         estimated_cost_per_piece: parseOptNum(values.estimated_cost_per_piece),
+        vendor_id: isVendorSupplied ? values.vendor_id || undefined : undefined,
       }
       if (isEdit && existing) {
         await updateItem.mutateAsync({ id: existing.id, ...payload })
@@ -195,10 +281,10 @@ function ItemFormDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* ── Basic Info ────────────────────────────────────────── */}
+          {/* ── Basic Details ─────────────────────────────────────── */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-              Basic Info
+              Basic Details
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -236,7 +322,9 @@ function ItemFormDialog({
                 </select>
               </div>
               <div>
-                <Label>Category</Label>
+                <Label>
+                  Category <span className="text-destructive">*</span>
+                </Label>
                 <select
                   {...register('category')}
                   className={selectCls}
@@ -249,6 +337,9 @@ function ItemFormDialog({
                     </option>
                   ))}
                 </select>
+                {errors.category && (
+                  <p className="text-destructive text-xs mt-1">{errors.category.message}</p>
+                )}
               </div>
               <div>
                 <Label>
@@ -265,6 +356,8 @@ function ItemFormDialog({
             </div>
           </div>
 
+          <Separator />
+
           {/* ── Pricing ───────────────────────────────────────────── */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
@@ -272,7 +365,9 @@ function ItemFormDialog({
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label>Selling Price (₹)</Label>
+                <Label>
+                  Selling Price (₹) <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -282,11 +377,14 @@ function ItemFormDialog({
                   placeholder="0.00"
                   data-testid="input-selling-price"
                 />
+                {errors.selling_price && (
+                  <p className="text-destructive text-xs mt-1">{errors.selling_price.message}</p>
+                )}
               </div>
               <div>
                 <Label>
                   Cost Price (₹)
-                  {watchedType === 'vendor_supplied' && (
+                  {isVendorSupplied && (
                     <span className="text-muted-foreground text-xs ml-1">
                       (auto from vendor rates)
                     </span>
@@ -301,6 +399,40 @@ function ItemFormDialog({
                   placeholder="0.00"
                 />
               </div>
+              <div>
+                <Label>Price Group</Label>
+                <select
+                  {...register('price_group')}
+                  className={selectCls}
+                  data-testid="select-price-group"
+                >
+                  <option value="">— Select —</option>
+                  {PRICE_GROUPS.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-muted-foreground text-xs mt-1">
+                  Auto-suggested from selling price
+                </p>
+              </div>
+              {showMlPerServing && (
+                <div>
+                  <Label>ml per Serving</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    {...register('ml_per_serving')}
+                    className="mt-1"
+                    placeholder="e.g. 150"
+                    data-testid="input-ml-per-serving"
+                  />
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Used by Milk Report cross-check algorithm
+                  </p>
+                </div>
+              )}
               {isMadeInShop && (
                 <div>
                   <Label>Estimated Cost per Piece (₹)</Label>
@@ -321,52 +453,62 @@ function ItemFormDialog({
             </div>
           </div>
 
-          {/* ── Reconciliation ────────────────────────────────────── */}
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-              Reconciliation
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label>Reconciliation Method</Label>
-                <select
-                  {...register('reconciliation_method')}
-                  className={selectCls}
-                  data-testid="select-recon-method"
-                >
-                  <option value="">— Select —</option>
-                  {RECON_METHODS.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {showMlPerServing && (
-                <div>
-                  <Label>ml per Serving</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    {...register('ml_per_serving')}
-                    className="mt-1"
-                    placeholder="e.g. 150"
-                    data-testid="input-ml-per-serving"
-                  />
-                  <p className="text-muted-foreground text-xs mt-1">
-                    Used by Milk Report cross-check algorithm
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          <Separator />
 
-          {/* ── Module Flags ──────────────────────────────────────── */}
+          {/* ── Availability ──────────────────────────────────────── */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-              Module Flags
+              Availability
             </p>
-            <div className="flex flex-wrap gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Controller
+                  control={control}
+                  name="branch_kr"
+                  render={({ field }) => (
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  )}
+                />
+                <span className="text-sm">KR Branch</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Controller
+                  control={control}
+                  name="branch_c2"
+                  render={({ field }) => (
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  )}
+                />
+                <span className="text-sm">C2 Branch</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Controller
+                  control={control}
+                  name="active_kr"
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      data-testid="checkbox-active-kr"
+                    />
+                  )}
+                />
+                <span className="text-sm">Active at KR</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Controller
+                  control={control}
+                  name="active_c2"
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      data-testid="checkbox-active-c2"
+                    />
+                  )}
+                />
+                <span className="text-sm">Active at C2</span>
+              </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <Controller
                   control={control}
@@ -404,34 +546,63 @@ function ItemFormDialog({
             </div>
           </div>
 
-          {/* ── Branch Availability ───────────────────────────────── */}
+          <Separator />
+
+          {/* ── Reconciliation ────────────────────────────────────── */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-              Branch Availability
+              Reconciliation
             </p>
-            <div className="flex gap-5">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Controller
-                  control={control}
-                  name="branch_kr"
-                  render={({ field }) => (
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-                <span className="text-sm">Kaappi Ready (KR)</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Controller
-                  control={control}
-                  name="branch_c2"
-                  render={({ field }) => (
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-                <span className="text-sm">Coffee Mate C2</span>
-              </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Reconciliation Method</Label>
+                <select
+                  {...register('reconciliation_method')}
+                  className={selectCls}
+                  data-testid="select-recon-method"
+                >
+                  <option value="">— Select —</option>
+                  {filteredReconMethods.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
+
+          {/* ── Vendor Link (vendor_supplied only) ────────────────── */}
+          {isVendorSupplied && (
+            <>
+              <Separator />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                  Vendor Link
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Primary Vendor</Label>
+                    <select
+                      {...register('vendor_id')}
+                      className={selectCls}
+                      data-testid="select-vendor-link"
+                    >
+                      <option value="">— None —</option>
+                      {activeVendors.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.business_name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-muted-foreground text-xs mt-1">
+                      Creates a vendor_items link for this item
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>

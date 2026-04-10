@@ -31,26 +31,31 @@ interface CreateItemPayload {
   category?: string
   branch_kr: boolean
   branch_c2: boolean
+  active_kr: boolean
+  active_c2: boolean
   unit: string
   selling_price?: number | null
   cost_price?: number | null
+  price_group?: string | null
   reconciliation_method?: string
   is_pos_item: boolean
   is_stock_item: boolean
   is_snack_item: boolean
   ml_per_serving?: number | null
   estimated_cost_per_piece?: number | null
+  vendor_id?: string
 }
 
 /**
  * Mutation that creates a new item in item_master.
  * Validates that no active item with the same name_en already exists.
+ * Returns the created item's id.
  */
 export function useCreateItem() {
   const qc = useQueryClient()
 
   return useMutation(
-    async (payload: CreateItemPayload) => {
+    async (payload: CreateItemPayload): Promise<string> => {
       const { data: existing } = await supabase
         .from('item_master')
         .select('id')
@@ -61,25 +66,46 @@ export function useCreateItem() {
         throw new Error(`Item "${payload.name_en}" already exists`)
       }
 
-      const { error } = await supabase.from('item_master').insert({
-        name_en: payload.name_en,
-        name_ta: payload.name_ta || null,
-        item_type: payload.item_type,
-        category: payload.category || null,
-        branch_kr: payload.branch_kr,
-        branch_c2: payload.branch_c2,
-        unit: payload.unit,
-        selling_price: payload.selling_price ?? null,
-        cost_price: payload.cost_price ?? null,
-        reconciliation_method: payload.reconciliation_method || null,
-        is_pos_item: payload.is_pos_item,
-        is_stock_item: payload.is_stock_item,
-        is_snack_item: payload.is_snack_item,
-        ml_per_serving: payload.ml_per_serving ?? null,
-        estimated_cost_per_piece: payload.estimated_cost_per_piece ?? null,
-        active: true,
-      })
+      const { data, error } = await supabase
+        .from('item_master')
+        .insert({
+          name_en: payload.name_en,
+          name_ta: payload.name_ta || null,
+          item_type: payload.item_type,
+          category: payload.category || null,
+          branch_kr: payload.branch_kr,
+          branch_c2: payload.branch_c2,
+          active_kr: payload.active_kr,
+          active_c2: payload.active_c2,
+          unit: payload.unit,
+          selling_price: payload.selling_price ?? null,
+          cost_price: payload.cost_price ?? null,
+          price_group: payload.price_group ?? null,
+          reconciliation_method: payload.reconciliation_method || null,
+          is_pos_item: payload.is_pos_item,
+          is_stock_item: payload.is_stock_item,
+          is_snack_item: payload.is_snack_item,
+          ml_per_serving: payload.ml_per_serving ?? null,
+          estimated_cost_per_piece: payload.estimated_cost_per_piece ?? null,
+          active: true,
+        })
+        .select('id')
+        .single()
       if (error) throw new Error(error.message)
+
+      // Link vendor if provided
+      if (payload.vendor_id && data?.id) {
+        await supabase.from('vendor_items').insert({
+          vendor_id: payload.vendor_id,
+          item_id: data.id,
+          branch: null,
+          calc_type: 'manual',
+          start_date: new Date().toISOString().split('T')[0],
+          active: true,
+        })
+      }
+
+      return data?.id ?? ''
     },
     {
       onSuccess: () => {
@@ -97,15 +123,19 @@ interface UpdateItemPayload {
   category?: string
   branch_kr: boolean
   branch_c2: boolean
+  active_kr: boolean
+  active_c2: boolean
   unit: string
   selling_price?: number | null
   cost_price?: number | null
+  price_group?: string | null
   reconciliation_method?: string
   is_pos_item: boolean
   is_stock_item: boolean
   is_snack_item: boolean
   ml_per_serving?: number | null
   estimated_cost_per_piece?: number | null
+  vendor_id?: string
 }
 
 /**
@@ -125,9 +155,12 @@ export function useUpdateItem() {
           category: payload.category || null,
           branch_kr: payload.branch_kr,
           branch_c2: payload.branch_c2,
+          active_kr: payload.active_kr,
+          active_c2: payload.active_c2,
           unit: payload.unit,
           selling_price: payload.selling_price ?? null,
           cost_price: payload.cost_price ?? null,
+          price_group: payload.price_group ?? null,
           reconciliation_method: payload.reconciliation_method || null,
           is_pos_item: payload.is_pos_item,
           is_stock_item: payload.is_stock_item,
@@ -137,12 +170,54 @@ export function useUpdateItem() {
         })
         .eq('id', payload.id)
       if (error) throw new Error(error.message)
+
+      // Update vendor link: deactivate old links, create new one if vendor_id provided
+      if (payload.vendor_id) {
+        // Deactivate existing vendor_items for this item
+        await supabase.from('vendor_items').update({ active: false }).eq('item_id', payload.id)
+        // Insert new active link
+        await supabase.from('vendor_items').insert({
+          vendor_id: payload.vendor_id,
+          item_id: payload.id,
+          branch: null,
+          calc_type: 'manual',
+          start_date: new Date().toISOString().split('T')[0],
+          active: true,
+        })
+      } else if (payload.vendor_id === '') {
+        // Explicit clear — deactivate all vendor links
+        await supabase.from('vendor_items').update({ active: false }).eq('item_id', payload.id)
+      }
     },
     {
       onSuccess: () => {
         qc.invalidateQueries('item_master')
+        qc.invalidateQueries('vendors')
       },
     }
+  )
+}
+
+/**
+ * Fetches the active vendor_items record for a given item so the form
+ * can pre-fill the Vendor Link dropdown in edit mode.
+ */
+export function useItemVendorLinks(itemId: string | undefined, session: boolean) {
+  return useQuery<{ vendor_id: string } | null>(
+    ['item_vendor_link', itemId],
+    async () => {
+      if (!itemId) return null
+      const { data, error } = await supabase
+        .from('vendor_items')
+        .select('vendor_id')
+        .eq('item_id', itemId)
+        .eq('active', true)
+        .limit(1)
+        .maybeSingle()
+      if (error) throw new Error(error.message)
+      return data ?? null
+    },
+    { enabled: !!session && !!itemId, staleTime: 30000 }
   )
 }
 

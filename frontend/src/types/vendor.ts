@@ -16,9 +16,12 @@ export interface ItemMaster {
   branch_c2: boolean
   unit: string
   active: boolean
+  active_kr: boolean
+  active_c2: boolean
   ml_per_serving: number | null
   selling_price: number | null
   cost_price: number | null
+  price_group: string | null
   reconciliation_method: string | null
   is_pos_item: boolean
   is_stock_item: boolean
