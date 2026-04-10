@@ -33,6 +33,7 @@ interface CreateItemPayload {
   branch_c2: boolean
   active_kr: boolean
   active_c2: boolean
+  active?: boolean
   unit: string
   selling_price?: number | null
   cost_price?: number | null
@@ -87,7 +88,7 @@ export function useCreateItem() {
           is_snack_item: payload.is_snack_item,
           ml_per_serving: payload.ml_per_serving ?? null,
           estimated_cost_per_piece: payload.estimated_cost_per_piece ?? null,
-          active: true,
+          active: payload.active ?? true,
         })
         .select('id')
         .single()
@@ -125,6 +126,7 @@ interface UpdateItemPayload {
   branch_c2: boolean
   active_kr: boolean
   active_c2: boolean
+  active?: boolean
   unit: string
   selling_price?: number | null
   cost_price?: number | null
@@ -167,6 +169,7 @@ export function useUpdateItem() {
           is_snack_item: payload.is_snack_item,
           ml_per_serving: payload.ml_per_serving ?? null,
           estimated_cost_per_piece: payload.estimated_cost_per_piece ?? null,
+          ...(payload.active !== undefined ? { active: payload.active } : {}),
         })
         .eq('id', payload.id)
       if (error) throw new Error(error.message)

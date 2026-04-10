@@ -113,11 +113,10 @@ const itemSchema = z.object({
   reconciliation_method: z.string().optional(),
   branch_kr: z.boolean(),
   branch_c2: z.boolean(),
-  active_kr: z.boolean(),
-  active_c2: z.boolean(),
   is_pos_item: z.boolean(),
   is_stock_item: z.boolean(),
   is_snack_item: z.boolean(),
+  active: z.boolean(),
   vendor_id: z.string().optional(),
 })
 
@@ -165,8 +164,6 @@ function ItemFormDialog({
           category: existing.category ?? '',
           branch_kr: existing.branch_kr,
           branch_c2: existing.branch_c2,
-          active_kr: existing.active_kr ?? true,
-          active_c2: existing.active_c2 ?? true,
           unit: existing.unit,
           selling_price: existing.selling_price?.toString() ?? '',
           cost_price: existing.cost_price?.toString() ?? '',
@@ -175,6 +172,7 @@ function ItemFormDialog({
           is_pos_item: existing.is_pos_item ?? true,
           is_stock_item: existing.is_stock_item ?? true,
           is_snack_item: existing.is_snack_item ?? false,
+          active: existing.active ?? true,
           ml_per_serving: existing.ml_per_serving?.toString() ?? '',
           estimated_cost_per_piece: existing.estimated_cost_per_piece?.toString() ?? '',
           vendor_id: '',
@@ -186,8 +184,6 @@ function ItemFormDialog({
           category: '',
           branch_kr: true,
           branch_c2: true,
-          active_kr: true,
-          active_c2: true,
           unit: 'piece',
           selling_price: '',
           cost_price: '',
@@ -196,6 +192,7 @@ function ItemFormDialog({
           is_pos_item: true,
           is_stock_item: true,
           is_snack_item: false,
+          active: true,
           ml_per_serving: '',
           estimated_cost_per_piece: '',
           vendor_id: '',
@@ -230,6 +227,8 @@ function ItemFormDialog({
 
   async function onSubmit(values: ItemFormValues) {
     try {
+      // active_kr / active_c2 mirror the branch selection;
+      // when the global status is OFF both are forced false.
       const payload = {
         name_en: values.name_en,
         name_ta: values.name_ta,
@@ -237,8 +236,9 @@ function ItemFormDialog({
         category: values.category,
         branch_kr: values.branch_kr,
         branch_c2: values.branch_c2,
-        active_kr: values.active_kr,
-        active_c2: values.active_c2,
+        active_kr: values.active && values.branch_kr,
+        active_c2: values.active && values.branch_c2,
+        active: values.active,
         unit: values.unit,
         selling_price: parseOptNum(values.selling_price),
         cost_price: parseOptNum(values.cost_price),
@@ -456,93 +456,114 @@ function ItemFormDialog({
           <Separator />
 
           {/* ── Availability ──────────────────────────────────────── */}
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+          <div className="space-y-5">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Availability
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Controller
-                  control={control}
-                  name="branch_kr"
-                  render={({ field }) => (
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-                <span className="text-sm">KR Branch</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Controller
-                  control={control}
-                  name="branch_c2"
-                  render={({ field }) => (
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-                <span className="text-sm">C2 Branch</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Controller
-                  control={control}
-                  name="active_kr"
-                  render={({ field }) => (
+
+            {/* Part 1 — Available at */}
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Available at</p>
+              <div className="flex gap-5 flex-wrap">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Controller
+                    control={control}
+                    name="branch_kr"
+                    render={({ field }) => (
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    )}
+                  />
+                  <span className="text-sm">Kaappi Ready</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Controller
+                    control={control}
+                    name="branch_c2"
+                    render={({ field }) => (
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    )}
+                  />
+                  <span className="text-sm">Coffee Mate C2</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Part 2 — Used in */}
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Used in</p>
+              <div className="flex gap-5 flex-wrap">
+                <label
+                  className="flex items-center gap-2 cursor-pointer"
+                  title="Shows on the billing screen at the counter"
+                >
+                  <Controller
+                    control={control}
+                    name="is_pos_item"
+                    render={({ field }) => (
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    )}
+                  />
+                  <span className="text-sm">POS Billing</span>
+                </label>
+                <label
+                  className="flex items-center gap-2 cursor-pointer"
+                  title="Shows in daily stock levels entry"
+                >
+                  <Controller
+                    control={control}
+                    name="is_stock_item"
+                    render={({ field }) => (
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    )}
+                  />
+                  <span className="text-sm">Stock Entry</span>
+                </label>
+                <label
+                  className="flex items-center gap-2 cursor-pointer"
+                  title="Shows in shift snacks data entry"
+                >
+                  <Controller
+                    control={control}
+                    name="is_snack_item"
+                    render={({ field }) => (
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="checkbox-snack-item"
+                      />
+                    )}
+                  />
+                  <span className="text-sm">Snacks Card</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Part 3 — Status */}
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Status</p>
+              <Controller
+                control={control}
+                name="active"
+                render={({ field }) => (
+                  <label className="flex items-center gap-3 cursor-pointer w-fit">
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      data-testid="checkbox-active-kr"
+                      data-testid="checkbox-item-active"
                     />
-                  )}
-                />
-                <span className="text-sm">Active at KR</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Controller
-                  control={control}
-                  name="active_c2"
-                  render={({ field }) => (
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      data-testid="checkbox-active-c2"
-                    />
-                  )}
-                />
-                <span className="text-sm">Active at C2</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Controller
-                  control={control}
-                  name="is_pos_item"
-                  render={({ field }) => (
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-                <span className="text-sm">POS Item</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Controller
-                  control={control}
-                  name="is_stock_item"
-                  render={({ field }) => (
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-                <span className="text-sm">Stock Item</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Controller
-                  control={control}
-                  name="is_snack_item"
-                  render={({ field }) => (
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      data-testid="checkbox-snack-item"
-                    />
-                  )}
-                />
-                <span className="text-sm">Snack Item</span>
-              </label>
+                    <div>
+                      <span className="text-sm font-medium">
+                        {field.value ? 'Active' : 'Inactive'}
+                      </span>
+                      <p className="text-xs text-muted-foreground">
+                        {field.value
+                          ? 'Item is visible across all modules and branches'
+                          : 'Item is hidden everywhere — use to temporarily disable'}
+                      </p>
+                    </div>
+                  </label>
+                )}
+              />
             </div>
           </div>
 
