@@ -121,6 +121,8 @@ test.describe('Add Vendor', () => {
     await page.waitForURL('**/vendors/**', { timeout: 15000 })
     // Should land on vendor profile page
     await expect(page.locator('text=00000 Test Vendor Phase3').first()).toBeVisible()
+    // No database error toast should appear
+    await expect(page.locator('li.destructive').first()).not.toBeVisible({ timeout: 2000 })
   })
 })
 
@@ -242,6 +244,8 @@ test.describe('Item Master', () => {
     await page.click('button:has-text("Create Item")')
     await page.waitForSelector('text=Item created', { timeout: 8000 })
     await expect(page.locator(`text=${itemName}`).first()).toBeVisible()
+    // No database error toast should appear
+    await expect(page.locator('li.destructive').first()).not.toBeVisible({ timeout: 2000 })
   })
 
   test('can edit an existing item', async ({ page }) => {
@@ -570,6 +574,13 @@ test.describe('Item Master Enhanced Fields', () => {
     // Verify selling price shows in the table
     await expect(page.locator(`text=${itemName}`).first()).toBeVisible()
     await expect(page.locator('text=₹25').first()).toBeVisible()
+    // No database error toast should appear
+    await expect(page.locator('li.destructive').first()).not.toBeVisible({ timeout: 2000 })
+
+    // Refresh — item must persist in the table (confirms DB write succeeded)
+    await page.goto('/owner/item-master')
+    await page.waitForSelector('table', { timeout: 10000 })
+    await expect(page.locator(`text=${itemName}`).first()).toBeVisible({ timeout: 8000 })
   })
 
   test('non-owner cannot access /owner/item-master', async ({ page }) => {

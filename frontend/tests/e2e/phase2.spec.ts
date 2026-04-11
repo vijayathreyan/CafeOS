@@ -86,10 +86,24 @@ test.describe('KR Stock Levels Entry', () => {
   test('save button submits stock entries and shows success toast', async ({ page }) => {
     await loginAsStaffKR(page)
     await page.goto('/stock-entry')
-    await page.waitForSelector('button:has-text("Save Stock")', { timeout: 10000 })
+    await page.waitForSelector('input[aria-label="Coffee Powder closing stock"]', {
+      timeout: 10000,
+    })
+
+    // Enter a known value so we can verify persistence after refresh
+    await page.locator('input[aria-label="Coffee Powder closing stock"]').fill('750')
 
     await page.locator('button:has-text("Save Stock")').click()
     await expect(page.locator('text=Stock saved').first()).toBeVisible({ timeout: 12000 })
+    // No database error toast should appear
+    await expect(page.locator('li.destructive').first()).not.toBeVisible({ timeout: 2000 })
+
+    // Refresh — value must persist (confirms DB write succeeded)
+    await page.reload()
+    await page.waitForSelector('input[aria-label="Coffee Powder closing stock"]', {
+      timeout: 10000,
+    })
+    await expect(page.locator('input[aria-label="Coffee Powder closing stock"]')).toHaveValue('750')
   })
 
   test('staff dashboard shows Stock Levels quick action', async ({ page }) => {
@@ -154,6 +168,8 @@ test.describe('KR Cash Expenses Entry', () => {
 
     await page.locator('button:has-text("Save Expenses")').click()
     await expect(page.locator('text=Expenses saved').first()).toBeVisible({ timeout: 12000 })
+    // No database error toast should appear
+    await expect(page.locator('li.destructive').first()).not.toBeVisible({ timeout: 2000 })
   })
 })
 
@@ -191,6 +207,8 @@ test.describe('C2 Stock Form', () => {
 
     await page.locator('button:has-text("Save Stock")').click()
     await expect(page.locator('text=Stock saved').first()).toBeVisible({ timeout: 12000 })
+    // No database error toast should appear
+    await expect(page.locator('li.destructive').first()).not.toBeVisible({ timeout: 2000 })
   })
 })
 
