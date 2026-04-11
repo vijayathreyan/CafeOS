@@ -16,8 +16,8 @@ import { Save, CheckCircle2 } from 'lucide-react'
 // ── Item definitions ──────────────────────────────────────────
 
 const KR_ITEMS: StockItemDefinition[] = [
-  { name: 'Coffee Powder', unit: 'kg', inputType: 'kg_grams' },
-  { name: 'Tea Powder', unit: 'kg', inputType: 'kg_grams' },
+  { name: 'Coffee Powder', unit: 'g', inputType: 'weight_grams' },
+  { name: 'Tea Powder', unit: 'g', inputType: 'weight_grams' },
   { name: 'Country Sugar', unit: 'kg', inputType: 'count' },
   { name: 'White Sugar', unit: 'kg', inputType: 'count' },
   { name: 'Peanut Ladoo Bottle', unit: 'grams', inputType: 'weight_grams' },
@@ -42,8 +42,8 @@ const KR_ITEMS: StockItemDefinition[] = [
 ]
 
 const C2_ITEMS: StockItemDefinition[] = [
-  { name: 'Coffee Powder', unit: 'kg', inputType: 'kg_grams' },
-  { name: 'Tea Powder', unit: 'kg', inputType: 'kg_grams' },
+  { name: 'Coffee Powder', unit: 'g', inputType: 'weight_grams' },
+  { name: 'Tea Powder', unit: 'g', inputType: 'weight_grams' },
   { name: 'Country Sugar', unit: 'kg', inputType: 'count' },
   { name: 'White Sugar', unit: 'kg', inputType: 'count' },
   { name: 'Peanut Ladoo Bottle', unit: 'grams', inputType: 'weight_grams' },

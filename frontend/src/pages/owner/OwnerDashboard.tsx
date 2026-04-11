@@ -11,6 +11,8 @@ import {
   Receipt,
   Scale,
   List,
+  CreditCard,
+  Banknote,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -45,6 +47,27 @@ export default function OwnerDashboard() {
       Icon: BarChart3,
       ready: false,
       phase: 'Phase 7–9',
+    },
+    {
+      title: 'Data Entry',
+      subtitle: 'UPI, Swiggy, Zomato payouts',
+      path: '/owner/data-entry',
+      Icon: CreditCard,
+      ready: true,
+    },
+    {
+      title: 'Expenses',
+      subtitle: 'Bills, maintenance, HO expenses',
+      path: '/owner/expenses',
+      Icon: Receipt,
+      ready: true,
+    },
+    {
+      title: 'Vasanth Float',
+      subtitle: 'Supervisor cash float balance',
+      path: '/owner/vasanth-float',
+      Icon: Banknote,
+      ready: true,
     },
     {
       title: 'Vendor Master',

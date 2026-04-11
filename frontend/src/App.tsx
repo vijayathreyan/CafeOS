@@ -25,6 +25,18 @@ import VendorMaster from './pages/owner/VendorMaster'
 import VendorOnboarding from './pages/owner/VendorOnboarding'
 import VendorProfile from './pages/owner/VendorProfile'
 import ItemMasterPage from './pages/owner/ItemMasterPage'
+// Phase 4 — Owner Entry Modules & Expenses
+import DataEntryHub from './pages/owner/DataEntryHub'
+import UPIEntryPage from './pages/owner/UPIEntryPage'
+import DeliveryPayoutsPage from './pages/owner/DeliveryPayoutsPage'
+import SalaryEntryPage from './pages/owner/SalaryEntryPage'
+import OwnerExpensesHub from './pages/owner/OwnerExpensesHub'
+import OwnerHOExpensesPage from './pages/owner/OwnerHOExpensesPage'
+import ManualExpensesPage from './pages/owner/ManualExpensesPage'
+import OwnerDepositsPage from './pages/owner/OwnerDepositsPage'
+import VasanthFloatPage from './pages/owner/VasanthFloatPage'
+import CashDepositPage from './pages/supervisor/CashDepositPage'
+import SupervisorExpensesPage from './pages/supervisor/SupervisorExpensesPage'
 
 export default function App() {
   const [authReady, setAuthReady] = useState(false)
@@ -257,6 +269,98 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner']}>
                   <ItemMasterPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Phase 4 — Owner Entry Modules */}
+            <Route
+              path="/owner/data-entry"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <DataEntryHub />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/upi-entry"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <UPIEntryPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/delivery-payouts"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <DeliveryPayoutsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/salary-entry"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <SalaryEntryPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/expenses"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <OwnerExpensesHub />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/ho-expenses"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <OwnerHOExpensesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/manual-expenses"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <ManualExpensesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/deposits"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <OwnerDepositsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/vasanth-float"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <VasanthFloatPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Phase 4 — Supervisor Modules */}
+            <Route
+              path="/supervisor/cash-deposit"
+              element={
+                <ProtectedRoute allowedRoles={['supervisor']}>
+                  <CashDepositPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/supervisor/expenses"
+              element={
+                <ProtectedRoute allowedRoles={['supervisor']}>
+                  <SupervisorExpensesPage />
                 </ProtectedRoute>
               }
             />

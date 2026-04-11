@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 3 complete (vendor onboarding, master, item master, bulk import)
+**Build Phase:** Phase 4 complete (owner entry modules, expenses, supervisor cash deposit, Vasanth float)
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -415,11 +415,60 @@ docker compose restart supabase-api
 
 ---
 
-## What's NOT Built Yet (Phase 4 onwards)
+## What Was Built in Phase 4
+
+### ✅ Migration 009 — pl_salary_entries notes column
+- Added `notes TEXT` column to `pl_salary_entries` (was missing from 001_complete_schema.sql)
+
+### ✅ TypeScript Types (`frontend/src/types/phase4.ts`)
+- All Phase 4 interfaces: `UPIEntry`, `DeliveryPlatformEntry`, `CashDeposit`, `CashDepositRow`, `SupervisorExpense`, `OwnerManualExpense`, `VasanthFloatBalance`, `FloatTransaction`, `PLSalaryEntry`
+- `PL_CATEGORY_MAP` — routes ExpenseType → P&L category string
+- `EXPENSE_TYPE_LABELS` — UI labels for expense types
+- `STAFF_BY_BRANCH` — hardcoded staff lists for KR (Kanchana, Parvathi, Vasanth) and C2 (Praveen, Silambarasan)
+
+### ✅ Custom Hooks
+- `useUPIEntries` — fetch/upsert UPI entries by week; `getMondayOfWeek`, `addDaysToDate` utilities
+- `useDeliveryPayouts` — CRUD for Swiggy/Zomato delivery payouts
+- `useCashDeposit` — supervisor cash deposit history and creation
+- `useSupervisorExpenses` — supervisor expense CRUD with auto float deduction
+- `useOwnerExpenseView` — owner view of all supervisor expenses with filters
+- `useManualExpenses` — owner manual expense CRUD; capital purchase dual-insert to `capital_expenditure`
+- `useVasanthFloat` — float balance, merged history (topups + deductions), add funds
+- `useSalaryEntries` — monthly salary entry per branch with upsert
+
+### ✅ Owner Entry Modules
+- **Data Entry Hub** (`/owner/data-entry`) — navigation tiles to UPI Entry, Delivery Payouts, Salary Entry
+- **UPI Entry** (`/owner/upi-entry`) — 14-row table (7 days × 2 branches), week navigation, null vs 0 distinction
+- **Delivery Payouts** (`/owner/delivery-payouts`) — Swiggy/Zomato payout CRUD with dialog form
+- **Salary Entry** (`/owner/salary-entry`) — staff salary entry by branch/month with DB pre-fill
+
+### ✅ Owner Expenses Modules
+- **Expenses Hub** (`/owner/expenses`) — navigation to HO Expenses, Manual Expenses, Cash Deposits
+- **HO Expenses** (`/owner/ho-expenses`) — owner view of supervisor expenses with summary cards + filters
+- **Manual Expenses** (`/owner/manual-expenses`) — CRUD form; auto pl_category; receipt photo upload; capital dual-insert
+- **Cash Deposits View** (`/owner/deposits`) — deposit history with branch/date filters; challan photo viewer
+
+### ✅ Vasanth Float
+- **Float Page** (`/owner/vasanth-float`) — current balance display, this-month stats, Add Funds dialog, transaction history
+
+### ✅ Supervisor Modules
+- **Cash Deposit** (`/supervisor/cash-deposit`) — challan photo upload, row entry, hard-block validation (rows must match challan amount exactly), success screen
+- **Supervisor Expenses** (`/supervisor/expenses`) — expense entry with shop/branch/photo; auto-deducts from Vasanth float; last-7-days list
+
+### ✅ Navigation Updates
+- Owner Dashboard: added Data Entry, Expenses, Vasanth Float tiles
+- Supervisor Dashboard: replaced inline forms with navigation tiles to `/supervisor/expenses` and `/supervisor/cash-deposit`
+
+### ✅ Testing
+- 38 Phase 4 Playwright E2E tests in `tests/e2e/phase4.spec.ts`
+- All tests passing (103 Phase 1–3 + 38 Phase 4 = 141+ total)
+
+---
+
+## What's NOT Built Yet (Phase 5 onwards)
 
 | Phase | Scope |
 |-------|-------|
-| 4 | Owner UPI entry, Swiggy/Zomato entry, Supervisor cash deposit, Supervisor expense module, Owner Manual Expense, Salary entry, Vasanth Float |
 | 5 | Vendor Payment module (Auto-Calculated + Manual Bill Entry), Post-Paid Customer module |
 | 6 | Month End Closing Stock (3-page list) |
 | 7 | Milk Report, Consumption Report, Wastage & Complimentary Report, Expense Report |
@@ -493,13 +542,13 @@ Branch: main
 ### Database Migrations
 - Numbered sequentially: 000, 001, 002...
 - NEVER modify existing migration files
-- Next migration for Phase 4: `007_phase4_additions.sql`
+- Next migration for Phase 5: `010_phase5_additions.sql`
 - Track all migrations in `migrations_log` table
 - See `supabase/migrations/README.md` for full rules
 
 ### Testing
 - Playwright E2E tests in `frontend/tests/e2e/`
-- All 65 tests passing
+- All 141 tests passing
 - Test data uses `00000` prefix — auto-cleaned before/after each run
 - Protected accounts never deleted: `9999999999`, `9876543210`, `8888888888`, `9876543211`
 - Run: `npx playwright test`
@@ -521,5 +570,5 @@ Every component built in Phase 2 onwards must follow:
 
 ---
 
-*CafeOS v1.0 · Phase 1 Complete · March 2026*
+*CafeOS v1.0 · Phase 4 Complete · April 2026*
 *Requirements: UFW_Requirements_v3.6_Final.docx*
