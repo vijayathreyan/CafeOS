@@ -43,7 +43,6 @@ import type { ItemMaster } from '../../types/vendor'
 const ITEM_TYPES = ['vendor_supplied', 'made_in_shop', 'stock', 'beverage']
 const UNITS = ['piece', 'kg', 'gram', 'packet', 'box', 'litre', 'bunch', 'cup', 'pack']
 const CATEGORIES = ['Tea/Coffee', 'Snacks', 'Buns', 'Beverages', 'Ladoos', 'Combo', 'Bakery']
-
 const PRICE_GROUPS = ['₹5-10', '₹10-20', '₹20-30', '₹30-50', '₹50-100', '₹100+']
 
 function suggestPriceGroup(priceStr: string): string {
@@ -97,8 +96,7 @@ const RECON_BY_TYPE: Record<string, string[]> = {
   beverage: ['consumed_litres', 'remaining_cups', 'remaining_weight_bottle'],
 }
 
-// Numeric fields are kept as strings in the form to avoid zod inference issues,
-// and converted to numbers on submit.
+// Numeric fields stored as strings in the form; converted to numbers on submit.
 const itemSchema = z.object({
   name_en: z.string().min(1, 'English name is required'),
   name_ta: z.string().optional(),
@@ -129,21 +127,114 @@ function parseOptNum(v?: string): number | null {
   return Number.isNaN(n) ? null : n
 }
 
+/** Empty defaults for the Add Item form. */
+const EMPTY_FORM: ItemFormValues = {
+  name_en: '',
+  name_ta: '',
+  item_type: 'vendor_supplied',
+  category: '',
+  branch_kr: true,
+  branch_c2: true,
+  unit: 'piece',
+  selling_price: '',
+  cost_price: '',
+  price_group: '',
+  reconciliation_method: '',
+  is_pos_item: true,
+  is_stock_item: true,
+  is_snack_item: false,
+  active: true,
+  ml_per_serving: '',
+  estimated_cost_per_piece: '',
+  vendor_id: '',
+}
+
+/** Map a DB item record to form values. */
+function itemToForm(item: ItemMaster): ItemFormValues {
+  return {
+    name_en: item.name_en,
+    name_ta: item.name_ta ?? '',
+    item_type: item.item_type,
+    category: item.category ?? '',
+    branch_kr: item.branch_kr,
+    branch_c2: item.branch_c2,
+    unit: item.unit,
+    selling_price: item.selling_price?.toString() ?? '',
+    cost_price: item.cost_price?.toString() ?? '',
+    price_group: item.price_group ?? '',
+    reconciliation_method: item.reconciliation_method ?? '',
+    is_pos_item: item.is_pos_item ?? true,
+    is_stock_item: item.is_stock_item ?? true,
+    is_snack_item: item.is_snack_item ?? false,
+    active: item.active ?? true,
+    ml_per_serving: item.ml_per_serving?.toString() ?? '',
+    estimated_cost_per_piece: item.estimated_cost_per_piece?.toString() ?? '',
+    vendor_id: '',
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ItemFormDialog — handles the Dialog shell.
+//
+// Strategy: pass `editingItem` (the full list object, already in React Query
+// cache) directly to the form as `existing`. No async fetch needed before
+// opening — the list query already uses select('*') so all fields are present.
+// ─────────────────────────────────────────────────────────────────────────────
 function ItemFormDialog({
   open,
   onClose,
-  existing,
+  editingItem,
 }: {
   open: boolean
   onClose: () => void
+  editingItem?: ItemMaster
+}) {
+  const isEdit = !!editingItem
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose()
+      }}
+    >
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? 'Edit Item' : 'Add Item to Master'}</DialogTitle>
+        </DialogHeader>
+
+        {/* key forces a fresh form mount per item / add-vs-edit switch */}
+        <ItemFormContent
+          key={editingItem?.id ?? 'new'}
+          existing={editingItem}
+          editingItem={editingItem}
+          onClose={onClose}
+        />
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ItemFormContent — the actual form.
+// Mounts with correct `defaultValues` from the very first render because
+// `existing` (from the list cache) is synchronously available before mount.
+// ─────────────────────────────────────────────────────────────────────────────
+function ItemFormContent({
+  existing,
+  editingItem,
+  onClose,
+}: {
   existing?: ItemMaster
+  editingItem?: ItemMaster
+  onClose: () => void
 }) {
   const { user } = useAuth()
-  const isEdit = Boolean(existing)
+  const isEdit = !!editingItem
   const createItem = useCreateItem()
   const updateItem = useUpdateItem()
   const { data: vendors = [] } = useVendors(!!user)
-  const { data: existingVendorLink } = useItemVendorLinks(existing?.id, !!user && isEdit)
+  const { data: existingVendorLink } = useItemVendorLinks(editingItem?.id, !!user && isEdit)
 
   const activeVendors = vendors.filter((v) => v.active)
 
@@ -156,50 +247,17 @@ function ItemFormDialog({
     formState: { errors, isSubmitting },
   } = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema),
-    defaultValues: existing
-      ? {
-          name_en: existing.name_en,
-          name_ta: existing.name_ta ?? '',
-          item_type: existing.item_type,
-          category: existing.category ?? '',
-          branch_kr: existing.branch_kr,
-          branch_c2: existing.branch_c2,
-          unit: existing.unit,
-          selling_price: existing.selling_price?.toString() ?? '',
-          cost_price: existing.cost_price?.toString() ?? '',
-          price_group: existing.price_group ?? '',
-          reconciliation_method: existing.reconciliation_method ?? '',
-          is_pos_item: existing.is_pos_item ?? true,
-          is_stock_item: existing.is_stock_item ?? true,
-          is_snack_item: existing.is_snack_item ?? false,
-          active: existing.active ?? true,
-          ml_per_serving: existing.ml_per_serving?.toString() ?? '',
-          estimated_cost_per_piece: existing.estimated_cost_per_piece?.toString() ?? '',
-          vendor_id: '',
-        }
-      : {
-          name_en: '',
-          name_ta: '',
-          item_type: 'vendor_supplied',
-          category: '',
-          branch_kr: true,
-          branch_c2: true,
-          unit: 'piece',
-          selling_price: '',
-          cost_price: '',
-          price_group: '',
-          reconciliation_method: '',
-          is_pos_item: true,
-          is_stock_item: true,
-          is_snack_item: false,
-          active: true,
-          ml_per_serving: '',
-          estimated_cost_per_piece: '',
-          vendor_id: '',
-        },
+    defaultValues: EMPTY_FORM,
+    // `values` reactively re-syncs the form whenever `existing` changes.
+    // This is the correct pattern for forms that display server data — it works
+    // with React StrictMode, Radix portals, and async DB fetches without any
+    // useEffect + reset() machinery. keepDirtyValues prevents overwriting fields
+    // the user has already edited when the background DB fetch completes.
+    values: existing ? itemToForm(existing) : undefined,
+    resetOptions: { keepDirtyValues: true },
   })
 
-  // Pre-fill vendor_id in edit mode once link loads
+  // Pre-fill vendor_id once the async vendor-link query resolves
   useEffect(() => {
     if (existingVendorLink?.vendor_id) {
       setValue('vendor_id', existingVendorLink.vendor_id)
@@ -227,8 +285,6 @@ function ItemFormDialog({
 
   async function onSubmit(values: ItemFormValues) {
     try {
-      // active_kr / active_c2 mirror the branch selection;
-      // when the global status is OFF both are forced false.
       const payload = {
         name_en: values.name_en,
         name_ta: values.name_ta,
@@ -251,9 +307,9 @@ function ItemFormDialog({
         estimated_cost_per_piece: parseOptNum(values.estimated_cost_per_piece),
         vendor_id: isVendorSupplied ? values.vendor_id || undefined : undefined,
       }
-      if (isEdit && existing) {
-        await updateItem.mutateAsync({ id: existing.id, ...payload })
-        showToast('Item updated', 'success')
+      if (isEdit && editingItem) {
+        await updateItem.mutateAsync({ id: editingItem.id, ...payload })
+        showToast('Item updated successfully', 'success')
       } else {
         await createItem.mutateAsync(payload)
         showToast('Item created', 'success')
@@ -269,373 +325,352 @@ function ItemFormDialog({
     'mt-1 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring'
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        if (!o) onClose()
-      }}
-    >
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit Item' : 'Add Item to Master'}</DialogTitle>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* ── Basic Details ─────────────────────────────────────── */}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {/* ── Basic Details ─────────────────────────────────────── */}
+      <div>
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+          Basic Details
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-              Basic Details
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label>
-                  Name (English) <span className="text-destructive">*</span>
-                </Label>
+            <Label>
+              Name (English) <span className="text-destructive">*</span>
+            </Label>
+            <Controller
+              control={control}
+              name="name_en"
+              render={({ field }) => (
                 <Input
-                  {...register('name_en')}
+                  {...field}
                   className="mt-1"
                   placeholder="e.g. Medu Vada"
                   data-testid="input-name-en"
                 />
-                {errors.name_en && (
-                  <p className="text-destructive text-xs mt-1">{errors.name_en.message}</p>
-                )}
-              </div>
-              <div>
-                <Label>Name (Tamil)</Label>
-                <Input {...register('name_ta')} className="mt-1" placeholder="e.g. மேது வடை" />
-              </div>
-              <div>
-                <Label>
-                  Item Type <span className="text-destructive">*</span>
-                </Label>
-                <select
-                  {...register('item_type')}
-                  className={selectCls}
-                  data-testid="select-item-type"
-                >
-                  {ITEM_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t.replace(/_/g, ' ')}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label>
-                  Category <span className="text-destructive">*</span>
-                </Label>
-                <select
-                  {...register('category')}
-                  className={selectCls}
-                  data-testid="select-category"
-                >
-                  <option value="">— Select —</option>
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-                {errors.category && (
-                  <p className="text-destructive text-xs mt-1">{errors.category.message}</p>
-                )}
-              </div>
-              <div>
-                <Label>
-                  Unit <span className="text-destructive">*</span>
-                </Label>
-                <select {...register('unit')} className={selectCls}>
-                  {UNITS.map((u) => (
-                    <option key={u} value={u}>
-                      {u}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+              )}
+            />
+            {errors.name_en && (
+              <p className="text-destructive text-xs mt-1">{errors.name_en.message}</p>
+            )}
           </div>
+          <div>
+            <Label>Name (Tamil)</Label>
+            <Input {...register('name_ta')} className="mt-1" placeholder="e.g. மேது வடை" />
+          </div>
+          <div>
+            <Label>
+              Item Type <span className="text-destructive">*</span>
+            </Label>
+            <select {...register('item_type')} className={selectCls} data-testid="select-item-type">
+              {ITEM_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t.replace(/_/g, ' ')}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label>
+              Category <span className="text-destructive">*</span>
+            </Label>
+            <select {...register('category')} className={selectCls} data-testid="select-category">
+              <option value="">— Select —</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            {errors.category && (
+              <p className="text-destructive text-xs mt-1">{errors.category.message}</p>
+            )}
+          </div>
+          <div>
+            <Label>
+              Unit <span className="text-destructive">*</span>
+            </Label>
+            <select {...register('unit')} className={selectCls}>
+              {UNITS.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
 
+      <Separator />
+
+      {/* ── Pricing ───────────────────────────────────────────── */}
+      <div>
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+          Pricing
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label>
+              Selling Price (₹) <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              {...register('selling_price')}
+              className="mt-1"
+              placeholder="0.00"
+              data-testid="input-selling-price"
+            />
+            {errors.selling_price && (
+              <p className="text-destructive text-xs mt-1">{errors.selling_price.message}</p>
+            )}
+          </div>
+          <div>
+            <Label>
+              Cost Price (₹)
+              {isVendorSupplied && (
+                <span className="text-muted-foreground text-xs ml-1">(auto from vendor rates)</span>
+              )}
+            </Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              {...register('cost_price')}
+              className="mt-1"
+              placeholder="0.00"
+            />
+          </div>
+          <div>
+            <Label>Price Group</Label>
+            <select
+              {...register('price_group')}
+              className={selectCls}
+              data-testid="select-price-group"
+            >
+              <option value="">— Select —</option>
+              {PRICE_GROUPS.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+            <p className="text-muted-foreground text-xs mt-1">Auto-suggested from selling price</p>
+          </div>
+          {showMlPerServing && (
+            <div>
+              <Label>ml per Serving</Label>
+              <Input
+                type="number"
+                min="0"
+                {...register('ml_per_serving')}
+                className="mt-1"
+                placeholder="e.g. 150"
+                data-testid="input-ml-per-serving"
+              />
+              <p className="text-muted-foreground text-xs mt-1">
+                Used by Milk Report cross-check algorithm
+              </p>
+            </div>
+          )}
+          {isMadeInShop && (
+            <div>
+              <Label>Estimated Cost per Piece (₹)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                {...register('estimated_cost_per_piece')}
+                className="mt-1"
+                placeholder="0.00"
+                data-testid="input-estimated-cost"
+              />
+              <p className="text-muted-foreground text-xs mt-1">
+                Approximate raw material cost for made-in-shop items
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* ── Availability ──────────────────────────────────────── */}
+      <div className="space-y-5">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Availability
+        </p>
+
+        {/* Part 1 — Available at */}
+        <div>
+          <p className="text-sm text-muted-foreground mb-2">Available at</p>
+          <div className="flex gap-5 flex-wrap">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Controller
+                control={control}
+                name="branch_kr"
+                render={({ field }) => (
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                )}
+              />
+              <span className="text-sm">Kaappi Ready</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Controller
+                control={control}
+                name="branch_c2"
+                render={({ field }) => (
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                )}
+              />
+              <span className="text-sm">Coffee Mate C2</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Part 2 — Used in */}
+        <div>
+          <p className="text-sm text-muted-foreground mb-2">Used in</p>
+          <div className="flex gap-5 flex-wrap">
+            <label
+              className="flex items-center gap-2 cursor-pointer"
+              title="Shows on the billing screen at the counter"
+            >
+              <Controller
+                control={control}
+                name="is_pos_item"
+                render={({ field }) => (
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                )}
+              />
+              <span className="text-sm">POS Billing</span>
+            </label>
+            <label
+              className="flex items-center gap-2 cursor-pointer"
+              title="Shows in daily stock levels entry"
+            >
+              <Controller
+                control={control}
+                name="is_stock_item"
+                render={({ field }) => (
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                )}
+              />
+              <span className="text-sm">Stock Entry</span>
+            </label>
+            <label
+              className="flex items-center gap-2 cursor-pointer"
+              title="Shows in shift snacks data entry"
+            >
+              <Controller
+                control={control}
+                name="is_snack_item"
+                render={({ field }) => (
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    data-testid="checkbox-snack-item"
+                  />
+                )}
+              />
+              <span className="text-sm">Snacks Card</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Part 3 — Status */}
+        <div>
+          <p className="text-sm text-muted-foreground mb-2">Status</p>
+          <Controller
+            control={control}
+            name="active"
+            render={({ field }) => (
+              <label className="flex items-center gap-3 cursor-pointer w-fit">
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  data-testid="checkbox-item-active"
+                />
+                <div>
+                  <span className="text-sm font-medium">{field.value ? 'Active' : 'Inactive'}</span>
+                  <p className="text-xs text-muted-foreground">
+                    {field.value
+                      ? 'Item is visible across all modules and branches'
+                      : 'Item is hidden everywhere — use to temporarily disable'}
+                  </p>
+                </div>
+              </label>
+            )}
+          />
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* ── Reconciliation ────────────────────────────────────── */}
+      <div>
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+          Reconciliation
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label>Reconciliation Method</Label>
+            <select
+              {...register('reconciliation_method')}
+              className={selectCls}
+              data-testid="select-recon-method"
+            >
+              <option value="">— Select —</option>
+              {filteredReconMethods.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Vendor Link (vendor_supplied only) ────────────────── */}
+      {isVendorSupplied && (
+        <>
           <Separator />
-
-          {/* ── Pricing ───────────────────────────────────────────── */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-              Pricing
+              Vendor Link
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label>
-                  Selling Price (₹) <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register('selling_price')}
-                  className="mt-1"
-                  placeholder="0.00"
-                  data-testid="input-selling-price"
-                />
-                {errors.selling_price && (
-                  <p className="text-destructive text-xs mt-1">{errors.selling_price.message}</p>
-                )}
-              </div>
-              <div>
-                <Label>
-                  Cost Price (₹)
-                  {isVendorSupplied && (
-                    <span className="text-muted-foreground text-xs ml-1">
-                      (auto from vendor rates)
-                    </span>
-                  )}
-                </Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register('cost_price')}
-                  className="mt-1"
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <Label>Price Group</Label>
+                <Label>Primary Vendor</Label>
                 <select
-                  {...register('price_group')}
+                  {...register('vendor_id')}
                   className={selectCls}
-                  data-testid="select-price-group"
+                  data-testid="select-vendor-link"
                 >
-                  <option value="">— Select —</option>
-                  {PRICE_GROUPS.map((g) => (
-                    <option key={g} value={g}>
-                      {g}
+                  <option value="">— None —</option>
+                  {activeVendors.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.business_name}
                     </option>
                   ))}
                 </select>
                 <p className="text-muted-foreground text-xs mt-1">
-                  Auto-suggested from selling price
+                  Creates a vendor_items link for this item
                 </p>
               </div>
-              {showMlPerServing && (
-                <div>
-                  <Label>ml per Serving</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    {...register('ml_per_serving')}
-                    className="mt-1"
-                    placeholder="e.g. 150"
-                    data-testid="input-ml-per-serving"
-                  />
-                  <p className="text-muted-foreground text-xs mt-1">
-                    Used by Milk Report cross-check algorithm
-                  </p>
-                </div>
-              )}
-              {isMadeInShop && (
-                <div>
-                  <Label>Estimated Cost per Piece (₹)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    {...register('estimated_cost_per_piece')}
-                    className="mt-1"
-                    placeholder="0.00"
-                    data-testid="input-estimated-cost"
-                  />
-                  <p className="text-muted-foreground text-xs mt-1">
-                    Approximate raw material cost for made-in-shop items
-                  </p>
-                </div>
-              )}
             </div>
           </div>
+        </>
+      )}
 
-          <Separator />
-
-          {/* ── Availability ──────────────────────────────────────── */}
-          <div className="space-y-5">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Availability
-            </p>
-
-            {/* Part 1 — Available at */}
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Available at</p>
-              <div className="flex gap-5 flex-wrap">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Controller
-                    control={control}
-                    name="branch_kr"
-                    render={({ field }) => (
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    )}
-                  />
-                  <span className="text-sm">Kaappi Ready</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Controller
-                    control={control}
-                    name="branch_c2"
-                    render={({ field }) => (
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    )}
-                  />
-                  <span className="text-sm">Coffee Mate C2</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Part 2 — Used in */}
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Used in</p>
-              <div className="flex gap-5 flex-wrap">
-                <label
-                  className="flex items-center gap-2 cursor-pointer"
-                  title="Shows on the billing screen at the counter"
-                >
-                  <Controller
-                    control={control}
-                    name="is_pos_item"
-                    render={({ field }) => (
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    )}
-                  />
-                  <span className="text-sm">POS Billing</span>
-                </label>
-                <label
-                  className="flex items-center gap-2 cursor-pointer"
-                  title="Shows in daily stock levels entry"
-                >
-                  <Controller
-                    control={control}
-                    name="is_stock_item"
-                    render={({ field }) => (
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                    )}
-                  />
-                  <span className="text-sm">Stock Entry</span>
-                </label>
-                <label
-                  className="flex items-center gap-2 cursor-pointer"
-                  title="Shows in shift snacks data entry"
-                >
-                  <Controller
-                    control={control}
-                    name="is_snack_item"
-                    render={({ field }) => (
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        data-testid="checkbox-snack-item"
-                      />
-                    )}
-                  />
-                  <span className="text-sm">Snacks Card</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Part 3 — Status */}
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Status</p>
-              <Controller
-                control={control}
-                name="active"
-                render={({ field }) => (
-                  <label className="flex items-center gap-3 cursor-pointer w-fit">
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      data-testid="checkbox-item-active"
-                    />
-                    <div>
-                      <span className="text-sm font-medium">
-                        {field.value ? 'Active' : 'Inactive'}
-                      </span>
-                      <p className="text-xs text-muted-foreground">
-                        {field.value
-                          ? 'Item is visible across all modules and branches'
-                          : 'Item is hidden everywhere — use to temporarily disable'}
-                      </p>
-                    </div>
-                  </label>
-                )}
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* ── Reconciliation ────────────────────────────────────── */}
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-              Reconciliation
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label>Reconciliation Method</Label>
-                <select
-                  {...register('reconciliation_method')}
-                  className={selectCls}
-                  data-testid="select-recon-method"
-                >
-                  <option value="">— Select —</option>
-                  {filteredReconMethods.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Vendor Link (vendor_supplied only) ────────────────── */}
-          {isVendorSupplied && (
-            <>
-              <Separator />
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                  Vendor Link
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Primary Vendor</Label>
-                    <select
-                      {...register('vendor_id')}
-                      className={selectCls}
-                      data-testid="select-vendor-link"
-                    >
-                      <option value="">— None —</option>
-                      {activeVendors.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.business_name}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-muted-foreground text-xs mt-1">
-                      Creates a vendor_items link for this item
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : isEdit ? 'Update Item' : 'Create Item'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Item'}
+        </Button>
+      </DialogFooter>
+    </form>
   )
 }
 
@@ -646,6 +681,7 @@ export default function ItemMasterPage() {
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState<string>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
+  // editingItem carries the full list record — available synchronously for instant pre-fill
   const [editingItem, setEditingItem] = useState<ItemMaster | undefined>()
 
   const { data: items = [], isLoading } = useItemMaster(!!user)
@@ -826,12 +862,13 @@ export default function ItemMasterPage() {
       )}
 
       <ItemFormDialog
+        key={editingItem?.id ?? 'new'}
         open={dialogOpen}
         onClose={() => {
           setDialogOpen(false)
           setEditingItem(undefined)
         }}
-        existing={editingItem}
+        editingItem={editingItem}
       />
       {ConfirmDialog}
     </div>

@@ -202,6 +202,25 @@ export function useUpdateItem() {
 }
 
 /**
+ * Fetches a single item_master record by ID from the database.
+ * Used by the edit form to guarantee fresh data (bypasses list cache).
+ *
+ * @param id      - Item UUID to fetch
+ * @param enabled - Auth session guard
+ */
+export function useItemById(id: string | undefined, enabled: boolean) {
+  return useQuery<ItemMaster>(
+    ['item_master', 'single', id],
+    async () => {
+      const { data, error } = await supabase.from('item_master').select('*').eq('id', id!).single()
+      if (error) throw new Error(error.message)
+      return data as ItemMaster
+    },
+    { enabled: !!enabled && !!id, staleTime: 0, retry: 2 }
+  )
+}
+
+/**
  * Fetches the active vendor_items record for a given item so the form
  * can pre-fill the Vendor Link dropdown in edit mode.
  */

@@ -258,6 +258,62 @@ test.describe('Item Master', () => {
     await expect(page.locator('text=Edit Item')).toBeVisible()
   })
 
+  test('edit form pre-fills data, saves changes, and persists after refresh', async ({ page }) => {
+    test.setTimeout(40000)
+    await loginAsOwner(page)
+    await page.goto('/items')
+    await page.waitForSelector('button:has-text("Add Item")', { timeout: 10000 })
+
+    // Create a fresh item so we can safely edit it without touching seeded data
+    await page.click('button:has-text("Add Item")')
+    await expect(page.locator('[role="dialog"]')).toBeVisible()
+    const itemName = `00000 EditTest ${Date.now()}`
+    await page.fill('[data-testid="input-name-en"]', itemName)
+    await page.selectOption('[data-testid="select-category"]', 'Snacks')
+    await page.fill('[data-testid="input-selling-price"]', '10')
+    await page.click('button:has-text("Create Item")')
+    await page.waitForSelector('text=Item created', { timeout: 10000 })
+    await expect(page.locator('[role="dialog"]')).not.toBeVisible({ timeout: 5000 })
+
+    // Find and click Edit on the newly created item
+    await page.waitForSelector(`text=${itemName}`, { timeout: 8000 })
+    const itemRow = page.locator('table tbody tr').filter({ hasText: itemName })
+    await itemRow.locator('td:last-child button').click()
+
+    // Dialog opens in Edit mode — title must say "Edit Item"
+    await expect(page.locator('[role="dialog"]')).toBeVisible()
+    await expect(page.locator('text=Edit Item')).toBeVisible()
+
+    // Wait for the DB fetch to finish (loading skeleton disappears) and
+    // verify item name field is not empty — it must be pre-filled from the DB
+    await expect(page.locator('[data-testid="edit-form-loading"]')).not.toBeVisible({
+      timeout: 8000,
+    })
+    await expect(page.locator('[data-testid="input-name-en"]')).not.toBeEmpty({ timeout: 5000 })
+    await expect(page.locator('[data-testid="input-name-en"]')).toHaveValue(itemName)
+
+    // Save button must say "Save Changes" (not "Create Item") in edit mode
+    await expect(page.locator('button:has-text("Save Changes")')).toBeVisible()
+
+    // Change the selling price and save
+    await page.locator('[data-testid="input-selling-price"]').fill('99')
+    await page.click('button:has-text("Save Changes")')
+    await page.waitForSelector('text=Item updated successfully', { timeout: 10000 })
+    await expect(page.locator('li.destructive').first()).not.toBeVisible({ timeout: 2000 })
+    await expect(page.locator('[role="dialog"]')).not.toBeVisible({ timeout: 5000 })
+
+    // Updated price must be visible in the list immediately after save
+    const updatedRow = page.locator('table tbody tr').filter({ hasText: itemName })
+    await expect(updatedRow.locator('text=₹99')).toBeVisible({ timeout: 8000 })
+
+    // Reload and verify the change persisted in the database
+    await page.reload()
+    await page.waitForSelector('table', { timeout: 10000 })
+    await expect(page.locator(`text=${itemName}`).first()).toBeVisible({ timeout: 8000 })
+    const persistedRow = page.locator('table tbody tr').filter({ hasText: itemName })
+    await expect(persistedRow.locator('text=₹99')).toBeVisible({ timeout: 8000 })
+  })
+
   test('search filters item list', async ({ page }) => {
     await loginAsOwner(page)
     await page.goto('/items')
