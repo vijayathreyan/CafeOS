@@ -151,9 +151,12 @@ CafeOS/
         │   └── useStockItemConfig.ts    # fetch + update weight-per-unit config
         │
         ├── components/
-        │   ├── Layout.tsx        # App shell with TopBar + BottomNav
-        │   ├── TopBar.tsx        # Header — branch chip + lang toggle + user
-        │   ├── BottomNav.tsx     # Mobile navigation bar
+        │   ├── Layout.tsx        # Role-aware shell: OwnerLayout (owner) or AppHeader+BottomNav (staff/supervisor)
+        │   ├── TopBar.tsx        # Legacy header — retained but no longer used in Layout
+        │   ├── BottomNav.tsx     # Mobile navigation bar (staff/supervisor only)
+        │   ├── layouts/
+        │   │   ├── OwnerLayout.tsx   # Owner: 240px sidebar (desktop lg+), Sheet drawer (mobile), nav groups
+        │   │   └── AppHeader.tsx     # Staff/supervisor: 56px top bar, home button + lang toggle + avatar
         │   ├── StatusChip.tsx    # Done/Pending/Warning/Error/Grey chips
         │   ├── ProtectedRoute.tsx  # Role-based route guard
         │   ├── StockForm.tsx     # ★ Phase 2 — branch-aware stock entry table
@@ -311,9 +314,11 @@ WhatsApp credential delivery on creation (hook ready — requires alert module P
 
 ### ✅ Supporting Components
 - `StatusChip` — Done/Pending/Warning/Error/Grey with icons
-- `TopBar` — branch chip, language toggle (staff/supervisor only), user avatar
-- `BottomNav` — role-aware navigation
-- `Layout` — responsive shell (bottom nav mobile, sidebar desktop ready)
+- `OwnerLayout` — persistent sidebar (240px, lg+) with nav groups: Core (Dashboard/Employees/Tasks/Reports/Settings) + Owner (Vendor Payments/Post-paid Customers/Item Master/Vendor Master/Expenses/Data Entry/Vasanth Float); Sheet drawer on mobile with hamburger (`data-testid="sidebar-hamburger"`); `data-testid="owner-sidebar"` on the desktop aside
+- `AppHeader` — 56px top bar for staff/supervisor: home button (`data-testid="app-header-home"`) → role-based URL, centered logo (`pointer-events-none`), language toggle, avatar dropdown
+- `BottomNav` — mobile nav for staff/supervisor only (owner uses sidebar)
+- `Layout` — role-aware: owner gets `<OwnerLayout>`, others get `<AppHeader> + <BottomNav>`
+- All owner sub-pages: back buttons removed (sidebar handles navigation)
 
 ---
 

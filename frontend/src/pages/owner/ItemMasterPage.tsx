@@ -36,8 +36,7 @@ import { useConfirm, showToast } from '@/lib/dialogs'
 import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Pencil, ArrowLeft } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Plus, Pencil } from 'lucide-react'
 import type { ItemMaster } from '../../types/vendor'
 
 const ITEM_TYPES = ['vendor_supplied', 'made_in_shop', 'stock', 'beverage']
@@ -729,7 +728,6 @@ function ItemFormContent({
 }
 
 export default function ItemMasterPage() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const { confirm, ConfirmDialog } = useConfirm()
   const [search, setSearch] = useState('')
@@ -797,9 +795,6 @@ export default function ItemMasterPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="w-4 h-4 mr-1" /> Dashboard
-          </Button>
           <div>
             <h1 className="text-xl font-semibold text-foreground">Item Master</h1>
             <p className="text-muted-foreground text-sm mt-0.5">

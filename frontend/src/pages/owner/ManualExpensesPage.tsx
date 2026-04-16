@@ -1,5 +1,4 @@
 import React, { useCallback, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   useManualExpenses,
@@ -33,7 +32,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { useConfirm, showToast } from '@/lib/dialogs'
-import { Plus, Pencil, Trash2, ArrowLeft, Camera } from 'lucide-react'
+import { Plus, Pencil, Trash2, Camera } from 'lucide-react'
 import type { OwnerManualExpense, ExpenseType } from '../../types/phase4'
 import { EXPENSE_TYPE_LABELS, PL_CATEGORY_MAP } from '../../types/phase4'
 
@@ -69,7 +68,6 @@ function formatDate(d: string) {
 }
 
 export default function ManualExpensesPage() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const { confirm, ConfirmDialog } = useConfirm()
   const [open, setOpen] = useState(false)
@@ -226,9 +224,6 @@ export default function ManualExpensesPage() {
 
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/owner/expenses')}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
           <h1 className="text-xl font-semibold text-foreground">Manual Expenses</h1>
         </div>
         <Button onClick={openAdd} data-testid="add-expense-btn">

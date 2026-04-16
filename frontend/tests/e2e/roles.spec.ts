@@ -4,12 +4,15 @@ import { loginAs, ensureShiftOpen } from './helpers'
 
 test.describe('Role-Based Access', () => {
   test('owner login → owner dashboard shown', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
     await loginAs(page, TEST_USERS.owner)
     await page.waitForURL('**/dashboard', { timeout: 12000 })
     await page.waitForLoadState('networkidle')
     await expect(page).toHaveURL(/\/dashboard/)
-    // Owner desktop nav has Employees link — scoped to header to avoid strict-mode
-    await expect(page.locator('header').getByRole('link', { name: 'Employees' })).toBeVisible()
+    // Owner sidebar has Employees link
+    await expect(
+      page.locator('[data-testid="owner-sidebar"]').getByRole('link', { name: 'Employees' })
+    ).toBeVisible()
   })
 
   test('staff login → staff dashboard shown, not owner dashboard', async ({ page }) => {

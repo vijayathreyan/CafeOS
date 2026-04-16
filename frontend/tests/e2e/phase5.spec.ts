@@ -82,11 +82,15 @@ test.describe('Vendor Payments — Page Structure', () => {
     await expect(page.locator('text=Kalingaraj Cycle')).toBeVisible()
   })
 
-  test('dashboard back button navigates to dashboard', async ({ page }) => {
+  test('sidebar Dashboard link navigates to dashboard', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
     await loginAsOwner(page)
     await page.goto('/owner/vendor-payments')
     await page.waitForSelector('[data-testid="vendor-payments-page"]', { timeout: 10000 })
-    await page.locator('button:has-text("Dashboard")').click()
+    await page
+      .locator('[data-testid="owner-sidebar"]')
+      .getByRole('link', { name: 'Dashboard' })
+      .click()
     await page.waitForURL('**/dashboard', { timeout: 8000 })
   })
 })

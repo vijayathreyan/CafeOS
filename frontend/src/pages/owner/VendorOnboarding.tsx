@@ -21,7 +21,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { showToast } from '@/lib/dialogs'
-import { Plus, Trash2, ArrowLeft } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import type { VendorFormValues } from '../../types/vendor'
 
 // ─── Validation schema ────────────────────────────────────────────────────────
@@ -191,9 +191,6 @@ export default function VendorOnboarding() {
     <div className="p-4 max-w-3xl mx-auto pb-24">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-4 h-4 mr-1" /> Back
-        </Button>
         <div>
           <h1 className="text-xl font-semibold text-foreground">
             {isEdit ? 'Edit Vendor' : 'Add Vendor'}

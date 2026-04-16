@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useVasanthFloat, useFloatHistory, useAddFloatFunds } from '../../hooks/useVasanthFloat'
 import { useForm } from 'react-hook-form'
@@ -19,7 +18,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { showToast } from '@/lib/dialogs'
-import { Banknote, ArrowLeft, TrendingUp, TrendingDown, History, Plus } from 'lucide-react'
+import { Banknote, TrendingUp, TrendingDown, History, Plus } from 'lucide-react'
 
 const addFundsSchema = z.object({
   topup_date: z.string().min(1, 'Required'),
@@ -30,7 +29,6 @@ const addFundsSchema = z.object({
 type AddFundsForm = z.infer<typeof addFundsSchema>
 
 export default function VasanthFloatPage() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const [addOpen, setAddOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -83,9 +81,6 @@ export default function VasanthFloatPage() {
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
         <h1 className="text-xl font-semibold text-foreground">Vasanth Float</h1>
       </div>
 

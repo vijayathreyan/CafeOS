@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useOwnerExpenseView } from '../../hooks/useOwnerExpenseView'
 import { useExpenseShops } from '../../hooks/useSupervisorExpenses'
@@ -19,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ArrowLeft, Image } from 'lucide-react'
+import { Image } from 'lucide-react'
 
 function formatDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', {
@@ -30,7 +29,6 @@ function formatDate(d: string) {
 }
 
 export default function OwnerHOExpensesPage() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const [branchFilter, setBranchFilter] = useState<'KR' | 'C2' | 'all'>('all')
   const [shopFilter, setShopFilter] = useState('all')
@@ -64,9 +62,6 @@ export default function OwnerHOExpensesPage() {
   return (
     <div className="p-4 max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/owner/expenses')}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
         <h1 className="text-xl font-semibold text-foreground">HO Expenses</h1>
       </div>
 

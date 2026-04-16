@@ -1,8 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Receipt, Eye, Banknote, ArrowLeft } from 'lucide-react'
+import { Receipt, Eye, Banknote } from 'lucide-react'
 
 export default function OwnerExpensesHub() {
   const navigate = useNavigate()
@@ -30,14 +29,9 @@ export default function OwnerExpensesHub() {
 
   return (
     <div className="p-4 max-w-3xl mx-auto" data-testid="expenses-hub">
-      <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Expenses</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">Bills, maintenance, HO expenses</p>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-foreground">Expenses</h1>
+        <p className="text-muted-foreground text-sm mt-0.5">Bills, maintenance, HO expenses</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -18,19 +18,21 @@ test.describe('Authentication', () => {
   test('owner login → lands on /dashboard not white page', async ({ page }) => {
     await loginAs(page, TEST_USERS.owner)
     await page.waitForURL('**/dashboard', { timeout: 12000 })
-    // App shell (TopBar header) must be visible — not a blank page
-    await expect(page.locator('header')).toBeVisible()
+    // Owner sidebar must be visible — not a blank page
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await expect(page.locator('[data-testid="owner-sidebar"]')).toBeVisible()
     // CafeOS logo/title visible
     await expect(page.locator('text=CafeOS').first()).toBeVisible()
   })
 
   test('refresh on /dashboard → stays on /dashboard with content loaded', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
     await loginAs(page, TEST_USERS.owner)
     await page.waitForURL('**/dashboard', { timeout: 12000 })
     await page.reload()
     // Must stay on /dashboard after reload — JWT in localStorage keeps session
     await page.waitForURL('**/dashboard', { timeout: 12000 })
-    await expect(page.locator('header')).toBeVisible()
+    await expect(page.locator('[data-testid="owner-sidebar"]')).toBeVisible()
   })
 
   test('refresh on /users → stays on /users with employee list loaded', async ({ page }) => {
@@ -45,13 +47,14 @@ test.describe('Authentication', () => {
   })
 
   test('refresh on /tasks → stays on /tasks with content loaded', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
     await loginAs(page, TEST_USERS.owner)
     await page.waitForURL('**/dashboard', { timeout: 12000 })
     await page.goto('/tasks')
     await page.waitForURL('**/tasks', { timeout: 8000 })
     await page.reload()
     await page.waitForURL('**/tasks', { timeout: 12000 })
-    await expect(page.locator('header')).toBeVisible()
+    await expect(page.locator('[data-testid="owner-sidebar"]')).toBeVisible()
   })
 
   test('logout from dashboard → redirects to /login immediately', async ({ page }) => {

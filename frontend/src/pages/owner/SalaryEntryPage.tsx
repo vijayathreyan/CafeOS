@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useSalaryEntries, useSaveSalaryEntries } from '../../hooks/useSalaryEntries'
 import { useForm, useFieldArray } from 'react-hook-form'
@@ -19,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { showToast } from '@/lib/dialogs'
-import { ArrowLeft, Save } from 'lucide-react'
+import { Save } from 'lucide-react'
 import { STAFF_BY_BRANCH } from '../../types/phase4'
 import type { PLSalaryEntry } from '../../types/phase4'
 
@@ -44,7 +43,6 @@ const formSchema = z.object({ rows: z.array(rowSchema) })
 type FormValues = z.infer<typeof formSchema>
 
 export default function SalaryEntryPage() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const [branch, setBranch] = React.useState<'KR' | 'C2'>('KR')
   const [monthYear, setMonthYear] = React.useState(currentMonthYear())
@@ -108,9 +106,6 @@ export default function SalaryEntryPage() {
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/owner/data-entry')}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
         <h1 className="text-xl font-semibold text-foreground">Salary Entry</h1>
       </div>
 

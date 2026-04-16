@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   usePostPaidBalances,
@@ -24,7 +23,7 @@ import { showToast } from '@/lib/dialogs'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, IndianRupee, History, Plus, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { IndianRupee, History, Plus, AlertCircle, CheckCircle2 } from 'lucide-react'
 import type { PostPaidBalance } from '../../types/phase5'
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -404,7 +403,6 @@ function CustomerCard({ balance }: { balance: PostPaidBalance }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function PostPaidCustomersPage() {
-  const navigate = useNavigate()
   const { user } = useAuth()
 
   const { data: balances = [], isLoading } = usePostPaidBalances(!!user)
@@ -418,9 +416,6 @@ export default function PostPaidCustomersPage() {
     <div className="p-4 max-w-3xl mx-auto" data-testid="postpaid-customers-page">
       {/* Header */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
-          <ArrowLeft className="w-4 h-4 mr-1" /> Dashboard
-        </Button>
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-foreground">Post-Paid Customers</h1>
           <p className="text-muted-foreground text-sm mt-0.5">

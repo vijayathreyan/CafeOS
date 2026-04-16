@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   useUPIEntries,
@@ -15,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ChevronLeft, ChevronRight, Save, ArrowLeft } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Save } from 'lucide-react'
 import { showToast } from '@/lib/dialogs'
 import type { UPIEntry } from '../../types/phase4'
 
@@ -40,7 +39,6 @@ const formSchema = z.object({ rows: z.array(rowSchema) })
 type FormValues = z.infer<typeof formSchema>
 
 export default function UPIEntryPage() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const [weekStart, setWeekStart] = React.useState(() => getMondayOfWeek(new Date()))
 
@@ -121,9 +119,6 @@ export default function UPIEntryPage() {
   return (
     <div className="p-4 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/owner/data-entry')}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
         <h1 className="text-xl font-semibold text-foreground">UPI Entry</h1>
       </div>
 

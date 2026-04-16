@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useVendors } from '../../hooks/useVendors'
 import {
@@ -36,15 +35,7 @@ import { showToast } from '@/lib/dialogs'
 import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  Plus,
-  History,
-  Calculator,
-} from 'lucide-react'
+import { CheckCircle2, Clock, AlertCircle, Plus, History, Calculator } from 'lucide-react'
 import {
   getMonThuCycle,
   getFixedDateCycle,
@@ -846,7 +837,6 @@ function SectionBCard({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function VendorPaymentsPage() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const today = useMemo(() => new Date(), [])
 
@@ -912,9 +902,6 @@ export default function VendorPaymentsPage() {
     <div className="p-4 max-w-5xl mx-auto" data-testid="vendor-payments-page">
       {/* Header */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
-          <ArrowLeft className="w-4 h-4 mr-1" /> Dashboard
-        </Button>
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-foreground">Vendor Payments</h1>
           <p className="text-muted-foreground text-sm mt-0.5">{todayDisplay}</p>

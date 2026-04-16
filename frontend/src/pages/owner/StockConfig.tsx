@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,10 +15,9 @@ import {
 import { useStockItemConfig, useUpdateStockItemConfig } from '../../hooks/useStockItemConfig'
 import { useToast } from '../../hooks/use-toast'
 import { useAuth } from '../../contexts/AuthContext'
-import { ArrowLeft, Check, Pencil, X } from 'lucide-react'
+import { Check, Pencil, X } from 'lucide-react'
 
 export default function StockConfig() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const { toast } = useToast()
   const { data: configs, isLoading, error } = useStockItemConfig(!!user)
@@ -94,13 +92,6 @@ export default function StockConfig() {
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <div className="mb-6">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
         <h1 className="text-xl font-semibold text-foreground">Stock Configuration</h1>
         <p className="text-muted-foreground text-sm mt-1">
           Weight per unit for weight-tracked items. Each change is saved with an effective date —

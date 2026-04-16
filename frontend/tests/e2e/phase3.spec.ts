@@ -515,11 +515,15 @@ test.describe('Item Master Enhanced Fields', () => {
     await expect(page.locator('p').filter({ hasText: 'active items' })).toBeVisible()
   })
 
-  test('Item Master page has back button to Dashboard', async ({ page }) => {
+  test('Item Master page has sidebar navigation to Dashboard', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
     await loginAsOwner(page)
     await page.goto('/owner/item-master')
-    await page.waitForSelector('button:has-text("Dashboard")', { timeout: 10000 })
-    await page.click('button:has-text("Dashboard")')
+    await page.waitForSelector('h1:has-text("Item Master")', { timeout: 10000 })
+    await page
+      .locator('[data-testid="owner-sidebar"]')
+      .getByRole('link', { name: 'Dashboard' })
+      .click()
     await page.waitForURL('**/dashboard', { timeout: 8000 })
   })
 

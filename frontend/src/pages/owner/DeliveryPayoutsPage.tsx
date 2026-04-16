@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   useDeliveryPayouts,
@@ -33,7 +32,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { useConfirm, showToast } from '@/lib/dialogs'
-import { Plus, Pencil, Trash2, ArrowLeft } from 'lucide-react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import type { DeliveryPlatformEntry } from '../../types/phase4'
 
 const schema = z.object({
@@ -60,7 +59,6 @@ function formatDate(d: string) {
 }
 
 export default function DeliveryPayoutsPage() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const { confirm, ConfirmDialog } = useConfirm()
   const [open, setOpen] = useState(false)
@@ -172,9 +170,6 @@ export default function DeliveryPayoutsPage() {
 
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/owner/data-entry')}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
           <h1 className="text-xl font-semibold text-foreground">Delivery Payouts</h1>
         </div>
         <Button onClick={openAdd} data-testid="add-payout-btn">

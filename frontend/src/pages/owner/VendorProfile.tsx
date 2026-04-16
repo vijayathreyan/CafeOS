@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useConfirm, showToast } from '@/lib/dialogs'
-import { ArrowLeft, ExternalLink, Phone, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
+import { ExternalLink, Phone, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
 import type { VendorItem, VendorItemRate } from '../../types/vendor'
 
 const CYCLE_LABELS: Record<string, string> = {
@@ -355,9 +355,6 @@ export default function VendorProfile() {
       {/* Header */}
       <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/vendors')}>
-            <ArrowLeft className="w-4 h-4 mr-1" /> Back
-          </Button>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-semibold text-foreground">{vendor.business_name}</h1>

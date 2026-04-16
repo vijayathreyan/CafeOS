@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useDepositHistory } from '../../hooks/useCashDeposit'
 import { supabase } from '../../lib/supabase'
@@ -17,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ArrowLeft, Image } from 'lucide-react'
+import { Image } from 'lucide-react'
 import type { CashDeposit } from '../../types/phase4'
 
 function formatDate(d: string) {
@@ -29,7 +28,6 @@ function formatDate(d: string) {
 }
 
 export default function OwnerDepositsPage() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const [branchFilter, setBranchFilter] = useState<'KR' | 'C2' | 'all'>('all')
   const [dateFrom, setDateFrom] = useState('')
@@ -67,9 +65,6 @@ export default function OwnerDepositsPage() {
   return (
     <div className="p-4 max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/owner/expenses')}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
         <h1 className="text-xl font-semibold text-foreground">Cash Deposits</h1>
       </div>
 
