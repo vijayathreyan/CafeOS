@@ -45,6 +45,9 @@ interface CreateItemPayload {
   ml_per_serving?: number | null
   estimated_cost_per_piece?: number | null
   vendor_id?: string
+  // Phase 5 — alert threshold fields
+  alert_days_threshold?: number | null
+  wastage_threshold_percent?: number | null
 }
 
 /**
@@ -89,6 +92,8 @@ export function useCreateItem() {
           ml_per_serving: payload.ml_per_serving ?? null,
           estimated_cost_per_piece: payload.estimated_cost_per_piece ?? null,
           active: payload.active ?? true,
+          alert_days_threshold: payload.alert_days_threshold ?? null,
+          wastage_threshold_percent: payload.wastage_threshold_percent ?? 5.0,
         })
         .select('id')
         .single()
@@ -138,6 +143,9 @@ interface UpdateItemPayload {
   ml_per_serving?: number | null
   estimated_cost_per_piece?: number | null
   vendor_id?: string
+  // Phase 5 — alert threshold fields
+  alert_days_threshold?: number | null
+  wastage_threshold_percent?: number | null
 }
 
 /**
@@ -169,6 +177,8 @@ export function useUpdateItem() {
           is_snack_item: payload.is_snack_item,
           ml_per_serving: payload.ml_per_serving ?? null,
           estimated_cost_per_piece: payload.estimated_cost_per_piece ?? null,
+          alert_days_threshold: payload.alert_days_threshold ?? null,
+          wastage_threshold_percent: payload.wastage_threshold_percent ?? 5.0,
           ...(payload.active !== undefined ? { active: payload.active } : {}),
         })
         .eq('id', payload.id)

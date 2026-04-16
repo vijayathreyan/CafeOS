@@ -85,11 +85,17 @@ export default function OwnerDashboard() {
     },
     {
       title: 'Vendor Payments',
-      subtitle: 'Mon/Thu payment cycles',
-      path: '/vendor-payments',
+      subtitle: 'Mon/Thu cycles and monthly payments',
+      path: '/owner/vendor-payments',
       Icon: Handshake,
-      ready: false,
-      phase: 'Phase 5',
+      ready: true,
+    },
+    {
+      title: 'Post-Paid Customers',
+      subtitle: 'Credit sales and outstanding balances',
+      path: '/owner/postpaid-customers',
+      Icon: CreditCard,
+      ready: true,
     },
     {
       title: 'Tasks',

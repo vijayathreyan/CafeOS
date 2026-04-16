@@ -116,6 +116,9 @@ const itemSchema = z.object({
   is_snack_item: z.boolean(),
   active: z.boolean(),
   vendor_id: z.string().optional(),
+  // Phase 5 — alert threshold fields
+  alert_days_threshold: z.string().optional(),
+  wastage_threshold_percent: z.string().optional(),
 })
 
 type ItemFormValues = z.infer<typeof itemSchema>
@@ -147,6 +150,8 @@ const EMPTY_FORM: ItemFormValues = {
   ml_per_serving: '',
   estimated_cost_per_piece: '',
   vendor_id: '',
+  alert_days_threshold: '',
+  wastage_threshold_percent: '5',
 }
 
 /** Map a DB item record to form values. */
@@ -170,6 +175,8 @@ function itemToForm(item: ItemMaster): ItemFormValues {
     ml_per_serving: item.ml_per_serving?.toString() ?? '',
     estimated_cost_per_piece: item.estimated_cost_per_piece?.toString() ?? '',
     vendor_id: '',
+    alert_days_threshold: item.alert_days_threshold?.toString() ?? '',
+    wastage_threshold_percent: item.wastage_threshold_percent?.toString() ?? '5',
   }
 }
 
@@ -306,6 +313,8 @@ function ItemFormContent({
         ml_per_serving: values.ml_per_serving ? parseInt(values.ml_per_serving, 10) : null,
         estimated_cost_per_piece: parseOptNum(values.estimated_cost_per_piece),
         vendor_id: isVendorSupplied ? values.vendor_id || undefined : undefined,
+        alert_days_threshold: parseOptNum(values.alert_days_threshold),
+        wastage_threshold_percent: parseOptNum(values.wastage_threshold_percent) ?? 5.0,
       }
       if (isEdit && editingItem) {
         await updateItem.mutateAsync({ id: editingItem.id, ...payload })
@@ -630,6 +639,51 @@ function ItemFormContent({
         </div>
       </div>
 
+      <Separator />
+
+      {/* ── Alerts & Thresholds (Phase 10 Alert Manager) ─────── */}
+      <div>
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+          Alerts &amp; Thresholds
+        </p>
+        <p className="text-xs text-muted-foreground mb-3">
+          Alert logic fires in Phase 10 Alert Manager. Configure thresholds now.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label>Purchase Alert (days)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="1"
+              {...register('alert_days_threshold')}
+              className="mt-1"
+              placeholder="Leave empty for no alert"
+              data-testid="input-alert-days"
+            />
+            <p className="text-muted-foreground text-xs mt-1">
+              Alert if not purchased for X days (leave empty for no alert)
+            </p>
+          </div>
+          <div>
+            <Label>Wastage Alert Threshold %</Label>
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              {...register('wastage_threshold_percent')}
+              className="mt-1"
+              placeholder="5"
+              data-testid="input-wastage-threshold"
+            />
+            <p className="text-muted-foreground text-xs mt-1">
+              Alert if daily wastage exceeds X% (default 5%)
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* ── Vendor Link (vendor_supplied only) ────────────────── */}
       {isVendorSupplied && (
         <>
@@ -843,7 +897,12 @@ export default function ItemMasterPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditDialog(item)}
+                      data-testid="btn-edit-item"
+                    >
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
                   </TableCell>

@@ -27,6 +27,9 @@ export interface ItemMaster {
   is_stock_item: boolean
   is_snack_item: boolean
   estimated_cost_per_piece: number | null
+  // Phase 5 — alert threshold fields (logic fires in Phase 10 Alert Manager)
+  alert_days_threshold: number | null
+  wastage_threshold_percent: number | null
   created_at: string
 }
 

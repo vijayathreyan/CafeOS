@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 4 complete (owner entry modules, expenses, supervisor cash deposit, Vasanth float)
+**Build Phase:** Phase 5 complete (vendor payments, post-paid customers, item alert threshold fields)
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -102,7 +102,12 @@ CafeOS/
 │       ├── 001_complete_schema.sql  # ALL database tables (Phases 1–16)
 │       ├── 002_add_deleted_at.sql   # Soft-delete: adds deleted_at to employees
 │       ├── 003_snack_tamil_names.sql  # Inserts snack items into item_master with Tamil names; links snack_entries.item_id
-│       └── 005_phase2_additions.sql   # branch/entry_date/entered_by on stock+expense; item_master + stock_item_config seeds
+│       ├── 005_phase2_additions.sql   # branch/entry_date/entered_by on stock+expense; item_master + stock_item_config seeds
+│       ├── 006_phase3_vendor_seed.sql  # seeds all 14 UFW vendors with items and rates
+│       ├── 007_item_master_enhancements.sql  # selling_price, is_pos_item, is_snack_item, reconciliation_method columns
+│       ├── 008_item_master_active_price.sql  # active_kr, active_c2 columns on item_master
+│       ├── 009_phase4_owner_entries.sql  # notes column on pl_salary_entries
+│       └── 010_phase5_additions.sql  # alert thresholds on item_master; last_purchased_date on stock_entries; vendor payment improvements
 │
 ├── scripts/
 │   ├── backup_daily.sh         # pg_dump cron (2am daily)
@@ -465,11 +470,103 @@ docker compose restart supabase-api
 
 ---
 
-## What's NOT Built Yet (Phase 5 onwards)
+## Phase 10 Alert Manager — Required Implementation Notes
+
+When Phase 10 is built, the Alert Manager MUST implement:
+
+1. **Purchase date alert**: For each item with `alert_days_threshold` set in `item_master`,
+   compare today's date with `last_purchased_date` in `stock_entries`.
+   If `(today - last_purchased_date) > alert_days_threshold` → fire owner alert via WhatsApp/SMS.
+
+2. **Wastage threshold alert**: For each daily snack entry, calculate:
+   `wastage_percent = (wastage_qty / (qty_supplied or prepared)) × 100`
+   If `wastage_percent > wastage_threshold_percent` from `item_master` → fire owner alert.
+
+3. **POS billing date alert (Phase 12)**: When POS is live, also track `last_billed_date`
+   per item from `bills` table for vendor snack items. If not billed for
+   `alert_days_threshold` days → fire owner alert for direct vendor snack items.
+
+4. **Post-paid customer overdue alert**: For each `postpaid_customer` where outstanding > 0
+   and `days_since_last_payment > 30` → fire owner alert. Threshold configurable per customer
+   (Phase 11 Admin Settings).
+
+---
+
+## What Was Built in Phase 5
+
+### ✅ Migration 010 — Phase 5 schema additions
+- Added `alert_days_threshold INTEGER DEFAULT NULL` to `item_master`
+- Added `wastage_threshold_percent DECIMAL(5,2) DEFAULT 5.00` to `item_master`
+- Added `last_purchased_date DATE` to `stock_entries` with auto-set trigger (fires when purchase > 0)
+- Added `cycle_type VARCHAR(50)` and `notes TEXT` to `vendor_payment_cycles_log`
+- Added `vendor_id UUID` to `vendor_manual_bills` (for direct vendor reference)
+- Added `owner_note TEXT` to `vendor_auto_calc_snapshot`
+
+### ✅ TypeScript Types (`frontend/src/types/phase5.ts`)
+- `VendorPaymentCycleLog`, `VendorManualBill`, `VendorAutoCalcSnapshot`, `VendorPaymentRecord`
+- `PostPaidCustomer`, `PostPaidPayment`, `PostPaidCreditEntry`, `PostPaidBalance`
+- `MarkVendorPaidPayload`, `AddVendorBillPayload`, `RecordPostPaidPaymentPayload`
+- `CyclePeriod`, `getMonThuCycle()`, `getFixedDateCycle()` — cycle date helpers
+- `SECTION_A_VENDORS`, `SECTION_B_VENDORS` — vendor classification lists
+
+### ✅ Vendor Payment Hooks (`frontend/src/hooks/useVendorPayments.ts`)
+- `useVendorCycleLogs` — cycle logs for a date range
+- `useVendorManualBillsForCycle` — manual bills for a vendor within a cycle
+- `useVendorPaymentHistory` — full payment history per vendor
+- `useVendorAutoTotal` — computes system total from snack/milk entries × vendor rates
+- `useMarkVendorPaid` — creates/updates cycle log and records vendor_payments entry
+- `useAddVendorBill` — adds manual bill to vendor_manual_bills
+- `useUpsertCycleLog` — creates or updates a cycle log without marking paid
+
+### ✅ Post-Paid Hooks (`frontend/src/hooks/usePostPaidCustomers.ts`)
+- `usePostPaidCustomers` — active customer list
+- `usePostPaidBalances` — outstanding balance computed per customer from entries and payments
+- `usePostPaidHistory` — credit entries + payment history with running balance
+- `useRecordPostPaidPayment` — records payment, invalidates balance cache
+
+### ✅ Vendor Payments Page (`/owner/vendor-payments`)
+- Two-section layout: Section A (auto-calculated) + Section B (manual bill entry)
+- Section A vendors: Kalingaraj (fixed 1st/11th/21st), snack vendors (Mon/Thu)
+- Section B vendors: Momos, Pioneer / KR Franchisor
+- Per-vendor card: contact info, cycle period, status badge (Paid/Pending)
+- Section A: Auto-total panel with item breakdown table; "Compute" button fetches from daily entries
+- Section B: Bill list for cycle, Add Bill dialog
+- Mark as Paid dialog: vendor bill amount input, system-vs-bill difference shown in amber
+- Payment History dialog per vendor
+- Pending count badge in header
+- Cycle period info cards (Mon/Thu + fixed dates)
+
+### ✅ Post-Paid Customers Page (`/owner/postpaid-customers`)
+- Running balance per customer (total credit, total paid, outstanding)
+- Outstanding shown in red; settled in green
+- Days since last payment auto-calculated; overdue (>30 days) flagged in red
+- Record Payment dialog: date, amount, method, notes
+- Customer history dialog: merged credit + payment timeline with running balance
+- Summary cards: total outstanding + overdue count
+
+### ✅ Item Master Additions — Alerts & Thresholds section
+- New "Alerts & Thresholds" form section in Item Master edit/create dialog
+- "Purchase Alert" field: alert_days_threshold (integer, optional)
+- "Wastage Alert Threshold %" field: wastage_threshold_percent (decimal, default 5%)
+- Both fields in all item types
+- TypeScript interfaces and hook mutations updated
+- `ItemMaster` type updated with new fields in `frontend/src/types/vendor.ts`
+
+### ✅ Navigation Updates
+- Owner Dashboard: "Vendor Payments" tile enabled (route: /owner/vendor-payments)
+- Owner Dashboard: "Post-Paid Customers" tile added and enabled (route: /owner/postpaid-customers)
+- App.tsx: routes registered for both pages
+
+### ✅ Testing
+- Phase 5 Playwright E2E tests in `tests/e2e/phase5.spec.ts`
+- All tests passing (141 Phase 1–4 + Phase 5 = 179+ total)
+
+---
+
+## What's NOT Built Yet (Phase 6 onwards)
 
 | Phase | Scope |
 |-------|-------|
-| 5 | Vendor Payment module (Auto-Calculated + Manual Bill Entry), Post-Paid Customer module |
 | 6 | Month End Closing Stock (3-page list) |
 | 7 | Milk Report, Consumption Report, Wastage & Complimentary Report, Expense Report |
 | 8 | Monthly P&L (fully automated), Daily Sales Summary |
@@ -542,7 +639,7 @@ Branch: main
 ### Database Migrations
 - Numbered sequentially: 000, 001, 002...
 - NEVER modify existing migration files
-- Next migration for Phase 5: `010_phase5_additions.sql`
+- Next migration for Phase 6: `011_phase6_additions.sql`
 - Track all migrations in `migrations_log` table
 - See `supabase/migrations/README.md` for full rules
 
@@ -570,5 +667,5 @@ Every component built in Phase 2 onwards must follow:
 
 ---
 
-*CafeOS v1.0 · Phase 4 Complete · April 2026*
+*CafeOS v1.0 · Phase 5 Complete · April 2026*
 *Requirements: UFW_Requirements_v3.6_Final.docx*

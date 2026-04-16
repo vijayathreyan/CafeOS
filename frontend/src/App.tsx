@@ -37,6 +37,9 @@ import OwnerDepositsPage from './pages/owner/OwnerDepositsPage'
 import VasanthFloatPage from './pages/owner/VasanthFloatPage'
 import CashDepositPage from './pages/supervisor/CashDepositPage'
 import SupervisorExpensesPage from './pages/supervisor/SupervisorExpensesPage'
+// Phase 5 — Vendor Payments & Post-Paid Customers
+import VendorPaymentsPage from './pages/owner/VendorPaymentsPage'
+import PostPaidCustomersPage from './pages/owner/PostPaidCustomersPage'
 
 export default function App() {
   const [authReady, setAuthReady] = useState(false)
@@ -343,6 +346,24 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner']}>
                   <VasanthFloatPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Phase 5 — Vendor Payments & Post-Paid Customers */}
+            <Route
+              path="/owner/vendor-payments"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <VendorPaymentsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/postpaid-customers"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <PostPaidCustomersPage />
                 </ProtectedRoute>
               }
             />
