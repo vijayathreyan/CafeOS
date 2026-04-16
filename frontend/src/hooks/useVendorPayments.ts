@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
 import type {
   VendorPaymentCycleLog,
@@ -17,7 +18,7 @@ import type {
  * @param session    - Auth session guard
  */
 export function useVendorCycleLogs(cycleStart: string, cycleEnd: string, session: boolean) {
-  return useQuery<VendorPaymentCycleLog[]>(
+  return useSupabaseQuery<VendorPaymentCycleLog[]>(
     ['vendor_cycle_logs', cycleStart, cycleEnd],
     async () => {
       const { data, error } = await supabase
@@ -48,7 +49,7 @@ export function useVendorManualBillsForCycle(
   cycleEnd: string,
   session: boolean
 ) {
-  return useQuery<VendorManualBill[]>(
+  return useSupabaseQuery<VendorManualBill[]>(
     ['vendor_manual_bills_cycle', vendorId, cycleStart, cycleEnd],
     async () => {
       const { data, error } = await supabase
@@ -73,7 +74,7 @@ export function useVendorManualBillsForCycle(
  * @param session  - Auth session guard
  */
 export function useVendorPaymentHistory(vendorId: string | undefined, session: boolean) {
-  return useQuery<{ cycles: VendorPaymentCycleLog[]; payments: VendorPaymentRecord[] }>(
+  return useSupabaseQuery<{ cycles: VendorPaymentCycleLog[]; payments: VendorPaymentRecord[] }>(
     ['vendor_payment_history', vendorId],
     async () => {
       const [cyclesRes, paymentsRes] = await Promise.all([
@@ -117,7 +118,7 @@ export function useVendorAutoTotal(
   cycleEnd: string,
   session: boolean
 ) {
-  return useQuery<{ item_name: string; qty: number; rate: number; line_total: number }[]>(
+  return useSupabaseQuery<{ item_name: string; qty: number; rate: number; line_total: number }[]>(
     ['vendor_auto_total', vendorId, cycleStart, cycleEnd],
     async () => {
       if (!vendorId) return []

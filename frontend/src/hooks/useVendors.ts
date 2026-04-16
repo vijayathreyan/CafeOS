@@ -1,5 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
 import { supabase } from '../lib/supabase'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import type { Vendor, VendorFormValues, VendorItemFormRow } from '../types/vendor'
 
 /**
@@ -9,7 +10,7 @@ import type { Vendor, VendorFormValues, VendorItemFormRow } from '../types/vendo
  * @param session - Auth session guard (only fetches when truthy)
  */
 export function useVendors(session: boolean) {
-  return useQuery<Vendor[]>(
+  return useSupabaseQuery<Vendor[]>(
     'vendors',
     async () => {
       const { data, error } = await supabase
@@ -39,7 +40,7 @@ export function useVendors(session: boolean) {
  * @param session - Auth session guard
  */
 export function useVendor(id: string | undefined, session: boolean) {
-  return useQuery<Vendor>(
+  return useSupabaseQuery<Vendor>(
     ['vendor', id],
     async () => {
       const { data, error } = await supabase
@@ -71,7 +72,7 @@ export function useVendor(id: string | undefined, session: boolean) {
  * @param session - Auth session guard
  */
 export function useNextVendorCode(session: boolean) {
-  return useQuery<string>(
+  return useSupabaseQuery<string>(
     'next_vendor_code',
     async () => {
       const { data } = await supabase

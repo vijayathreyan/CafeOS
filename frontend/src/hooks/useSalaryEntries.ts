@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
 import type { PLSalaryEntry } from '../types/phase4'
 
@@ -11,7 +12,7 @@ import type { PLSalaryEntry } from '../types/phase4'
  * @param session - Auth session guard (only fetches when truthy)
  */
 export function useSalaryEntries(monthYear: string, branch: 'KR' | 'C2', session: boolean) {
-  return useQuery<PLSalaryEntry[]>(
+  return useSupabaseQuery<PLSalaryEntry[]>(
     ['salary_entries', monthYear, branch],
     async () => {
       const { data, error } = await supabase

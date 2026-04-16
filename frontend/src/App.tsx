@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { supabase } from './lib/supabase'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -41,354 +40,344 @@ import SupervisorExpensesPage from './pages/supervisor/SupervisorExpensesPage'
 import VendorPaymentsPage from './pages/owner/VendorPaymentsPage'
 import PostPaidCustomersPage from './pages/owner/PostPaidCustomersPage'
 
-export default function App() {
-  const [authReady, setAuthReady] = useState(false)
+/**
+ * Global loading gate — blocks all page rendering until AuthContext.loading is false.
+ * loading becomes false only after fetchEmployee() completes (or the 3s fallback fires),
+ * so no page ever mounts with user=null due to an in-flight session check.
+ */
+function AppRouter() {
+  const { loading } = useAuth()
 
-  useEffect(() => {
-    // Hard 3-second timeout — unblocks the UI if the first auth event is late
-    const timeout = setTimeout(() => setAuthReady(true), 3000)
-
-    // Use ONLY onAuthStateChange — no getSession() call.
-    // INITIAL_SESSION fires once on mount with the current session (or null),
-    // which is the reliable signal that the client is fully initialised.
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, _session) => {
-      clearTimeout(timeout)
-      setAuthReady(true)
-    })
-
-    return () => {
-      clearTimeout(timeout)
-      subscription.unsubscribe()
-    }
-  }, [])
-
-  // Global loading gate — show spinner until first auth event fires (max 3s)
-  if (!authReady) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-text-secondary text-sm">Loading CafeOS...</div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     )
   }
 
   return (
+    <Routes>
+      {/* /login: Login.tsx's useEffect handles redirect when user is already authenticated.
+              Removing the session-based Navigate here prevents a race where App.tsx sets
+              session before AuthContext finishes fetchEmployee, causing a redirect loop. */}
+      <Route path="/login" element={<Login />} />
+
+      <Route
+        path="/branch-select"
+        element={
+          <ProtectedRoute>
+            <BranchSelect />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Protected layout routes */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        {/* / → redirect to role-specific dashboard */}
+        <Route path="/" element={<RoleHome />} />
+
+        {/* Role-specific home routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <OwnerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['staff']}>
+              <StaffDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/supervisor-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['supervisor']}>
+              <SupervisorDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/shift"
+          element={
+            <ProtectedRoute allowedRoles={['staff']}>
+              <ShiftDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/supervisor-shift"
+          element={
+            <ProtectedRoute allowedRoles={['supervisor']}>
+              <ShiftDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Phase 2 — Stock & Expense Entry (Staff) */}
+        <Route
+          path="/stock-entry"
+          element={
+            <ProtectedRoute allowedRoles={['staff']}>
+              <StockEntry />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/expense-entry"
+          element={
+            <ProtectedRoute allowedRoles={['staff']}>
+              <ExpenseEntry />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Phase 2 — Supervisor Data Entry (both branches) */}
+        <Route
+          path="/supervisor-entry"
+          element={
+            <ProtectedRoute allowedRoles={['supervisor']}>
+              <SupervisorEntry />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <PlaceholderPage title="Reports" subtitle="Phase 7–9" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <AdminSettings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/stock-config"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <StockConfig />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <UserManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users/new"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <EmployeeOnboarding />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <EmployeeOnboarding />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/tasks" element={<TaskInbox />} />
+
+        {/* Phase 3 — Vendor Onboarding & Master (Owner) */}
+        <Route
+          path="/vendors"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <VendorMaster />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendors/new"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <VendorOnboarding />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendors/:id"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <VendorProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendors/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <VendorOnboarding />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/items"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <ItemMasterPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/item-master"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <ItemMasterPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Phase 4 — Owner Entry Modules */}
+        <Route
+          path="/owner/data-entry"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <DataEntryHub />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/upi-entry"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <UPIEntryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/delivery-payouts"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <DeliveryPayoutsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/salary-entry"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <SalaryEntryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/expenses"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <OwnerExpensesHub />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/ho-expenses"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <OwnerHOExpensesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/manual-expenses"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <ManualExpensesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/deposits"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <OwnerDepositsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/vasanth-float"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <VasanthFloatPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Phase 5 — Vendor Payments & Post-Paid Customers */}
+        <Route
+          path="/owner/vendor-payments"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <VendorPaymentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/postpaid-customers"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <PostPaidCustomersPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Phase 4 — Supervisor Modules */}
+        <Route
+          path="/supervisor/cash-deposit"
+          element={
+            <ProtectedRoute allowedRoles={['supervisor']}>
+              <CashDepositPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/supervisor/expenses"
+          element={
+            <ProtectedRoute allowedRoles={['supervisor']}>
+              <SupervisorExpensesPage />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
+
+export default function App() {
+  return (
     <AuthProvider>
       <LanguageProvider>
         <Toaster />
-        <Routes>
-          {/* /login: Login.tsx's useEffect handles redirect when user is already authenticated.
-              Removing the session-based Navigate here prevents a race where App.tsx sets
-              session before AuthContext finishes fetchEmployee, causing a redirect loop. */}
-          <Route path="/login" element={<Login />} />
-
-          <Route
-            path="/branch-select"
-            element={
-              <ProtectedRoute>
-                <BranchSelect />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Protected layout routes */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            {/* / → redirect to role-specific dashboard */}
-            <Route path="/" element={<RoleHome />} />
-
-            {/* Role-specific home routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <OwnerDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/staff-dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['staff']}>
-                  <StaffDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/supervisor-dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['supervisor']}>
-                  <SupervisorDashboard />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/shift"
-              element={
-                <ProtectedRoute allowedRoles={['staff']}>
-                  <ShiftDashboard />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/supervisor-shift"
-              element={
-                <ProtectedRoute allowedRoles={['supervisor']}>
-                  <ShiftDashboard />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Phase 2 — Stock & Expense Entry (Staff) */}
-            <Route
-              path="/stock-entry"
-              element={
-                <ProtectedRoute allowedRoles={['staff']}>
-                  <StockEntry />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/expense-entry"
-              element={
-                <ProtectedRoute allowedRoles={['staff']}>
-                  <ExpenseEntry />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Phase 2 — Supervisor Data Entry (both branches) */}
-            <Route
-              path="/supervisor-entry"
-              element={
-                <ProtectedRoute allowedRoles={['supervisor']}>
-                  <SupervisorEntry />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <PlaceholderPage title="Reports" subtitle="Phase 7–9" />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <AdminSettings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/owner/stock-config"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <StockConfig />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/users"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <UserManagement />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/users/new"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <EmployeeOnboarding />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/users/:id/edit"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <EmployeeOnboarding />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route path="/tasks" element={<TaskInbox />} />
-
-            {/* Phase 3 — Vendor Onboarding & Master (Owner) */}
-            <Route
-              path="/vendors"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <VendorMaster />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/vendors/new"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <VendorOnboarding />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/vendors/:id"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <VendorProfile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/vendors/:id/edit"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <VendorOnboarding />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/items"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <ItemMasterPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/owner/item-master"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <ItemMasterPage />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Phase 4 — Owner Entry Modules */}
-            <Route
-              path="/owner/data-entry"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <DataEntryHub />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/owner/upi-entry"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <UPIEntryPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/owner/delivery-payouts"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <DeliveryPayoutsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/owner/salary-entry"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <SalaryEntryPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/owner/expenses"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <OwnerExpensesHub />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/owner/ho-expenses"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <OwnerHOExpensesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/owner/manual-expenses"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <ManualExpensesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/owner/deposits"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <OwnerDepositsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/owner/vasanth-float"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <VasanthFloatPage />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Phase 5 — Vendor Payments & Post-Paid Customers */}
-            <Route
-              path="/owner/vendor-payments"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <VendorPaymentsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/owner/postpaid-customers"
-              element={
-                <ProtectedRoute allowedRoles={['owner']}>
-                  <PostPaidCustomersPage />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Phase 4 — Supervisor Modules */}
-            <Route
-              path="/supervisor/cash-deposit"
-              element={
-                <ProtectedRoute allowedRoles={['supervisor']}>
-                  <CashDepositPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/supervisor/expenses"
-              element={
-                <ProtectedRoute allowedRoles={['supervisor']}>
-                  <SupervisorExpensesPage />
-                </ProtectedRoute>
-              }
-            />
-          </Route>
-
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <AppRouter />
       </LanguageProvider>
     </AuthProvider>
   )

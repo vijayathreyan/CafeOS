@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
 import type { SupervisorExpense } from '../types/phase4'
 
@@ -18,7 +18,7 @@ interface ExpenseFilters {
  * @param filters - Optional filter criteria for the query
  */
 export function useOwnerExpenseView(session: boolean, filters?: ExpenseFilters) {
-  return useQuery<SupervisorExpense[]>(
+  return useSupabaseQuery<SupervisorExpense[]>(
     ['owner_expense_view', filters],
     async () => {
       let q = supabase

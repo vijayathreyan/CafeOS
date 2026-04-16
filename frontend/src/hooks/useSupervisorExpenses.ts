@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
 import type { SupervisorExpense } from '../types/phase4'
 
@@ -11,7 +12,7 @@ import type { SupervisorExpense } from '../types/phase4'
  * @param last7Days - If true, only returns entries from the last 7 days
  */
 export function useSupervisorExpenses(session: boolean, last7Days = false) {
-  return useQuery<SupervisorExpense[]>(
+  return useSupabaseQuery<SupervisorExpense[]>(
     ['supervisor_expenses', last7Days],
     async () => {
       let q = supabase
@@ -41,7 +42,7 @@ export function useSupervisorExpenses(session: boolean, last7Days = false) {
  * @param session - Auth session guard (only fetches when truthy)
  */
 export function useExpenseShops(session: boolean) {
-  return useQuery<{ id: string; shop_name: string }[]>(
+  return useSupabaseQuery<{ id: string; shop_name: string }[]>(
     'expense_shops',
     async () => {
       const { data, error } = await supabase

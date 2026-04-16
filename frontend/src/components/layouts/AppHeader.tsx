@@ -29,6 +29,7 @@ export default function AppHeader() {
   const qc = useQueryClient()
 
   const handleLogout = async () => {
+    qc.cancelQueries()
     qc.clear()
     try {
       await logout()

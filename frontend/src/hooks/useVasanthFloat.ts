@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
 import type { VasanthFloatBalance, FloatTransaction } from '../types/phase4'
 
@@ -9,7 +10,7 @@ import type { VasanthFloatBalance, FloatTransaction } from '../types/phase4'
  * @param session - Auth session guard (only fetches when truthy)
  */
 export function useVasanthFloat(session: boolean) {
-  return useQuery<VasanthFloatBalance | null>(
+  return useSupabaseQuery<VasanthFloatBalance | null>(
     'vasanth_float',
     async () => {
       const { data } = await supabase
@@ -30,7 +31,7 @@ export function useVasanthFloat(session: boolean) {
  * @param session - Auth session guard (only fetches when truthy)
  */
 export function useFloatHistory(session: boolean) {
-  return useQuery<FloatTransaction[]>(
+  return useSupabaseQuery<FloatTransaction[]>(
     'float_history',
     async () => {
       const [topupsRes, expensesRes] = await Promise.all([

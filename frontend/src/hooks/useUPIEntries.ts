@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
 import type { UPIEntry } from '../types/phase4'
 
@@ -32,7 +33,7 @@ export function getMondayOfWeek(date: Date): string {
  */
 export function useUPIEntries(weekStart: string, session: boolean) {
   const weekEnd = addDaysToDate(weekStart, 6)
-  return useQuery<UPIEntry[]>(
+  return useSupabaseQuery<UPIEntry[]>(
     ['upi_entries', weekStart],
     async () => {
       const { data, error } = await supabase

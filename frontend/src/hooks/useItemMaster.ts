@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
 import type { ItemMaster } from '../types/vendor'
 
@@ -9,7 +10,7 @@ import type { ItemMaster } from '../types/vendor'
  * @param session - Auth session guard
  */
 export function useItemMaster(session: boolean) {
-  return useQuery<ItemMaster[]>(
+  return useSupabaseQuery<ItemMaster[]>(
     'item_master',
     async () => {
       const { data, error } = await supabase
@@ -219,7 +220,7 @@ export function useUpdateItem() {
  * @param enabled - Auth session guard
  */
 export function useItemById(id: string | undefined, enabled: boolean) {
-  return useQuery<ItemMaster>(
+  return useSupabaseQuery<ItemMaster>(
     ['item_master', 'single', id],
     async () => {
       const { data, error } = await supabase.from('item_master').select('*').eq('id', id!).single()
@@ -235,7 +236,7 @@ export function useItemById(id: string | undefined, enabled: boolean) {
  * can pre-fill the Vendor Link dropdown in edit mode.
  */
 export function useItemVendorLinks(itemId: string | undefined, session: boolean) {
-  return useQuery<{ vendor_id: string } | null>(
+  return useSupabaseQuery<{ vendor_id: string } | null>(
     ['item_vendor_link', itemId],
     async () => {
       if (!itemId) return null

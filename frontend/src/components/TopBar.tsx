@@ -17,6 +17,7 @@ export default function TopBar() {
 
   // Bug 4: always navigate to /login regardless of whether signOut succeeds.
   const handleLogout = async () => {
+    qc.cancelQueries()
     qc.clear()
     try {
       await logout()

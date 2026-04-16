@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
 import type { StockItemConfig } from '../types/stock'
 
@@ -9,7 +10,7 @@ import type { StockItemConfig } from '../types/stock'
  * @param session - Auth session guard
  */
 export function useStockItemConfig(session: boolean) {
-  return useQuery<StockItemConfig[]>(
+  return useSupabaseQuery<StockItemConfig[]>(
     'stock_item_config',
     async () => {
       const { data, error } = await supabase

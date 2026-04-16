@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
 import { getOrCreateDailyEntry } from '../lib/dailyEntry'
 import type { BranchCode } from '../lib/supabase'
@@ -13,7 +14,7 @@ import type { StockEntryRow, StockEntryRecord } from '../types/stock'
  * @param session - Auth session (query is disabled when null)
  */
 export function useStockEntries(branch: BranchCode | null, date: string, session: boolean) {
-  return useQuery<StockEntryRow[]>(
+  return useSupabaseQuery<StockEntryRow[]>(
     ['stock_entries', branch, date],
     async () => {
       if (!branch) return []

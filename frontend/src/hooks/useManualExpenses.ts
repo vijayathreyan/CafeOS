@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
 import type { OwnerManualExpense, ExpenseType } from '../types/phase4'
 import { PL_CATEGORY_MAP } from '../types/phase4'
@@ -17,7 +18,7 @@ interface ManualExpenseFilters {
  * @param filters - Optional filter criteria
  */
 export function useManualExpenses(session: boolean, filters?: ManualExpenseFilters) {
-  return useQuery<OwnerManualExpense[]>(
+  return useSupabaseQuery<OwnerManualExpense[]>(
     ['manual_expenses', filters],
     async () => {
       let q = supabase

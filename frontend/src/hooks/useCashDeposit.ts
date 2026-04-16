@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
 import type { CashDeposit, CashDepositRow } from '../types/phase4'
 
@@ -8,7 +9,7 @@ import type { CashDeposit, CashDepositRow } from '../types/phase4'
  * @param session - Auth session guard (only fetches when truthy)
  */
 export function useDepositHistory(session: boolean) {
-  return useQuery<CashDeposit[]>(
+  return useSupabaseQuery<CashDeposit[]>(
     'deposit_history',
     async () => {
       const { data, error } = await supabase

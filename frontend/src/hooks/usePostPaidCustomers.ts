@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
 import type {
   PostPaidCustomer,
@@ -15,7 +16,7 @@ import type {
  * @param session - Auth session guard
  */
 export function usePostPaidCustomers(session: boolean) {
-  return useQuery<PostPaidCustomer[]>(
+  return useSupabaseQuery<PostPaidCustomer[]>(
     'postpaid_customers',
     async () => {
       const { data, error } = await supabase
@@ -38,7 +39,7 @@ export function usePostPaidCustomers(session: boolean) {
  * @param session - Auth session guard
  */
 export function usePostPaidBalances(session: boolean) {
-  return useQuery<PostPaidBalance[]>(
+  return useSupabaseQuery<PostPaidBalance[]>(
     'postpaid_balances',
     async () => {
       const [customersRes, entriesRes, paymentsRes] = await Promise.all([
@@ -103,7 +104,7 @@ export function usePostPaidBalances(session: boolean) {
  * @param session    - Auth session guard
  */
 export function usePostPaidHistory(customerId: string | undefined, session: boolean) {
-  return useQuery<{ credits: PostPaidCreditEntry[]; payments: PostPaidPayment[] }>(
+  return useSupabaseQuery<{ credits: PostPaidCreditEntry[]; payments: PostPaidPayment[] }>(
     ['postpaid_history', customerId],
     async () => {
       const [creditsRes, paymentsRes] = await Promise.all([

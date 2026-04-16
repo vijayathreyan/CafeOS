@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
 import { supabase, AppUser, BranchCode } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -38,7 +39,7 @@ export default function UserManagement() {
     cleanupGhosts()
   }, [])
 
-  const { data: employees = [], isLoading } = useQuery(
+  const { data: employees = [], isLoading } = useSupabaseQuery(
     ['employees', user?.id, showDeleted],
     async () => {
       let q = supabase.from('employees').select('*').order('employee_id')

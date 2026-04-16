@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
+import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
 import { getOrCreateDailyEntry } from '../lib/dailyEntry'
 import type { BranchCode } from '../lib/supabase'
@@ -13,7 +14,7 @@ import type { ExpenseEntryRow, ExpenseEntryRecord } from '../types/expense'
  * @param session - Auth session guard
  */
 export function useExpenseEntries(branch: BranchCode | null, date: string, session: boolean) {
-  return useQuery<ExpenseEntryRow[]>(
+  return useSupabaseQuery<ExpenseEntryRow[]>(
     ['expense_entries', branch, date],
     async () => {
       if (!branch) return []

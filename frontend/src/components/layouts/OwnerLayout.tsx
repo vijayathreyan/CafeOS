@@ -93,6 +93,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   const navGroups = useNavGroups()
 
   const handleLogout = async () => {
+    qc.cancelQueries()
     qc.clear()
     try {
       await logout()
