@@ -33,6 +33,8 @@ import {
 } from '@/components/ui/dialog'
 import { useConfirm, showToast } from '@/lib/dialogs'
 import { Plus, Pencil, Trash2, Camera } from 'lucide-react'
+import { PageContainer } from '@/components/layouts/PageContainer'
+import { PageHeader } from '@/components/layouts/PageHeader'
 import type { OwnerManualExpense, ExpenseType } from '../../types/phase4'
 import { EXPENSE_TYPE_LABELS, PL_CATEGORY_MAP } from '../../types/phase4'
 
@@ -219,18 +221,18 @@ export default function ManualExpensesPage() {
   const isSaving = createMut.isLoading || updateMut.isLoading
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
+    <PageContainer>
       {ConfirmDialog}
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold text-foreground">Manual Expenses</h1>
-        </div>
-        <Button onClick={openAdd} data-testid="add-expense-btn">
-          <Plus className="w-4 h-4 mr-1.5" />
-          Add Expense
-        </Button>
-      </div>
+      <PageHeader
+        title="Manual Expenses"
+        action={
+          <Button onClick={openAdd} data-testid="add-expense-btn">
+            <Plus className="w-4 h-4 mr-1.5" />
+            Add Expense
+          </Button>
+        }
+      />
 
       <div className="mb-4">
         <Select value={filterType} onValueChange={(v) => setFilterType(v as ExpenseType | 'all')}>
@@ -438,6 +440,6 @@ export default function ManualExpensesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

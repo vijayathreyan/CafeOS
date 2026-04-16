@@ -1,7 +1,5 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import {
   Users,
   BarChart3,
@@ -15,6 +13,18 @@ import {
   Banknote,
   type LucideIcon,
 } from 'lucide-react'
+import PageContainer from '@/components/layouts/PageContainer'
+import PageHeader from '@/components/layouts/PageHeader'
+import StatusBadge from '@/components/ui/StatusBadge'
+
+interface DashCard {
+  title: string
+  subtitle: string
+  path: string
+  Icon: LucideIcon
+  ready: boolean
+  phase?: string
+}
 
 export default function OwnerDashboard() {
   const navigate = useNavigate()
@@ -25,14 +35,7 @@ export default function OwnerDashboard() {
     year: 'numeric',
   })
 
-  const cards: {
-    title: string
-    subtitle: string
-    path: string
-    Icon: LucideIcon
-    ready: boolean
-    phase?: string
-  }[] = [
+  const cards: DashCard[] = [
     {
       title: 'Users & Employees',
       subtitle: 'Manage staff accounts',
@@ -130,32 +133,89 @@ export default function OwnerDashboard() {
   ]
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Owner Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">{today} · Unlimited Food Works</p>
-      </div>
+    <PageContainer>
+      <PageHeader title="Owner Dashboard" subtitle={`${today} · Unlimited Food Works`} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {cards.map(({ title, subtitle, path, Icon, ready, phase }) => (
-          <Card
+          <div
             key={path}
             onClick={() => ready && navigate(path)}
-            className={`transition-all ${ready ? 'cursor-pointer hover:shadow-card-lg hover:border-primary/30' : 'opacity-60 cursor-default'}`}
+            style={{
+              background: 'var(--brand-surface)',
+              border: 'var(--border-default)',
+              borderRadius: 'var(--radius-xl)',
+              boxShadow: 'var(--shadow-sm)',
+              padding: 'var(--space-5)',
+              cursor: ready ? 'pointer' : 'default',
+              opacity: ready ? 1 : 0.55,
+              transition: 'all var(--transition-base)',
+            }}
+            onMouseEnter={
+              ready
+                ? (e) => {
+                    const el = e.currentTarget as HTMLDivElement
+                    el.style.boxShadow = 'var(--shadow-md)'
+                    el.style.transform = 'translateY(-2px)'
+                    el.style.borderColor = 'var(--brand-primary)'
+                  }
+                : undefined
+            }
+            onMouseLeave={
+              ready
+                ? (e) => {
+                    const el = e.currentTarget as HTMLDivElement
+                    el.style.boxShadow = 'var(--shadow-sm)'
+                    el.style.transform = 'translateY(0)'
+                    el.style.borderColor = 'var(--gray-200)'
+                  }
+                : undefined
+            }
           >
-            <CardContent className="p-5">
-              <Icon className="w-8 h-8 mb-3 text-foreground" />
-              <h3 className="font-semibold text-foreground">{title}</h3>
-              <p className="text-muted-foreground text-sm mt-1">{subtitle}</p>
-              {!ready && (
-                <Badge variant="secondary" className="mt-2 text-xs">
-                  {phase}
-                </Badge>
-              )}
-            </CardContent>
-          </Card>
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--gray-100)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 'var(--space-3)',
+              }}
+            >
+              <Icon size={20} style={{ color: 'var(--gray-700)' }} />
+            </div>
+            <h3
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'var(--text-base)',
+                fontWeight: 'var(--font-semibold)',
+                color: 'var(--gray-900)',
+                margin: 0,
+              }}
+            >
+              {title}
+            </h3>
+            <p
+              style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: 'var(--text-sm)',
+                color: 'var(--gray-500)',
+                marginTop: 'var(--space-1)',
+                marginBottom: 0,
+              }}
+            >
+              {subtitle}
+            </p>
+            {!ready && phase && (
+              <div style={{ marginTop: 'var(--space-2)' }}>
+                <StatusBadge status="inactive" label={phase} size="sm" />
+              </div>
+            )}
+          </div>
         ))}
       </div>
-    </div>
+    </PageContainer>
   )
 }

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react'
+import PageContainer from '@/components/layouts/PageContainer'
+import PageHeader from '@/components/layouts/PageHeader'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from 'react-query'
@@ -126,12 +128,12 @@ export default function UserManagement() {
   })
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-foreground">{t('employees.title')}</h1>
-        <Button onClick={() => navigate('/users/new')}>+ {t('employees.add')}</Button>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title={t('employees.title')}
+        subtitle="Manage staff accounts and access"
+        action={<Button onClick={() => navigate('/users/new')}>+ {t('employees.add')}</Button>}
+      />
 
       {/* Filters */}
       <Card className="mb-4">
@@ -307,6 +309,6 @@ export default function UserManagement() {
         </div>
       )}
       {ConfirmDialog}
-    </div>
+    </PageContainer>
   )
 }

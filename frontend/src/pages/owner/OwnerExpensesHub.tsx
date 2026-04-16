@@ -1,55 +1,104 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, CardContent } from '@/components/ui/card'
 import { Receipt, Eye, Banknote } from 'lucide-react'
+import PageContainer from '@/components/layouts/PageContainer'
+import PageHeader from '@/components/layouts/PageHeader'
+
+const tiles = [
+  {
+    title: 'View HO Expenses',
+    subtitle: "Vasanth's bill-wise expense submissions",
+    path: '/owner/ho-expenses',
+    Icon: Eye,
+  },
+  {
+    title: 'Manual Expenses',
+    subtitle: 'Bills, maintenance, capital purchases',
+    path: '/owner/manual-expenses',
+    Icon: Receipt,
+  },
+  {
+    title: 'Cash Deposits',
+    subtitle: 'Full history of all bank deposits',
+    path: '/owner/deposits',
+    Icon: Banknote,
+  },
+]
 
 export default function OwnerExpensesHub() {
   const navigate = useNavigate()
 
-  const tiles = [
-    {
-      title: 'View HO Expenses',
-      subtitle: "Vasanth's bill-wise expense submissions",
-      path: '/owner/ho-expenses',
-      Icon: Eye,
-    },
-    {
-      title: 'Manual Expenses',
-      subtitle: 'Bills, maintenance, capital purchases',
-      path: '/owner/manual-expenses',
-      Icon: Receipt,
-    },
-    {
-      title: 'Cash Deposits',
-      subtitle: 'Full history of all bank deposits',
-      path: '/owner/deposits',
-      Icon: Banknote,
-    },
-  ]
-
   return (
-    <div className="p-4 max-w-3xl mx-auto" data-testid="expenses-hub">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Expenses</h1>
-        <p className="text-muted-foreground text-sm mt-0.5">Bills, maintenance, HO expenses</p>
-      </div>
+    <PageContainer data-testid="expenses-hub">
+      <PageHeader title="Expenses" subtitle="Bills, maintenance, HO expenses" />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {tiles.map(({ title, subtitle, path, Icon }) => (
-          <Card
+          <div
             key={path}
             onClick={() => navigate(path)}
-            className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all"
             data-testid={`tile-${title.toLowerCase().replace(/\s+/g, '-')}`}
+            style={{
+              background: 'var(--brand-surface)',
+              border: 'var(--border-default)',
+              borderRadius: 'var(--radius-xl)',
+              boxShadow: 'var(--shadow-sm)',
+              padding: 'var(--space-5)',
+              cursor: 'pointer',
+              transition: 'all var(--transition-base)',
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLDivElement
+              el.style.boxShadow = 'var(--shadow-md)'
+              el.style.transform = 'translateY(-2px)'
+              el.style.borderColor = 'var(--brand-primary)'
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLDivElement
+              el.style.boxShadow = 'var(--shadow-sm)'
+              el.style.transform = 'translateY(0)'
+              el.style.borderColor = 'var(--gray-200)'
+            }}
           >
-            <CardContent className="p-5">
-              <Icon className="w-8 h-8 mb-3 text-foreground" />
-              <h3 className="font-semibold text-foreground">{title}</h3>
-              <p className="text-muted-foreground text-sm mt-1">{subtitle}</p>
-            </CardContent>
-          </Card>
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--color-warning-bg)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 'var(--space-3)',
+              }}
+            >
+              <Icon size={24} style={{ color: 'var(--color-warning)' }} />
+            </div>
+            <h3
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'var(--text-base)',
+                fontWeight: 'var(--font-semibold)',
+                color: 'var(--gray-900)',
+                margin: 0,
+              }}
+            >
+              {title}
+            </h3>
+            <p
+              style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: 'var(--text-sm)',
+                color: 'var(--gray-500)',
+                marginTop: 'var(--space-1)',
+                marginBottom: 0,
+              }}
+            >
+              {subtitle}
+            </p>
+          </div>
         ))}
       </div>
-    </div>
+    </PageContainer>
   )
 }

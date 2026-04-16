@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/select'
 import { showToast } from '@/lib/dialogs'
 import { Camera, Plus, Trash2, CheckCircle2 } from 'lucide-react'
+import { PageContainer } from '@/components/layouts/PageContainer'
+import { PageHeader } from '@/components/layouts/PageHeader'
 import type { CashDepositRow } from '../../types/phase4'
 
 const today = new Date().toISOString().split('T')[0]
@@ -152,8 +154,8 @@ export default function CashDepositPage() {
   if (submitted) return <SuccessScreen onReset={handleReset} />
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <h1 className="text-xl font-semibold text-foreground mb-6">Cash Deposit</h1>
+    <PageContainer>
+      <PageHeader title="Cash Deposit" />
 
       <Card>
         <CardContent className="p-4 space-y-4">
@@ -311,6 +313,6 @@ export default function CashDepositPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

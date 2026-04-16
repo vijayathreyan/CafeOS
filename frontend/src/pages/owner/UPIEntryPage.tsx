@@ -16,6 +16,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChevronLeft, ChevronRight, Save } from 'lucide-react'
 import { showToast } from '@/lib/dialogs'
+import { PageContainer } from '@/components/layouts/PageContainer'
+import { PageHeader } from '@/components/layouts/PageHeader'
 import type { UPIEntry } from '../../types/phase4'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -117,10 +119,8 @@ export default function UPIEntryPage() {
   const weekLabel = `${formatDateShort(weekStart)} – ${formatDateShort(weekEnd)}`
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <div className="flex items-center gap-3 mb-4">
-        <h1 className="text-xl font-semibold text-foreground">UPI Entry</h1>
-      </div>
+    <PageContainer>
+      <PageHeader title="UPI Entry" />
 
       <div className="flex items-center justify-between mb-4" data-testid="week-nav">
         <Button
@@ -229,6 +229,6 @@ export default function UPIEntryPage() {
           {saveAll.isLoading ? 'Saving…' : 'Save All'}
         </Button>
       </div>
-    </div>
+    </PageContainer>
   )
 }

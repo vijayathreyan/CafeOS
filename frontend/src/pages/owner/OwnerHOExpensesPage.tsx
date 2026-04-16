@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Image } from 'lucide-react'
+import { PageContainer } from '@/components/layouts/PageContainer'
+import { PageHeader } from '@/components/layouts/PageHeader'
 
 function formatDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', {
@@ -60,10 +62,8 @@ export default function OwnerHOExpensesPage() {
   }
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
-      <div className="flex items-center gap-3 mb-4">
-        <h1 className="text-xl font-semibold text-foreground">HO Expenses</h1>
-      </div>
+    <PageContainer>
+      <PageHeader title="HO Expenses" />
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3 mb-4">
@@ -216,6 +216,6 @@ export default function OwnerHOExpensesPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

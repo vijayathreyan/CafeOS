@@ -1,4 +1,9 @@
 import React, { useState } from 'react'
+import PageContainer from '@/components/layouts/PageContainer'
+import PageHeader from '@/components/layouts/PageHeader'
+import AmountDisplay from '@/components/ui/AmountDisplay'
+import SectionCard from '@/components/ui/SectionCard'
+import KPICard from '@/components/ui/KPICard'
 import { useAuth } from '../../contexts/AuthContext'
 import { useVasanthFloat, useFloatHistory, useAddFloatFunds } from '../../hooks/useVasanthFloat'
 import { useForm } from 'react-hook-form'
@@ -7,7 +12,6 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -79,64 +83,96 @@ export default function VasanthFloatPage() {
     .reduce((s, t) => s + t.amount, 0)
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Vasanth Float</h1>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Vasanth Float"
+        subtitle="Supervisor cash float management"
+        action={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setHistoryOpen(true)}>
+              <History className="w-4 h-4 mr-1.5" />
+              History
+            </Button>
+            <Button onClick={() => setAddOpen(true)} data-testid="add-funds-btn">
+              <Plus className="w-4 h-4 mr-1.5" />
+              Add Funds
+            </Button>
+          </div>
+        }
+      />
 
       {/* Current Balance */}
-      <Card className="mb-4 border-primary/20" data-testid="float-balance-card">
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                Current Balance
-              </p>
-              {balLoading ? (
-                <Skeleton className="h-10 w-36 mt-1" />
-              ) : (
-                <p className="text-3xl font-bold text-foreground mt-1" data-testid="float-balance">
-                  {balance != null
-                    ? `₹${Number(balance.current_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
-                    : '—'}
-                </p>
-              )}
-            </div>
-            <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center">
-              <Banknote className="w-7 h-7 text-primary" />
-            </div>
+      <SectionCard className="mb-4" status="info" data-testid="float-balance-card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <p
+              style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--gray-600)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                margin: 0,
+              }}
+            >
+              Current Balance
+            </p>
+            {balLoading ? (
+              <Skeleton className="h-10 w-36 mt-1" />
+            ) : (
+              <div style={{ marginTop: 'var(--space-1)' }} data-testid="float-balance">
+                {balance != null ? (
+                  <AmountDisplay amount={Number(balance.current_balance)} size="xl" />
+                ) : (
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 'var(--text-3xl)',
+                      color: 'var(--gray-400)',
+                    }}
+                  >
+                    —
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-        </CardContent>
-      </Card>
+          <div
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: 'var(--color-info-bg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Banknote style={{ width: 28, height: 28, color: 'var(--color-info)' }} />
+          </div>
+        </div>
+      </SectionCard>
 
       {/* This month stats */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="w-4 h-4 text-green-500" />
-              <p className="text-xs text-muted-foreground">Topped Up</p>
-            </div>
-            <p className="font-semibold text-foreground">
-              ₹{thisMonthTopups.toLocaleString('en-IN')}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingDown className="w-4 h-4 text-red-500" />
-              <p className="text-xs text-muted-foreground">Spent</p>
-            </div>
-            <p className="font-semibold text-foreground">
-              ₹{thisMonthSpent.toLocaleString('en-IN')}
-            </p>
-          </CardContent>
-        </Card>
+        <KPICard
+          title="Topped Up"
+          value={`₹${thisMonthTopups.toLocaleString('en-IN')}`}
+          subtitle="This month"
+          icon={TrendingUp}
+          status="success"
+        />
+        <KPICard
+          title="Spent"
+          value={`₹${thisMonthSpent.toLocaleString('en-IN')}`}
+          subtitle="This month"
+          icon={TrendingDown}
+          status="danger"
+        />
       </div>
 
-      {/* Action buttons */}
-      <div className="flex gap-3">
+      {/* Action buttons (mobile fallback) */}
+      <div className="flex gap-3 lg:hidden">
         <Button onClick={() => setAddOpen(true)} className="flex-1" data-testid="add-funds-btn">
           <Plus className="w-4 h-4 mr-1.5" />
           Add Funds
@@ -242,6 +278,6 @@ export default function VasanthFloatPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

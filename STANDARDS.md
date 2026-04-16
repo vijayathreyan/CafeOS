@@ -107,6 +107,57 @@
 
 ---
 
+## Design System
+
+### Foundation Components
+ALL pages must use these components — no exceptions:
+- `PageContainer` (`@/components/layouts/PageContainer`) — wraps all page content
+- `PageHeader` (`@/components/layouts/PageHeader`) — every page title area
+- `SectionCard` (`@/components/ui/SectionCard`) — all card containers
+- `StatusBadge` (`@/components/ui/StatusBadge`) — all status indicators
+- `EmptyState` (`@/components/ui/EmptyState`) — all empty list states
+- `DataTable` (`@/components/ui/DataTable`) — all tabular data
+- `AmountDisplay` (`@/components/ui/AmountDisplay`) — all ₹ currency amounts
+- `KPICard` (`@/components/ui/KPICard`) — all metric summary cards
+- `LoadingSkeletons` variants (`@/components/ui/LoadingSkeletons`) — all loading states
+
+### Typography
+- Headings and brand moments: Plus Jakarta Sans (`var(--font-display)`)
+- Body and UI text: Inter (`var(--font-body)`)
+- Numbers, amounts, and codes: JetBrains Mono (`var(--font-mono)`)
+- Currency amounts: JetBrains Mono with `tabular-nums` via `<AmountDisplay>`
+
+### Design Tokens
+All values from `src/index.css` CSS variables:
+- Never hardcode colours, spacing, or border-radius
+- Use `var(--brand-primary)` not `#1A73E8`
+- Use `var(--radius-xl)` not inline border-radius values
+- Use `var(--shadow-sm)` not custom box-shadow values
+- Use `var(--gray-900)` for primary text, `var(--gray-600)` for secondary text
+
+### New Page Checklist (every new page must have):
+1. Wrapped in `<PageContainer>`
+2. `<PageHeader title="" subtitle="" action={} />`
+3. Content in `<SectionCard>` components
+4. Loading state using appropriate `LoadingSkeleton` variant
+5. Empty state using `<EmptyState>`
+6. All amounts using `<AmountDisplay>`
+7. All statuses using `<StatusBadge>`
+8. All tables using `<DataTable>`
+
+### Sidebar (Owner) Navigation
+- Desktop: 220px fixed sidebar, white background, Google Blue active state
+- Mobile: Sheet drawer (hamburger at top-left)
+- Active nav item: `var(--brand-primary-subtle)` bg + 3px left border in `var(--brand-primary)`
+- Always use `OwnerLayout` for owner routes
+
+### AppHeader (Staff/Supervisor)
+- 56px sticky header, white, `var(--shadow-xs)` bottom
+- Home button left, ☕ CafeOS center, lang toggle + avatar right
+- Always use `AppHeader` + `BottomNav` layout for staff/supervisor routes
+
+---
+
 ## Session Start Checklist
 
 At the start of every Claude Code session:

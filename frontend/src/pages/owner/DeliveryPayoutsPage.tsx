@@ -33,6 +33,8 @@ import {
 } from '@/components/ui/dialog'
 import { useConfirm, showToast } from '@/lib/dialogs'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { PageContainer } from '@/components/layouts/PageContainer'
+import { PageHeader } from '@/components/layouts/PageHeader'
 import type { DeliveryPlatformEntry } from '../../types/phase4'
 
 const schema = z.object({
@@ -165,18 +167,18 @@ export default function DeliveryPayoutsPage() {
   const isSaving = createMut.isLoading || updateMut.isLoading
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
+    <PageContainer>
       {ConfirmDialog}
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold text-foreground">Delivery Payouts</h1>
-        </div>
-        <Button onClick={openAdd} data-testid="add-payout-btn">
-          <Plus className="w-4 h-4 mr-1.5" />
-          Add Payout
-        </Button>
-      </div>
+      <PageHeader
+        title="Delivery Payouts"
+        action={
+          <Button onClick={openAdd} data-testid="add-payout-btn">
+            <Plus className="w-4 h-4 mr-1.5" />
+            Add Payout
+          </Button>
+        }
+      />
 
       {isLoading ? (
         <div className="space-y-3">
@@ -326,6 +328,6 @@ export default function DeliveryPayoutsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Image } from 'lucide-react'
+import { PageContainer } from '@/components/layouts/PageContainer'
+import { PageHeader } from '@/components/layouts/PageHeader'
 import type { CashDeposit } from '../../types/phase4'
 
 function formatDate(d: string) {
@@ -63,10 +65,8 @@ export default function OwnerDepositsPage() {
   })
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
-      <div className="flex items-center gap-3 mb-4">
-        <h1 className="text-xl font-semibold text-foreground">Cash Deposits</h1>
-      </div>
+    <PageContainer>
+      <PageHeader title="Cash Deposits" />
 
       <Card className="mb-4">
         <CardContent className="p-4">
@@ -239,6 +239,6 @@ export default function OwnerDepositsPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

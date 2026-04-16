@@ -36,6 +36,8 @@ import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { CheckCircle2, Clock, AlertCircle, Plus, History, Calculator } from 'lucide-react'
+import { PageContainer } from '@/components/layouts/PageContainer'
+import { PageHeader } from '@/components/layouts/PageHeader'
 import {
   getMonThuCycle,
   getFixedDateCycle,
@@ -899,24 +901,23 @@ export default function VendorPaymentsPage() {
   })
 
   return (
-    <div className="p-4 max-w-5xl mx-auto" data-testid="vendor-payments-page">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <div className="flex-1">
-          <h1 className="text-xl font-semibold text-foreground">Vendor Payments</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">{todayDisplay}</p>
-        </div>
-        {pendingCount > 0 && (
-          <Badge
-            className="bg-amber-100 text-amber-800 text-sm"
-            variant="outline"
-            data-testid="pending-count"
-          >
-            <AlertCircle className="w-3.5 h-3.5 mr-1" />
-            {pendingCount} vendor{pendingCount > 1 ? 's' : ''} pending
-          </Badge>
-        )}
-      </div>
+    <PageContainer data-testid="vendor-payments-page">
+      <PageHeader
+        title="Vendor Payments"
+        subtitle={todayDisplay}
+        action={
+          pendingCount > 0 ? (
+            <Badge
+              className="bg-amber-100 text-amber-800 text-sm"
+              variant="outline"
+              data-testid="pending-count"
+            >
+              <AlertCircle className="w-3.5 h-3.5 mr-1" />
+              {pendingCount} vendor{pendingCount > 1 ? 's' : ''} pending
+            </Badge>
+          ) : undefined
+        }
+      />
 
       {/* Cycle info cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
@@ -1039,6 +1040,6 @@ export default function VendorPaymentsPage() {
           </div>
         </>
       )}
-    </div>
+    </PageContainer>
   )
 }

@@ -55,7 +55,11 @@
       "Bash(echo \"EXIT_CODE:$?\")",
       "Bash(echo \"BUILD_EXIT:$?\")",
       "Bash(echo \"UP_EXIT:$?\")",
-      "Bash(echo \"TEST_EXIT:$?\")"
+      "Bash(echo \"TEST_EXIT:$?\")",
+      "Bash(git stash:*)",
+      "Bash(git checkout:*)",
+      "Bash(curl -s \"http://localhost/\")",
+      "Bash(curl -s http://localhost/login)"
     ]
   }
 }

@@ -2,15 +2,17 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../contexts/AuthContext'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Package, Wallet } from 'lucide-react'
+import { Package, Wallet, ClipboardList, Phone } from 'lucide-react'
+import PageContainer from '@/components/layouts/PageContainer'
+import SectionCard from '@/components/ui/SectionCard'
 
 export default function StaffDashboard() {
   const { t } = useTranslation()
   const { user, activeBranch } = useAuth()
   const navigate = useNavigate()
   const branch = activeBranch || user?.branch_access[0]
+  const firstName = user?.full_name?.split(' ')[0]
   const today = new Date().toLocaleDateString('en-IN', {
     weekday: 'long',
     day: 'numeric',
@@ -19,79 +21,189 @@ export default function StaffDashboard() {
   })
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">
-          Good morning, {user?.full_name?.split(' ')[0]}
+    <PageContainer>
+      {/* Greeting header */}
+      <div style={{ marginBottom: 'var(--space-6)' }}>
+        <h1
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'var(--text-2xl)',
+            fontWeight: 'var(--font-semibold)',
+            color: 'var(--gray-900)',
+            letterSpacing: '-0.025em',
+            margin: 0,
+          }}
+        >
+          Good morning, {firstName}
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          {today} · {branch ? t(`branch.${branch}`) : ''}
+        <p
+          style={{
+            fontFamily: 'var(--font-body)',
+            fontSize: 'var(--text-sm)',
+            color: 'var(--gray-600)',
+            marginTop: '2px',
+          }}
+        >
+          {today}
+          {branch ? ` · ${t(`branch.${branch}`)}` : ''}
         </p>
       </div>
 
-      {/* Quick action */}
-      <Card className="mb-4">
-        <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {/* Today's Shift CTA */}
+      <SectionCard className="mb-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="font-semibold text-foreground text-lg">Today&apos;s Shift</h2>
-            <p className="text-muted-foreground text-sm mt-1">Fill in your shift details</p>
+            <h2
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'var(--text-lg)',
+                fontWeight: 'var(--font-semibold)',
+                color: 'var(--gray-900)',
+                margin: 0,
+              }}
+            >
+              Today&apos;s Shift
+            </h2>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', marginTop: '2px' }}>
+              Fill in your shift details
+            </p>
           </div>
-          <Button onClick={() => navigate('/shift')} className="w-full sm:w-auto">
-            Open Shift →
+          <Button
+            onClick={() => navigate('/shift')}
+            className="w-full sm:w-auto"
+            style={{ gap: '6px' }}
+          >
+            <ClipboardList size={16} />
+            Open Shift
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
-      {/* Phase 2 quick actions */}
+      {/* Quick actions grid */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <Card
-          className="cursor-pointer hover:border-primary/50 transition-colors"
+        <SectionCard
+          padding="compact"
+          hoverable
           onClick={() => navigate('/stock-entry')}
+          className="cursor-pointer"
         >
-          <CardContent className="p-4 flex flex-col items-start gap-2">
-            <Package className="w-6 h-6 text-primary" />
-            <div>
-              <p className="font-medium text-sm text-foreground">Stock Levels</p>
-              <p className="text-xs text-muted-foreground">Enter today&apos;s stock</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--brand-primary-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Package size={20} style={{ color: 'var(--brand-primary)' }} />
             </div>
-          </CardContent>
-        </Card>
-        <Card
-          className="cursor-pointer hover:border-primary/50 transition-colors"
+            <div>
+              <p
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontWeight: 500,
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--gray-900)',
+                  margin: 0,
+                }}
+              >
+                Stock Levels
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
+                Enter today&apos;s stock
+              </p>
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          padding="compact"
+          hoverable
           onClick={() => navigate('/expense-entry')}
+          className="cursor-pointer"
         >
-          <CardContent className="p-4 flex flex-col items-start gap-2">
-            <Wallet className="w-6 h-6 text-primary" />
-            <div>
-              <p className="font-medium text-sm text-foreground">Cash Expenses</p>
-              <p className="text-xs text-muted-foreground">Record today&apos;s expenses</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--color-success-bg)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Wallet size={20} style={{ color: 'var(--color-success)' }} />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <p
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontWeight: 500,
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--gray-900)',
+                  margin: 0,
+                }}
+              >
+                Cash Expenses
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
+                Record today&apos;s expenses
+              </p>
+            </div>
+          </div>
+        </SectionCard>
       </div>
 
-      {/* Maintenance contacts card */}
-      <Card>
-        <CardContent className="p-4">
-          <h3 className="font-medium text-foreground mb-3">Service Contacts</h3>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <div className="flex justify-between">
-              <span>Gas (Anand)</span>
-              <a href="tel:9942082233" className="text-primary font-medium">
-                9942082233
-              </a>
+      {/* Service contacts */}
+      <SectionCard title="Service Contacts">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          {[
+            { label: 'Gas (Anand)', phone: '9942082233' },
+            { label: 'Coffee Machine Repair', phone: null },
+            { label: 'Electrician', phone: null },
+          ].map(({ label, phone }) => (
+            <div
+              key={label}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-700)' }}>{label}</span>
+              {phone ? (
+                <a
+                  href={`tel:${phone}`}
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 500,
+                    color: 'var(--brand-primary)',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Phone size={12} />
+                  {phone}
+                </a>
+              ) : (
+                <span
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--gray-400)',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  Contact Owner
+                </span>
+              )}
             </div>
-            <div className="flex justify-between">
-              <span>Coffee Machine Repair</span>
-              <span className="italic">Contact Owner</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Electrician</span>
-              <span className="italic">Contact Owner</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          ))}
+        </div>
+      </SectionCard>
+    </PageContainer>
   )
 }

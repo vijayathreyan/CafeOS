@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/select'
 import { showToast } from '@/lib/dialogs'
 import { Save } from 'lucide-react'
+import { PageContainer } from '@/components/layouts/PageContainer'
+import { PageHeader } from '@/components/layouts/PageHeader'
 import { STAFF_BY_BRANCH } from '../../types/phase4'
 import type { PLSalaryEntry } from '../../types/phase4'
 
@@ -104,10 +106,8 @@ export default function SalaryEntryPage() {
   })
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Salary Entry</h1>
-      </div>
+    <PageContainer>
+      <PageHeader title="Salary Entry" />
 
       {/* Controls */}
       <div className="grid grid-cols-2 gap-3 mb-4">
@@ -196,6 +196,6 @@ export default function SalaryEntryPage() {
           {saveMut.isLoading ? 'Saving…' : 'Save All'}
         </Button>
       </div>
-    </div>
+    </PageContainer>
   )
 }

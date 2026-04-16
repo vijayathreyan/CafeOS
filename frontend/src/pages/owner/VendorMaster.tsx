@@ -9,6 +9,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useConfirm, showToast } from '@/lib/dialogs'
 import { Phone, Plus, Download, Upload, ChevronRight } from 'lucide-react'
+import { PageContainer } from '@/components/layouts/PageContainer'
+import { PageHeader } from '@/components/layouts/PageHeader'
 import type { Vendor } from '../../types/vendor'
 
 const CYCLE_LABELS: Record<string, string> = {
@@ -196,36 +198,35 @@ export default function VendorMaster() {
 
   if (isLoading) {
     return (
-      <div className="p-4 max-w-4xl mx-auto space-y-3">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-24 w-full" />
-        ))}
-      </div>
+      <PageContainer>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
+        </div>
+      </PageContainer>
     )
   }
 
   if (error) {
     return (
-      <div className="p-4 max-w-4xl mx-auto">
+      <PageContainer>
         <p className="text-destructive text-sm">Failed to load vendors. Please try again.</p>
-      </div>
+      </PageContainer>
     )
   }
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Vendor Master</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            {vendors.filter((v) => v.active).length} active vendors
-          </p>
-        </div>
-        <Button onClick={() => navigate('/vendors/new')}>
-          <Plus className="w-4 h-4 mr-1" /> Add Vendor
-        </Button>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Vendor Master"
+        subtitle={`${vendors.filter((v) => v.active).length} active vendors`}
+        action={
+          <Button onClick={() => navigate('/vendors/new')}>
+            <Plus className="w-4 h-4 mr-1" /> Add Vendor
+          </Button>
+        }
+      />
 
       {/* Active / Inactive tabs */}
       <div className="flex gap-1 mb-4 bg-muted rounded-lg p-1 w-fit">
@@ -414,6 +415,6 @@ export default function VendorMaster() {
       </div>
 
       {ConfirmDialog}
-    </div>
+    </PageContainer>
   )
 }

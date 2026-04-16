@@ -64,12 +64,15 @@ CafeOS replaces all manual paper-based workflows at two coffee shop branches of 
 
 ## Design System
 
-- **Theme:** Material Design 3 inspired, Google colour palette
-- **Primary:** `#1A73E8` · **Secondary:** `#34A853` · **Warning:** `#FBBC04` · **Error:** `#EA4335`
-- **Background:** `#F8F9FA` · **Surface:** `#FFFFFF` · **Border:** `#DADCE0`
-- **Fonts:** Inter (English) + Noto Sans Tamil (Tamil) — both from Google Fonts
+- **Theme:** Refined operational excellence — Linear.app meets Notion meets premium Indian fintech
+- **Primary:** `#1A73E8` (Google Blue) · **Secondary:** `#34A853` · **Warning:** `#F29900` · **Error:** `#D93025`
+- **Background:** `#F6F8FC` (brand-bg) · **Surface:** `#FFFFFF` · **Border:** `#E8EAED` (gray-200)
+- **Fonts:** Plus Jakarta Sans (display/headings) + Inter (body/UI) + JetBrains Mono (amounts/codes) + Noto Sans Tamil
+- **Design tokens:** Full CSS custom property system in `src/index.css` — never hardcode values
+- **Foundation components:** `PageContainer`, `PageHeader`, `SectionCard`, `StatusBadge`, `EmptyState`, `DataTable`, `AmountDisplay`, `KPICard`, `LoadingSkeletons`
 - **Min tap target:** 48×48px (mobile-first)
-- **Layout:** Bottom nav on mobile, sidebar on desktop
+- **Layout:** Bottom nav on mobile, 220px sidebar on desktop (owner); AppHeader+BottomNav (staff/supervisor)
+- **Design system complete:** April 2026 — see STANDARDS.md Design System section for component usage rules
 
 ---
 

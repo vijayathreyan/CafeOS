@@ -24,6 +24,8 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { IndianRupee, History, Plus, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { PageContainer } from '@/components/layouts/PageContainer'
+import { PageHeader } from '@/components/layouts/PageHeader'
 import type { PostPaidBalance } from '../../types/phase5'
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -413,16 +415,11 @@ export default function PostPaidCustomersPage() {
   ).length
 
   return (
-    <div className="p-4 max-w-3xl mx-auto" data-testid="postpaid-customers-page">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <div className="flex-1">
-          <h1 className="text-xl font-semibold text-foreground">Post-Paid Customers</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            Credit sales and outstanding balances · KR branch
-          </p>
-        </div>
-      </div>
+    <PageContainer data-testid="postpaid-customers-page">
+      <PageHeader
+        title="Post-Paid Customers"
+        subtitle="Credit sales and outstanding balances · KR branch"
+      />
 
       {/* Summary */}
       {!isLoading && balances.length > 0 && (
@@ -471,6 +468,6 @@ export default function PostPaidCustomersPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }

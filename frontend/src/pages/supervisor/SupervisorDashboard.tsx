@@ -9,16 +9,19 @@ interface Task {
   branch?: string | null
   assigned_by_emp?: { full_name: string } | null
 }
+
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from 'react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ChevronDown, Banknote, ClipboardList, Package, Receipt, ArrowRight } from 'lucide-react'
-import StatusChip from '../../components/StatusChip'
+import StatusBadge from '@/components/ui/StatusBadge'
+import PageContainer from '@/components/layouts/PageContainer'
+import SectionCard from '@/components/ui/SectionCard'
+import AmountDisplay from '@/components/ui/AmountDisplay'
 
 export default function SupervisorDashboard() {
   const { t } = useTranslation()
@@ -53,180 +56,307 @@ export default function SupervisorDashboard() {
     { enabled: !!user }
   )
 
+  const today = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+
   return (
-    <div className="p-4 max-w-2xl mx-auto">
+    <PageContainer>
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Supervisor Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          {new Date().toLocaleDateString('en-IN', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          })}
-          {' · '}
-          {user?.full_name}
+      <div style={{ marginBottom: 'var(--space-6)' }}>
+        <h1
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'var(--text-2xl)',
+            fontWeight: 'var(--font-semibold)',
+            color: 'var(--gray-900)',
+            letterSpacing: '-0.025em',
+            margin: 0,
+          }}
+        >
+          Supervisor Dashboard
+        </h1>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)', marginTop: '2px' }}>
+          {today} · {user?.full_name}
         </p>
       </div>
 
       {/* Float Balance — always visible, read-only */}
-      <Card className="mb-4">
-        <CardContent className="p-4 flex items-center justify-between">
+      <SectionCard className="mb-4">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+            <p
+              style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--gray-600)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                margin: 0,
+              }}
+            >
               Vasanth Float Balance
             </p>
-            <p className="text-2xl font-bold text-foreground mt-1">
-              {floatData != null
-                ? `₹${Number(floatData.current_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
-                : '—'}
-            </p>
+            <div style={{ marginTop: 'var(--space-1)' }}>
+              {floatData != null ? (
+                <AmountDisplay amount={Number(floatData.current_balance)} size="xl" />
+              ) : (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 'var(--text-3xl)',
+                    color: 'var(--gray-400)',
+                  }}
+                >
+                  —
+                </span>
+              )}
+            </div>
           </div>
-          <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
-            <Banknote className="w-6 h-6 text-primary" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Expense Entry — dedicated page */}
-      <SectionCard
-        title="Expense Entry"
-        open={activeSection === 'expense'}
-        onToggle={() => toggle('expense')}
-      >
-        <div className="p-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Record bill-wise expenses with photo upload. Float balance is automatically deducted.
-          </p>
-          <Button className="w-full" onClick={() => navigate('/supervisor/expenses')}>
-            <Receipt className="w-4 h-4 mr-2" />
-            Open Expense Entry
-            <ArrowRight className="w-4 h-4 ml-auto" />
-          </Button>
-        </div>
-      </SectionCard>
-
-      {/* Cash Deposit — dedicated page */}
-      <SectionCard
-        title="Cash Deposit"
-        open={activeSection === 'deposit'}
-        onToggle={() => toggle('deposit')}
-      >
-        <div className="p-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Submit a bank deposit with challan photo and branch breakdown.
-          </p>
-          <Button className="w-full" onClick={() => navigate('/supervisor/cash-deposit')}>
-            <Banknote className="w-4 h-4 mr-2" />
-            Open Cash Deposit
-            <ArrowRight className="w-4 h-4 ml-auto" />
-          </Button>
-        </div>
-      </SectionCard>
-
-      {/* Enter Shift Data */}
-      <SectionCard
-        title="Enter Shift Data"
-        open={activeSection === 'shift'}
-        onToggle={() => toggle('shift')}
-      >
-        <div className="p-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Select the branch to enter shift data for:
-          </p>
-          <div className="flex gap-3">
-            <Button className="flex-1" onClick={() => handleEnterShift('KR')}>
-              <ClipboardList className="w-4 h-4 mr-2" />
-              Kaappi Ready
-            </Button>
-            <Button className="flex-1" variant="outline" onClick={() => handleEnterShift('C2')}>
-              <ClipboardList className="w-4 h-4 mr-2" />
-              Coffee Mate C2
-            </Button>
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: 'var(--color-info-bg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Banknote size={24} style={{ color: 'var(--color-info)' }} />
           </div>
         </div>
       </SectionCard>
 
-      {/* Stock & Cash Expense Entry (Phase 2) */}
-      <SectionCard
-        title="Stock & Cash Expenses"
-        open={activeSection === 'stock_expense'}
-        onToggle={() => toggle('stock_expense')}
-      >
-        <div className="p-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Enter stock levels and cash expenses for either branch:
-          </p>
-          <Button className="w-full" onClick={() => navigate('/supervisor-entry')}>
-            <Package className="w-4 h-4 mr-2" />
-            Open Stock & Expenses Entry
-          </Button>
-        </div>
-      </SectionCard>
-
-      {/* Tasks */}
-      <SectionCard
-        title={`Tasks${tasks.length > 0 ? ` (${tasks.length})` : ''}`}
-        open={activeSection === 'tasks'}
-        onToggle={() => toggle('tasks')}
-      >
-        <div className="p-4">
-          {tasks.length === 0 ? (
-            <p className="text-muted-foreground text-sm text-center py-4">No tasks assigned</p>
-          ) : (
-            <div className="space-y-2">
-              {tasks.map((task: Task) => {
-                const isOverdue =
-                  task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done'
-                return (
-                  <div
-                    key={task.id}
-                    className={`rounded-lg border p-3 ${isOverdue ? 'border-destructive/30 bg-red-50' : 'border-border'}`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground text-sm">{task.title}</p>
-                        {task.description && (
-                          <p className="text-muted-foreground text-xs mt-0.5 truncate">
-                            {task.description}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
-                          {task.due_date && (
-                            <span>Due: {new Date(task.due_date).toLocaleDateString('en-IN')}</span>
-                          )}
-                          {task.assigned_by_emp?.full_name && (
-                            <span>From: {task.assigned_by_emp.full_name}</span>
-                          )}
-                          {task.branch && <span>{t(`branch.${task.branch}`)}</span>}
+      {/* Accordion sections */}
+      {[
+        {
+          key: 'expense',
+          title: 'Expense Entry',
+          content: (
+            <div
+              style={{
+                padding: 'var(--space-4)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-3)',
+              }}
+            >
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)' }}>
+                Record bill-wise expenses with photo upload. Float balance is automatically
+                deducted.
+              </p>
+              <Button className="w-full" onClick={() => navigate('/supervisor/expenses')}>
+                <Receipt size={16} style={{ marginRight: '8px' }} />
+                Open Expense Entry
+                <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
+              </Button>
+            </div>
+          ),
+        },
+        {
+          key: 'deposit',
+          title: 'Cash Deposit',
+          content: (
+            <div
+              style={{
+                padding: 'var(--space-4)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-3)',
+              }}
+            >
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)' }}>
+                Submit a bank deposit with challan photo and branch breakdown.
+              </p>
+              <Button className="w-full" onClick={() => navigate('/supervisor/cash-deposit')}>
+                <Banknote size={16} style={{ marginRight: '8px' }} />
+                Open Cash Deposit
+                <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
+              </Button>
+            </div>
+          ),
+        },
+        {
+          key: 'shift',
+          title: 'Enter Shift Data',
+          content: (
+            <div
+              style={{
+                padding: 'var(--space-4)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-3)',
+              }}
+            >
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)' }}>
+                Select the branch to enter shift data for:
+              </p>
+              <div className="flex gap-3">
+                <Button className="flex-1" onClick={() => handleEnterShift('KR')}>
+                  <ClipboardList size={16} style={{ marginRight: '6px' }} />
+                  Kaappi Ready
+                </Button>
+                <Button className="flex-1" variant="outline" onClick={() => handleEnterShift('C2')}>
+                  <ClipboardList size={16} style={{ marginRight: '6px' }} />
+                  Coffee Mate C2
+                </Button>
+              </div>
+            </div>
+          ),
+        },
+        {
+          key: 'stock_expense',
+          title: 'Stock & Cash Expenses',
+          content: (
+            <div
+              style={{
+                padding: 'var(--space-4)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-3)',
+              }}
+            >
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)' }}>
+                Enter stock levels and cash expenses for either branch:
+              </p>
+              <Button className="w-full" onClick={() => navigate('/supervisor-entry')}>
+                <Package size={16} style={{ marginRight: '8px' }} />
+                Open Stock &amp; Expenses Entry
+              </Button>
+            </div>
+          ),
+        },
+        {
+          key: 'tasks',
+          title: `Tasks${tasks.length > 0 ? ` (${tasks.length})` : ''}`,
+          content: (
+            <div style={{ padding: 'var(--space-4)' }}>
+              {tasks.length === 0 ? (
+                <p
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--gray-500)',
+                    textAlign: 'center',
+                    padding: 'var(--space-4) 0',
+                  }}
+                >
+                  No tasks assigned
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                  {tasks.map((task: Task) => {
+                    const isOverdue =
+                      task.due_date &&
+                      new Date(task.due_date) < new Date() &&
+                      task.status !== 'done'
+                    return (
+                      <div
+                        key={task.id}
+                        style={{
+                          borderRadius: 'var(--radius-md)',
+                          border: isOverdue
+                            ? '1px solid var(--color-danger-border)'
+                            : 'var(--border-default)',
+                          background: isOverdue ? 'var(--color-danger-bg)' : 'transparent',
+                          padding: 'var(--space-3)',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            justifyContent: 'space-between',
+                            gap: 'var(--space-2)',
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p
+                              style={{
+                                fontWeight: 500,
+                                fontSize: 'var(--text-sm)',
+                                color: 'var(--gray-900)',
+                                margin: 0,
+                              }}
+                            >
+                              {task.title}
+                            </p>
+                            {task.description && (
+                              <p
+                                style={{
+                                  fontSize: 'var(--text-xs)',
+                                  color: 'var(--gray-500)',
+                                  marginTop: '2px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {task.description}
+                              </p>
+                            )}
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: 'var(--space-2)',
+                                marginTop: 'var(--space-1)',
+                                fontSize: 'var(--text-xs)',
+                                color: 'var(--gray-500)',
+                              }}
+                            >
+                              {task.due_date && (
+                                <span>
+                                  Due: {new Date(task.due_date).toLocaleDateString('en-IN')}
+                                </span>
+                              )}
+                              {task.assigned_by_emp?.full_name && (
+                                <span>From: {task.assigned_by_emp.full_name}</span>
+                              )}
+                              {task.branch && <span>{t(`branch.${task.branch}`)}</span>}
+                            </div>
+                          </div>
+                          <StatusBadge
+                            status={
+                              task.status === 'done'
+                                ? 'success'
+                                : isOverdue
+                                  ? 'danger'
+                                  : task.status === 'in_progress'
+                                    ? 'pending'
+                                    : 'inactive'
+                            }
+                            label={task.status}
+                            size="sm"
+                          />
                         </div>
                       </div>
-                      <StatusChip
-                        variant={
-                          task.status === 'done'
-                            ? 'done'
-                            : isOverdue
-                              ? 'error'
-                              : task.status === 'in_progress'
-                                ? 'pending'
-                                : 'grey'
-                        }
-                        label={task.status}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
+                    )
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </SectionCard>
-    </div>
+          ),
+        },
+      ].map(({ key, title, content }) => (
+        <AccordionCard
+          key={key}
+          title={title}
+          open={activeSection === key}
+          onToggle={() => toggle(key)}
+        >
+          {content}
+        </AccordionCard>
+      ))}
+    </PageContainer>
   )
 }
 
-function SectionCard({
+function AccordionCard({
   title,
   open,
   onToggle,
@@ -238,14 +368,50 @@ function SectionCard({
   children: React.ReactNode
 }) {
   return (
-    <Card className="mb-3 overflow-hidden">
+    <div
+      style={{
+        background: 'var(--brand-surface)',
+        border: 'var(--border-default)',
+        borderRadius: 'var(--radius-xl)',
+        boxShadow: 'var(--shadow-sm)',
+        marginBottom: 'var(--space-3)',
+        overflow: 'hidden',
+      }}
+    >
       <button
-        className="w-full flex items-center justify-between p-4 min-h-[48px] text-left hover:bg-accent/50 transition-colors"
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: 'var(--space-4)',
+          minHeight: '48px',
+          textAlign: 'left',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          fontFamily: 'var(--font-body)',
+          fontWeight: 500,
+          fontSize: 'var(--text-base)',
+          color: 'var(--gray-900)',
+          transition: 'background var(--transition-fast)',
+        }}
         onClick={onToggle}
+        onMouseEnter={(e) => {
+          ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--gray-50)'
+        }}
+        onMouseLeave={(e) => {
+          ;(e.currentTarget as HTMLButtonElement).style.background = 'none'
+        }}
       >
-        <span className="font-medium text-foreground">{title}</span>
+        <span>{title}</span>
         <ChevronDown
-          className={`w-5 h-5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+          size={20}
+          style={{
+            color: 'var(--gray-500)',
+            transition: 'transform var(--transition-base)',
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+          }}
         />
       </button>
       {open && (
@@ -254,6 +420,6 @@ function SectionCard({
           {children}
         </>
       )}
-    </Card>
+    </div>
   )
 }

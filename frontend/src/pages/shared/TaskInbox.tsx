@@ -3,9 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { useQuery } from 'react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
-import { Card, CardContent } from '@/components/ui/card'
-import StatusChip from '../../components/StatusChip'
 import { CheckCircle2 } from 'lucide-react'
+import PageContainer from '@/components/layouts/PageContainer'
+import PageHeader from '@/components/layouts/PageHeader'
+import SectionCard from '@/components/ui/SectionCard'
+import StatusBadge from '@/components/ui/StatusBadge'
+import EmptyState from '@/components/ui/EmptyState'
 
 interface Task {
   id: string
@@ -40,44 +43,69 @@ export default function TaskInbox() {
     { enabled: !!user, retry: 2, staleTime: 30_000 }
   )
 
-  const getChipVariant = (status: string, dueDate: string | null | undefined) => {
-    if (status === 'done') return 'done' as const
-    if (dueDate && new Date(dueDate) < new Date()) return 'error' as const
-    if (status === 'in_progress') return 'pending' as const
-    return 'grey' as const
-  }
-
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <h1 className="text-xl font-semibold text-foreground mb-6">{t('nav.tasks')}</h1>
+    <PageContainer>
+      <PageHeader title={t('nav.tasks')} subtitle="Your assigned tasks" />
 
       {authLoading || isLoading ? (
-        <div className="text-center py-12 text-muted-foreground">{t('common.loading')}</div>
-      ) : tasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <CheckCircle2 className="h-12 w-12 text-green-500 mb-4" strokeWidth={1.5} />
-          <h3 className="text-lg font-medium text-foreground mb-1">All caught up!</h3>
-          <p className="text-sm text-muted-foreground">No tasks assigned to you right now.</p>
+        <div
+          style={{ textAlign: 'center', padding: 'var(--space-12) 0', color: 'var(--gray-500)' }}
+        >
+          {t('common.loading')}
         </div>
+      ) : tasks.length === 0 ? (
+        <EmptyState
+          icon={CheckCircle2}
+          title="All caught up!"
+          description="No tasks assigned to you right now."
+        />
       ) : (
-        <div className="space-y-3">
-          {tasks.map((task: Task) => (
-            <Card
-              key={task.id}
-              className={
-                task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done'
-                  ? 'border-destructive/30'
-                  : ''
-              }
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <h3 className="font-medium text-foreground">{task.title}</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          {tasks.map((task: Task) => {
+            const isOverdue =
+              task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done'
+            return (
+              <SectionCard key={task.id} padding="compact" status={isOverdue ? 'danger' : 'none'}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    gap: 'var(--space-3)',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3
+                      style={{
+                        fontWeight: 500,
+                        fontSize: 'var(--text-base)',
+                        color: 'var(--gray-900)',
+                        margin: 0,
+                      }}
+                    >
+                      {task.title}
+                    </h3>
                     {task.description && (
-                      <p className="text-muted-foreground text-sm mt-1">{task.description}</p>
+                      <p
+                        style={{
+                          fontSize: 'var(--text-sm)',
+                          color: 'var(--gray-600)',
+                          marginTop: 'var(--space-1)',
+                        }}
+                      >
+                        {task.description}
+                      </p>
                     )}
-                    <div className="flex flex-wrap gap-2 mt-2 text-xs text-muted-foreground">
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 'var(--space-2)',
+                        marginTop: 'var(--space-2)',
+                        fontSize: 'var(--text-xs)',
+                        color: 'var(--gray-500)',
+                      }}
+                    >
                       {task.due_date && (
                         <span>Due: {new Date(task.due_date).toLocaleDateString('en-IN')}</span>
                       )}
@@ -87,16 +115,25 @@ export default function TaskInbox() {
                       {task.branch && <span>{t(`branch.${task.branch}`)}</span>}
                     </div>
                   </div>
-                  <StatusChip
-                    variant={getChipVariant(task.status, task.due_date)}
+                  <StatusBadge
+                    status={
+                      task.status === 'done'
+                        ? 'success'
+                        : isOverdue
+                          ? 'danger'
+                          : task.status === 'in_progress'
+                            ? 'pending'
+                            : 'inactive'
+                    }
                     label={task.status}
+                    size="sm"
                   />
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              </SectionCard>
+            )
+          })}
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }

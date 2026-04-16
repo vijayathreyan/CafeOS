@@ -29,6 +29,8 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { showToast } from '@/lib/dialogs'
 import { Plus, Camera } from 'lucide-react'
+import { PageContainer } from '@/components/layouts/PageContainer'
+import { PageHeader } from '@/components/layouts/PageHeader'
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -115,20 +117,22 @@ export default function SupervisorExpensesPage() {
   }
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold text-foreground">Expense Entry</h1>
-        <Button
-          onClick={() => {
-            resetForm()
-            setOpen(true)
-          }}
-          data-testid="add-expense-btn"
-        >
-          <Plus className="w-4 h-4 mr-1.5" />
-          Add Expense
-        </Button>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Expense Entry"
+        action={
+          <Button
+            onClick={() => {
+              resetForm()
+              setOpen(true)
+            }}
+            data-testid="add-expense-btn"
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            Add Expense
+          </Button>
+        }
+      />
 
       <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
         Last 7 Days
@@ -265,6 +269,6 @@ export default function SupervisorExpensesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

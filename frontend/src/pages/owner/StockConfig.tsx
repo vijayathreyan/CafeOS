@@ -16,6 +16,8 @@ import { useStockItemConfig, useUpdateStockItemConfig } from '../../hooks/useSto
 import { useToast } from '../../hooks/use-toast'
 import { useAuth } from '../../contexts/AuthContext'
 import { Check, Pencil, X } from 'lucide-react'
+import { PageContainer } from '@/components/layouts/PageContainer'
+import { PageHeader } from '@/components/layouts/PageHeader'
 
 export default function StockConfig() {
   const { user } = useAuth()
@@ -90,14 +92,8 @@ export default function StockConfig() {
     entryUnit === 'cup' ? 'grams per cup' : 'grams per piece'
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Stock Configuration</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Weight per unit for weight-tracked items. Each change is saved with an effective date —
-          history is never deleted.
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader title="Stock Configuration" subtitle="Weight per unit settings" />
 
       <Card>
         <CardHeader className="pb-3">
@@ -228,6 +224,6 @@ export default function StockConfig() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }
