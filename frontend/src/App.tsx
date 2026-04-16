@@ -1,5 +1,6 @@
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { Coffee } from 'lucide-react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -40,6 +41,21 @@ import SupervisorExpensesPage from './pages/supervisor/SupervisorExpensesPage'
 import VendorPaymentsPage from './pages/owner/VendorPaymentsPage'
 import PostPaidCustomersPage from './pages/owner/PostPaidCustomersPage'
 
+function AuthLoadingScreen() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background gap-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Coffee className="h-8 w-8 text-primary" />
+        <span className="text-2xl font-semibold text-foreground">CafeOS</span>
+      </div>
+      <div className="w-48 h-1 bg-muted rounded-full overflow-hidden">
+        <div className="h-full bg-primary rounded-full animate-loading w-1/3" />
+      </div>
+      <p className="text-sm text-muted-foreground">Unlimited Food Works</p>
+    </div>
+  )
+}
+
 /**
  * Global loading gate — blocks all page rendering until AuthContext.loading is false.
  * loading becomes false only after fetchEmployee() completes (or the 3s fallback fires),
@@ -49,11 +65,7 @@ function AppRouter() {
   const { loading } = useAuth()
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    )
+    return <AuthLoadingScreen />
   }
 
   return (
