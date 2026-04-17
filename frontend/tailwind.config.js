@@ -46,11 +46,31 @@ export default {
         'text-primary': '#202124',
         'text-secondary': '#5F6368',
         'border-legacy': '#DADCE0',
+        // Design system brand tokens
+        brand: {
+          primary: 'var(--brand-primary)',
+          subtle: 'var(--brand-primary-subtle)',
+          bg: 'var(--brand-bg)',
+        },
+        gray: {
+          50: 'var(--gray-50)',
+          100: 'var(--gray-100)',
+          200: 'var(--gray-200)',
+          300: 'var(--gray-300)',
+          400: 'var(--gray-400)',
+          500: 'var(--gray-500)',
+          600: 'var(--gray-600)',
+          700: 'var(--gray-700)',
+          800: 'var(--gray-800)',
+          900: 'var(--gray-900)',
+        },
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        sm: 'var(--radius-sm)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
+        full: 'var(--radius-full)',
         // legacy
         card: '12px',
         chip: '8px',
@@ -58,6 +78,9 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         tamil: ['"Noto Sans Tamil"', 'sans-serif'],
+        display: ['Plus Jakarta Sans', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
       fontSize: {
         xs: ['12px', '16px'],
@@ -68,6 +91,11 @@ export default {
         '2xl': ['24px', '32px'],
       },
       boxShadow: {
+        xs: 'var(--shadow-xs)',
+        sm: 'var(--shadow-sm)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+        // legacy
         card: '0 1px 3px rgba(60,64,67,0.3), 0 4px 8px rgba(60,64,67,0.15)',
         'card-sm': '0 1px 2px rgba(60,64,67,0.3)',
         'card-lg': '0 2px 6px rgba(60,64,67,0.3), 0 8px 16px rgba(60,64,67,0.15)',

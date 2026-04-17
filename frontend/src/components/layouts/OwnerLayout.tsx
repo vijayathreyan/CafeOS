@@ -141,7 +141,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        background: '#FFFFFF',
+        background: 'var(--brand-surface)',
       }}
     >
       {/* ── Brand header ── */}
@@ -363,7 +363,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
         style={{
           width: 'var(--sidebar-width)',
           flexShrink: 0,
-          background: '#FFFFFF',
+          background: 'var(--brand-surface)',
           borderRight: 'var(--border-default)',
           height: '100vh',
           position: 'sticky',
@@ -383,7 +383,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
           className="lg:hidden"
           style={{
             height: 'var(--header-height)',
-            background: '#FFFFFF',
+            background: 'var(--brand-surface)',
             borderBottom: 'var(--border-default)',
             boxShadow: 'var(--shadow-xs)',
             display: 'flex',

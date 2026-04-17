@@ -63,9 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (mounted) applyUser(emp)
         }
         if (mounted) setLoading(false)
-      } else if (event === 'SIGNED_IN' && session?.user) {
-        const emp = await fetchEmployee(session.user.id)
-        if (mounted) applyUser(emp)
       } else if (event === 'SIGNED_OUT') {
         setUser(null)
         setActiveBranchState(null)

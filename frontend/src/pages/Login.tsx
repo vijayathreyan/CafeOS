@@ -26,9 +26,21 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const { error: err } = await login(phone, password)
-    setLoading(false)
-    if (err) setError(err)
+    try {
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 10000)
+      )
+      const { error: err } = await Promise.race([login(phone, password), timeout])
+      if (err) setError(err)
+    } catch (e) {
+      if (e instanceof Error && e.message === 'timeout') {
+        setError('Server not reachable. Is Docker running? Check VITE_SUPABASE_URL.')
+      } else {
+        setError('Connection error. Check your network and try again.')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
