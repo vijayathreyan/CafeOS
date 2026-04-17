@@ -12,9 +12,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChevronLeft, ChevronRight, Save } from 'lucide-react'
+import SectionCard from '@/components/ui/SectionCard'
 import { showToast } from '@/lib/dialogs'
 import { PageContainer } from '@/components/layouts/PageContainer'
 import { PageHeader } from '@/components/layouts/PageHeader'
@@ -147,8 +147,8 @@ export default function UPIEntryPage() {
       {isLoading ? (
         <Skeleton className="h-80 w-full" />
       ) : (
-        <Card>
-          <CardContent className="p-0">
+        <SectionCard padding="none">
+          <div className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -215,8 +215,8 @@ export default function UPIEntryPage() {
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </SectionCard>
       )}
 
       <div className="mt-4 flex justify-end">

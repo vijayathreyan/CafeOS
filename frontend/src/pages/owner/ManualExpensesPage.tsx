@@ -13,9 +13,11 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import SectionCard from '@/components/ui/SectionCard'
+import AmountDisplay from '@/components/ui/AmountDisplay'
+import EmptyState from '@/components/ui/EmptyState'
+import { TableSkeleton } from '@/components/ui/LoadingSkeletons'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
@@ -251,22 +253,18 @@ export default function ManualExpensesPage() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
+        <TableSkeleton rows={3} />
       ) : expenses.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            No manual expenses found.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Plus}
+          title="No manual expenses found"
+          description="Add your first expense entry."
+        />
       ) : (
         <div className="space-y-2">
           {expenses.map((e) => (
-            <Card key={e.id}>
-              <CardContent className="p-3">
+            <SectionCard key={e.id} padding="compact">
+              <div className="p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -285,9 +283,7 @@ export default function ManualExpensesPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="font-semibold text-foreground text-sm">
-                      ₹{Number(e.amount).toLocaleString('en-IN')}
-                    </span>
+                    <AmountDisplay amount={Number(e.amount)} size="sm" />
                     <Button
                       variant="ghost"
                       size="icon"
@@ -306,8 +302,8 @@ export default function ManualExpensesPage() {
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </SectionCard>
           ))}
         </div>
       )}

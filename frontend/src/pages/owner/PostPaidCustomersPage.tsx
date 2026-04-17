@@ -8,10 +8,14 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import SectionCard from '@/components/ui/SectionCard'
+import StatusBadge from '@/components/ui/StatusBadge'
+import AmountDisplay from '@/components/ui/AmountDisplay'
+import EmptyState from '@/components/ui/EmptyState'
+import KPICard from '@/components/ui/KPICard'
+import { CardGridSkeleton } from '@/components/ui/LoadingSkeletons'
 import {
   Dialog,
   DialogContent,
@@ -23,7 +27,7 @@ import { showToast } from '@/lib/dialogs'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { IndianRupee, History, Plus, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { IndianRupee, History, Plus, AlertCircle } from 'lucide-react'
 import { PageContainer } from '@/components/layouts/PageContainer'
 import { PageHeader } from '@/components/layouts/PageHeader'
 import type { PostPaidBalance } from '../../types/phase5'
@@ -322,78 +326,72 @@ function CustomerCard({ balance }: { balance: PostPaidBalance }) {
 
   return (
     <>
-      <Card
-        className={`transition-all ${isSettled ? 'border-green-200 bg-green-50/30' : isOverdue ? 'border-destructive/40' : 'border-border'}`}
+      <SectionCard
+        className="transition-all"
+        status={isSettled ? 'success' : isOverdue ? 'danger' : 'none'}
         data-testid={`customer-card-${balance.customer.name.toLowerCase()}`}
       >
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-foreground">{balance.customer.name}</h3>
-                {isSettled ? (
-                  <Badge className="bg-green-100 text-green-800 text-xs" variant="outline">
-                    <CheckCircle2 className="w-3 h-3 mr-1" /> Settled
-                  </Badge>
-                ) : isOverdue ? (
-                  <Badge className="bg-destructive/10 text-destructive text-xs" variant="outline">
-                    <AlertCircle className="w-3 h-3 mr-1" /> Overdue
-                  </Badge>
-                ) : (
-                  <Badge className="bg-amber-100 text-amber-800 text-xs" variant="outline">
-                    Outstanding
-                  </Badge>
-                )}
-              </div>
-              {balance.customer.contact && (
-                <p className="text-xs text-muted-foreground">{balance.customer.contact}</p>
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-foreground">{balance.customer.name}</h3>
+              {isSettled ? (
+                <StatusBadge status="settled" label="Settled" size="sm" />
+              ) : isOverdue ? (
+                <StatusBadge status="overdue" label="Overdue" size="sm" />
+              ) : (
+                <StatusBadge status="unpaid" label="Outstanding" size="sm" />
               )}
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setHistOpen(true)} className="h-8">
-              <History className="w-3.5 h-3.5" />
-            </Button>
-          </div>
-
-          <div className="space-y-1.5 mb-4">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total Credit</span>
-              <span>{formatCurrency(balance.total_credit)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total Paid</span>
-              <span className="text-green-700">{formatCurrency(balance.total_paid)}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between text-sm font-semibold">
-              <span>Outstanding</span>
-              <span className={balance.outstanding > 0 ? 'text-destructive' : 'text-green-700'}>
-                {formatCurrency(Math.abs(balance.outstanding))}
-                {balance.outstanding < 0 && ' (overpaid)'}
-              </span>
-            </div>
-            {balance.last_payment_date && (
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Last payment</span>
-                <span>
-                  {formatDate(balance.last_payment_date)}
-                  {balance.days_since_payment != null && ` (${balance.days_since_payment}d ago)`}
-                </span>
-              </div>
+            {balance.customer.contact && (
+              <p className="text-xs text-muted-foreground">{balance.customer.contact}</p>
             )}
           </div>
-
-          <Button
-            size="sm"
-            className="w-full"
-            variant={isSettled ? 'outline' : 'default'}
-            onClick={() => setPayOpen(true)}
-            data-testid={`btn-record-payment-${balance.customer.name.toLowerCase()}`}
-          >
-            <Plus className="w-3.5 h-3.5 mr-1" />
-            Record Payment
+          <Button variant="ghost" size="sm" onClick={() => setHistOpen(true)} className="h-8">
+            <History className="w-3.5 h-3.5" />
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="space-y-1.5 mb-4">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Total Credit</span>
+            <AmountDisplay amount={balance.total_credit} size="sm" />
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Total Paid</span>
+            <AmountDisplay amount={balance.total_paid} size="sm" variant="positive" />
+          </div>
+          <Separator />
+          <div className="flex justify-between text-sm font-semibold">
+            <span>Outstanding</span>
+            <AmountDisplay
+              amount={Math.abs(balance.outstanding)}
+              size="sm"
+              variant={balance.outstanding > 0 ? 'negative' : 'positive'}
+            />
+          </div>
+          {balance.last_payment_date && (
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Last payment</span>
+              <span>
+                {formatDate(balance.last_payment_date)}
+                {balance.days_since_payment != null && ` (${balance.days_since_payment}d ago)`}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <Button
+          size="sm"
+          className="w-full"
+          variant={isSettled ? 'outline' : 'default'}
+          onClick={() => setPayOpen(true)}
+          data-testid={`btn-record-payment-${balance.customer.name.toLowerCase()}`}
+        >
+          <Plus className="w-3.5 h-3.5 mr-1" />
+          Record Payment
+        </Button>
+      </SectionCard>
 
       <RecordPaymentDialog open={payOpen} onClose={() => setPayOpen(false)} balance={balance} />
 
@@ -424,43 +422,32 @@ export default function PostPaidCustomersPage() {
       {/* Summary */}
       {!isLoading && balances.length > 0 && (
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <IndianRupee className="w-4 h-4 text-destructive" />
-                <p className="text-xs text-muted-foreground">Total Outstanding</p>
-              </div>
-              <p
-                className="text-lg font-bold text-destructive mt-1"
-                data-testid="total-outstanding"
-              >
-                {formatCurrency(totalOutstanding)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-600" />
-                <p className="text-xs text-muted-foreground">Overdue (&gt;30 days)</p>
-              </div>
-              <p className="text-lg font-bold text-amber-600 mt-1" data-testid="overdue-count">
-                {overdueCount}
-              </p>
-            </CardContent>
-          </Card>
+          <KPICard
+            title="Total Outstanding"
+            value={`₹${totalOutstanding.toLocaleString('en-IN')}`}
+            icon={IndianRupee}
+            status="danger"
+            data-testid="total-outstanding"
+          />
+          <KPICard
+            title="Overdue (>30 days)"
+            value={overdueCount}
+            icon={AlertCircle}
+            status="warning"
+            data-testid="overdue-count"
+          />
         </div>
       )}
 
       {/* Customer cards */}
       {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-40 w-full" />
-          ))}
-        </div>
+        <CardGridSkeleton count={4} />
       ) : balances.length === 0 ? (
-        <p className="text-muted-foreground text-center py-12">No post-paid customers found.</p>
+        <EmptyState
+          icon={IndianRupee}
+          title="No post-paid customers"
+          description="No post-paid customers found."
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" data-testid="customer-list">
           {balances.map((balance) => (

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { CreditCard, Truck, Users } from 'lucide-react'
 import PageContainer from '@/components/layouts/PageContainer'
 import PageHeader from '@/components/layouts/PageHeader'
+import SectionCard from '@/components/ui/SectionCard'
 
 const tiles = [
   {
@@ -34,31 +35,12 @@ export default function DataEntryHub() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {tiles.map(({ title, subtitle, path, Icon }) => (
-          <div
+          <SectionCard
             key={path}
             onClick={() => navigate(path)}
+            hoverable
+            className="cursor-pointer"
             data-testid={`tile-${title.toLowerCase().replace(/\s+/g, '-')}`}
-            style={{
-              background: 'var(--brand-surface)',
-              border: 'var(--border-default)',
-              borderRadius: 'var(--radius-xl)',
-              boxShadow: 'var(--shadow-sm)',
-              padding: 'var(--space-5)',
-              cursor: 'pointer',
-              transition: 'all var(--transition-base)',
-            }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLDivElement
-              el.style.boxShadow = 'var(--shadow-md)'
-              el.style.transform = 'translateY(-2px)'
-              el.style.borderColor = 'var(--brand-primary)'
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLDivElement
-              el.style.boxShadow = 'var(--shadow-sm)'
-              el.style.transform = 'translateY(0)'
-              el.style.borderColor = 'var(--gray-200)'
-            }}
           >
             <div
               style={{
@@ -96,7 +78,7 @@ export default function DataEntryHub() {
             >
               {subtitle}
             </p>
-          </div>
+          </SectionCard>
         ))}
       </div>
     </PageContainer>

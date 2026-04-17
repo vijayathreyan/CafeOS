@@ -7,9 +7,9 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import SectionCard from '@/components/ui/SectionCard'
 import {
   Select,
   SelectContent,
@@ -141,8 +141,8 @@ export default function SalaryEntryPage() {
       {isLoading ? (
         <Skeleton className="h-48 w-full" />
       ) : (
-        <Card>
-          <CardContent className="p-0">
+        <SectionCard padding="none">
+          <div className="p-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
@@ -179,8 +179,8 @@ export default function SalaryEntryPage() {
                 ))}
               </tbody>
             </table>
-          </CardContent>
-        </Card>
+          </div>
+        </SectionCard>
       )}
 
       <Separator className="my-4" />

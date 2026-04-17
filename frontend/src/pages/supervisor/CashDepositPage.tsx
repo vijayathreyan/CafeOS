@@ -5,8 +5,9 @@ import { supabase } from '../../lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
+import SectionCard from '@/components/ui/SectionCard'
+import AmountDisplay from '@/components/ui/AmountDisplay'
 import {
   Select,
   SelectContent,
@@ -157,8 +158,8 @@ export default function CashDepositPage() {
     <PageContainer>
       <PageHeader title="Cash Deposit" />
 
-      <Card>
-        <CardContent className="p-4 space-y-4">
+      <SectionCard padding="compact">
+        <div className="p-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Deposit Date *</Label>
@@ -273,7 +274,11 @@ export default function CashDepositPage() {
             <div className="mt-3 flex items-center justify-between text-sm font-medium">
               <span className="text-muted-foreground">Rows Total:</span>
               <span className={amountMismatch ? 'text-destructive' : 'text-foreground'}>
-                ₹{rowsTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                <AmountDisplay
+                  amount={rowsTotal}
+                  size="sm"
+                  variant={amountMismatch ? 'negative' : 'default'}
+                />
               </span>
             </div>
 
@@ -311,8 +316,8 @@ export default function CashDepositPage() {
               Challan photo is required before submitting.
             </p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
     </PageContainer>
   )
 }

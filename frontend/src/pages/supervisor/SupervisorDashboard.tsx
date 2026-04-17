@@ -20,6 +20,7 @@ import { Separator } from '@/components/ui/separator'
 import { ChevronDown, Banknote, ClipboardList, Package, Receipt, ArrowRight } from 'lucide-react'
 import StatusBadge from '@/components/ui/StatusBadge'
 import PageContainer from '@/components/layouts/PageContainer'
+import PageHeader from '@/components/layouts/PageHeader'
 import SectionCard from '@/components/ui/SectionCard'
 import AmountDisplay from '@/components/ui/AmountDisplay'
 
@@ -65,24 +66,7 @@ export default function SupervisorDashboard() {
 
   return (
     <PageContainer>
-      {/* Header */}
-      <div style={{ marginBottom: 'var(--space-6)' }}>
-        <h1
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 'var(--text-2xl)',
-            fontWeight: 'var(--font-semibold)',
-            color: 'var(--gray-900)',
-            letterSpacing: '-0.025em',
-            margin: 0,
-          }}
-        >
-          Supervisor Dashboard
-        </h1>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)', marginTop: '2px' }}>
-          {today} · {user?.full_name}
-        </p>
-      </div>
+      <PageHeader title="Supervisor Dashboard" subtitle={`${today} · ${user?.full_name}`} />
 
       {/* Float Balance — always visible, read-only */}
       <SectionCard className="mb-4">

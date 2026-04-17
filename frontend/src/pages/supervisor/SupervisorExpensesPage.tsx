@@ -9,8 +9,10 @@ import { supabase } from '../../lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import SectionCard from '@/components/ui/SectionCard'
+import AmountDisplay from '@/components/ui/AmountDisplay'
+import EmptyState from '@/components/ui/EmptyState'
+import { TableSkeleton } from '@/components/ui/LoadingSkeletons'
 import {
   Select,
   SelectContent,
@@ -139,21 +141,18 @@ export default function SupervisorExpensesPage() {
       </h2>
 
       {isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
-        </div>
+        <TableSkeleton rows={3} />
       ) : recentExpenses.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center text-muted-foreground text-sm">
-            No expenses in the last 7 days.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Plus}
+          title="No expenses in the last 7 days"
+          description="No expenses recorded recently."
+        />
       ) : (
         <div className="space-y-2">
           {recentExpenses.map((e) => (
-            <Card key={e.id}>
-              <CardContent className="p-3">
+            <SectionCard key={e.id} padding="compact">
+              <div className="p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <p className="font-medium text-foreground text-sm">{e.shop_name}</p>
@@ -165,13 +164,11 @@ export default function SupervisorExpensesPage() {
                     <Badge variant="outline" className="text-xs">
                       {e.branch}
                     </Badge>
-                    <span className="font-semibold text-foreground text-sm">
-                      ₹{Number(e.amount).toLocaleString('en-IN')}
-                    </span>
+                    <AmountDisplay amount={Number(e.amount)} size="sm" />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </SectionCard>
           ))}
         </div>
       )}

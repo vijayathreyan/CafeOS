@@ -4,13 +4,14 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useVendors, useToggleVendorActive } from '../../hooks/useVendors'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { useConfirm, showToast } from '@/lib/dialogs'
 import { Phone, Plus, Download, Upload, ChevronRight } from 'lucide-react'
 import { PageContainer } from '@/components/layouts/PageContainer'
 import { PageHeader } from '@/components/layouts/PageHeader'
+import SectionCard from '@/components/ui/SectionCard'
+import StatusBadge from '@/components/ui/StatusBadge'
+import EmptyState from '@/components/ui/EmptyState'
+import { TableSkeleton } from '@/components/ui/LoadingSkeletons'
 import type { Vendor } from '../../types/vendor'
 
 const CYCLE_LABELS: Record<string, string> = {
@@ -199,11 +200,7 @@ export default function VendorMaster() {
   if (isLoading) {
     return (
       <PageContainer>
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-24 w-full" />
-          ))}
-        </div>
+        <TableSkeleton rows={4} />
       </PageContainer>
     )
   }
@@ -255,8 +252,8 @@ export default function VendorMaster() {
       </div>
 
       {/* Filters */}
-      <Card className="mb-4">
-        <CardContent className="p-4 flex flex-wrap gap-3">
+      <SectionCard className="mb-4" padding="compact">
+        <div className="p-4 flex flex-wrap gap-3">
           <Input
             className="flex-1 min-w-40"
             placeholder="Search vendor name, contact, code..."
@@ -274,8 +271,8 @@ export default function VendorMaster() {
             <option value="prepaid">Prepaid</option>
             <option value="same_day_cash">Same Day Cash</option>
           </select>
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
       {/* Bulk Import */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -306,11 +303,12 @@ export default function VendorMaster() {
         {filtered.map((vendor) => {
           const activeItems = vendor.vendor_items?.filter((vi) => vi.active) ?? []
           return (
-            <Card
+            <SectionCard
               key={vendor.id}
               className={`transition-all ${!vendor.active ? 'opacity-60' : ''}`}
+              padding="compact"
             >
-              <CardContent className="p-4">
+              <div className="p-4">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex-1 min-w-0">
                     {/* Name + code + status */}
@@ -320,9 +318,7 @@ export default function VendorMaster() {
                       </span>
                       <span className="text-xs text-muted-foreground">{vendor.vendor_code}</span>
                       {!vendor.active && (
-                        <Badge variant="secondary" className="text-xs">
-                          Inactive
-                        </Badge>
+                        <StatusBadge status="inactive" label="Inactive" size="sm" />
                       )}
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full font-medium ${cycleColor(vendor)}`}
@@ -400,17 +396,28 @@ export default function VendorMaster() {
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </SectionCard>
           )
         })}
 
         {filtered.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            {vendors.length === 0
-              ? 'No vendors yet. Add your first vendor.'
-              : 'No vendors match your filters.'}
-          </div>
+          <EmptyState
+            icon={Plus}
+            title={vendors.length === 0 ? 'No vendors yet' : 'No vendors match your filters'}
+            description={
+              vendors.length === 0
+                ? 'Add your first vendor to get started.'
+                : 'Try adjusting the filter criteria.'
+            }
+            action={
+              vendors.length === 0 ? (
+                <Button onClick={() => navigate('/vendors/new')}>
+                  <Plus className="w-4 h-4 mr-1" /> Add Vendor
+                </Button>
+              ) : undefined
+            }
+          />
         )}
       </div>
 

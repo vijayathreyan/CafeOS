@@ -12,9 +12,11 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import SectionCard from '@/components/ui/SectionCard'
+import AmountDisplay from '@/components/ui/AmountDisplay'
+import EmptyState from '@/components/ui/EmptyState'
+import { TableSkeleton } from '@/components/ui/LoadingSkeletons'
 import {
   Select,
   SelectContent,
@@ -181,21 +183,18 @@ export default function DeliveryPayoutsPage() {
       />
 
       {isLoading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-        </div>
+        <TableSkeleton rows={3} />
       ) : payouts.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            No payout entries yet. Add your first payout.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Plus}
+          title="No payout entries yet"
+          description="Add your first payout."
+        />
       ) : (
         <div className="space-y-3">
           {payouts.map((p) => (
-            <Card key={p.id} data-testid="payout-row">
-              <CardContent className="p-4">
+            <SectionCard key={p.id} padding="compact" data-testid="payout-row">
+              <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -207,10 +206,7 @@ export default function DeliveryPayoutsPage() {
                       </span>
                     </div>
                     <p className="font-semibold text-foreground mt-1.5">
-                      ₹
-                      {Number(p.amount_credited).toLocaleString('en-IN', {
-                        minimumFractionDigits: 2,
-                      })}
+                      <AmountDisplay amount={Number(p.amount_credited)} size="sm" />
                     </p>
                     {p.bank_utr && (
                       <p className="text-xs text-muted-foreground mt-0.5">UTR: {p.bank_utr}</p>
@@ -231,8 +227,8 @@ export default function DeliveryPayoutsPage() {
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </SectionCard>
           ))}
 
           <Separator className="my-4" />
@@ -244,11 +240,11 @@ export default function DeliveryPayoutsPage() {
               .map(([month, totals]) => (
                 <div key={month} className="flex items-center gap-4 text-sm">
                   <span className="text-muted-foreground w-20">{month}</span>
-                  <span className="text-orange-600">
-                    Swiggy ₹{totals.swiggy.toLocaleString('en-IN')}
+                  <span className="text-orange-600 flex items-center gap-1">
+                    Swiggy <AmountDisplay amount={totals.swiggy} size="sm" />
                   </span>
-                  <span className="text-red-600">
-                    Zomato ₹{totals.zomato.toLocaleString('en-IN')}
+                  <span className="text-red-600 flex items-center gap-1">
+                    Zomato <AmountDisplay amount={totals.zomato} size="sm" />
                   </span>
                 </div>
               ))}

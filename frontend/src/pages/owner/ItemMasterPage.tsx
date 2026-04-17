@@ -14,8 +14,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import {
   Table,
@@ -25,6 +23,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import SectionCard from '@/components/ui/SectionCard'
+import AmountDisplay from '@/components/ui/AmountDisplay'
+import EmptyState from '@/components/ui/EmptyState'
+import { TableSkeleton } from '@/components/ui/LoadingSkeletons'
 import {
   Dialog,
   DialogContent,
@@ -805,8 +807,8 @@ export default function ItemMasterPage() {
       />
 
       {/* Filters */}
-      <Card className="mb-4">
-        <CardContent className="p-4 flex flex-wrap gap-3">
+      <SectionCard className="mb-4" padding="compact">
+        <div className="p-4 flex flex-wrap gap-3">
           <Input
             className="flex-1 min-w-40"
             placeholder="Search items..."
@@ -825,16 +827,12 @@ export default function ItemMasterPage() {
               </option>
             ))}
           </select>
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
       {/* Table */}
       {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
+        <TableSkeleton rows={5} />
       ) : (
         <div className="rounded-md border border-border overflow-x-auto">
           <Table>
@@ -867,7 +865,11 @@ export default function ItemMasterPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{item.unit}</TableCell>
                   <TableCell className="text-right text-sm">
-                    {item.selling_price != null ? `₹${item.selling_price}` : '—'}
+                    {item.selling_price != null ? (
+                      <AmountDisplay amount={item.selling_price} size="sm" />
+                    ) : (
+                      '—'
+                    )}
                   </TableCell>
                   <TableCell className="text-center">
                     <Checkbox
@@ -902,7 +904,11 @@ export default function ItemMasterPage() {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
-                    No items found
+                    <EmptyState
+                      icon={Plus}
+                      title="No items found"
+                      description="No items match your current filters."
+                    />
                   </TableCell>
                 </TableRow>
               )}

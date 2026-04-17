@@ -9,6 +9,7 @@ import PageHeader from '@/components/layouts/PageHeader'
 import SectionCard from '@/components/ui/SectionCard'
 import StatusBadge from '@/components/ui/StatusBadge'
 import EmptyState from '@/components/ui/EmptyState'
+import { CardGridSkeleton } from '@/components/ui/LoadingSkeletons'
 
 interface Task {
   id: string
@@ -48,11 +49,7 @@ export default function TaskInbox() {
       <PageHeader title={t('nav.tasks')} subtitle="Your assigned tasks" />
 
       {authLoading || isLoading ? (
-        <div
-          style={{ textAlign: 'center', padding: 'var(--space-12) 0', color: 'var(--gray-500)' }}
-        >
-          {t('common.loading')}
-        </div>
+        <CardGridSkeleton count={3} />
       ) : tasks.length === 0 ? (
         <EmptyState
           icon={CheckCircle2}

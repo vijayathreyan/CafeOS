@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import PageContainer from '@/components/layouts/PageContainer'
 import PageHeader from '@/components/layouts/PageHeader'
+import SectionCard from '@/components/ui/SectionCard'
+import StatusBadge from '@/components/ui/StatusBadge'
+import EmptyState from '@/components/ui/EmptyState'
+import { TableSkeleton } from '@/components/ui/LoadingSkeletons'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from 'react-query'
@@ -11,8 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Card, CardContent } from '@/components/ui/card'
-import StatusChip from '../../components/StatusChip'
+import { Users } from 'lucide-react'
 import { useConfirm, showToast } from '@/lib/dialogs'
 
 type AppUserExt = AppUser & { deleted_at?: string | null }
@@ -136,8 +139,8 @@ export default function UserManagement() {
       />
 
       {/* Filters */}
-      <Card className="mb-4">
-        <CardContent className="p-4 flex flex-wrap gap-3">
+      <SectionCard className="mb-4" padding="compact">
+        <div className="p-4 flex flex-wrap gap-3">
           <Input
             className="flex-1 min-w-40"
             placeholder={t('common.search')}
@@ -163,8 +166,8 @@ export default function UserManagement() {
             <option value="KR">{t('branch.KR')}</option>
             <option value="C2">{t('branch.C2')}</option>
           </select>
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
       {/* View toggle */}
       <div className="flex items-center gap-3 mb-4">
@@ -186,12 +189,16 @@ export default function UserManagement() {
 
       {/* Employee list */}
       {isLoading ? (
-        <div className="text-center py-12 text-muted-foreground">{t('common.loading')}</div>
+        <TableSkeleton rows={4} />
       ) : (
         <div className="space-y-3">
           {filtered.map((emp) => (
-            <Card key={emp.id} className={`${!emp.active || emp.deleted_at ? 'opacity-60' : ''}`}>
-              <CardContent className="p-4 flex items-center justify-between gap-4">
+            <SectionCard
+              key={emp.id}
+              className={`${!emp.active || emp.deleted_at ? 'opacity-60' : ''}`}
+              padding="compact"
+            >
+              <div className="p-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <Avatar className="w-12 h-12">
                     <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-lg">
@@ -203,9 +210,9 @@ export default function UserManagement() {
                       <span className="font-semibold text-foreground">{emp.full_name}</span>
                       <span className="text-xs text-muted-foreground">{emp.employee_id}</span>
                       {!emp.active && !emp.deleted_at && (
-                        <StatusChip variant="grey" label="Inactive" />
+                        <StatusBadge status="inactive" label="Inactive" size="sm" />
                       )}
-                      {emp.deleted_at && <StatusChip variant="error" label="Deleted" />}
+                      {emp.deleted_at && <StatusBadge status="danger" label="Deleted" size="sm" />}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap mt-1">
                       <span className="text-sm text-muted-foreground">{emp.phone}</span>
@@ -298,13 +305,19 @@ export default function UserManagement() {
                     </Button>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </SectionCard>
           ))}
           {filtered.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              {showDeleted ? 'No deleted employees' : t('common.noData')}
-            </div>
+            <EmptyState
+              icon={Users}
+              title={showDeleted ? 'No deleted employees' : 'No employees found'}
+              description={
+                showDeleted
+                  ? 'No employees have been deleted.'
+                  : 'No employees match your current filters.'
+              }
+            />
           )}
         </div>
       )}

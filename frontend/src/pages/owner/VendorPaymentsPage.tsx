@@ -13,9 +13,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import SectionCard from '@/components/ui/SectionCard'
+import StatusBadge from '@/components/ui/StatusBadge'
+import AmountDisplay from '@/components/ui/AmountDisplay'
+import EmptyState from '@/components/ui/EmptyState'
+import { CardGridSkeleton } from '@/components/ui/LoadingSkeletons'
 import {
   Dialog,
   DialogContent,
@@ -35,7 +39,7 @@ import { showToast } from '@/lib/dialogs'
 import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { CheckCircle2, Clock, AlertCircle, Plus, History, Calculator } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Plus, History, Calculator } from 'lucide-react'
 import { PageContainer } from '@/components/layouts/PageContainer'
 import { PageHeader } from '@/components/layouts/PageHeader'
 import {
@@ -574,91 +578,86 @@ function SectionACard({
 
   return (
     <>
-      <Card
-        className={`transition-all ${isPaid ? 'border-green-200 bg-green-50/30' : 'border-border'}`}
+      <SectionCard
+        className="transition-all"
+        status={isPaid ? 'success' : 'none'}
         data-testid={`vendor-card-${vendor.business_name.replace(/\s+/g, '-').toLowerCase()}`}
       >
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-foreground text-sm">{vendor.business_name}</h3>
-                {isPaid ? (
-                  <Badge className="bg-green-100 text-green-800 text-xs" variant="outline">
-                    <CheckCircle2 className="w-3 h-3 mr-1" /> Paid
-                  </Badge>
-                ) : (
-                  <Badge className="bg-amber-100 text-amber-800 text-xs" variant="outline">
-                    <Clock className="w-3 h-3 mr-1" /> Pending
-                  </Badge>
-                )}
-              </div>
-              {vendor.contact_name && (
-                <p className="text-xs text-muted-foreground mt-0.5">{vendor.contact_name}</p>
-              )}
-              {vendor.whatsapp_number && (
-                <p className="text-xs text-muted-foreground">WhatsApp: {vendor.whatsapp_number}</p>
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-foreground text-sm">{vendor.business_name}</h3>
+              {isPaid ? (
+                <StatusBadge status="paid" label="Paid" size="sm" />
+              ) : (
+                <StatusBadge status="pending" label="Pending" size="sm" />
               )}
             </div>
+            {vendor.contact_name && (
+              <p className="text-xs text-muted-foreground mt-0.5">{vendor.contact_name}</p>
+            )}
+            {vendor.whatsapp_number && (
+              <p className="text-xs text-muted-foreground">WhatsApp: {vendor.whatsapp_number}</p>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setHistoryOpen(true)}
+            className="h-8 text-xs gap-1"
+          >
+            <History className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+
+        <p className="text-xs text-muted-foreground mb-3">
+          Period: <span className="text-foreground font-medium">{cycleLabel}</span>
+        </p>
+
+        {!isPaid && (
+          <AutoTotalPanel
+            vendorId={vendor.id}
+            cycleStart={cycleStart}
+            cycleEnd={cycleEnd}
+            onTotal={(t) => setSystemTotal(t)}
+          />
+        )}
+
+        {isPaid && cycleLog && (
+          <div className="text-sm space-y-1">
+            {cycleLog.system_total != null && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">System Total</span>
+                <span>{formatCurrency(cycleLog.system_total)}</span>
+              </div>
+            )}
+            {cycleLog.vendor_bill_amount != null && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Vendor Bill</span>
+                <span>{formatCurrency(cycleLog.vendor_bill_amount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-semibold text-green-700">
+              <span>Paid</span>
+              <span>{formatCurrency(cycleLog.total_paid)}</span>
+            </div>
+          </div>
+        )}
+
+        {!isPaid && (
+          <div className="flex gap-2 mt-3">
             <Button
-              variant="ghost"
               size="sm"
-              onClick={() => setHistoryOpen(true)}
-              className="h-8 text-xs gap-1"
+              className="flex-1"
+              onClick={() => setMarkPaidOpen(true)}
+              data-testid={`btn-mark-paid-${vendor.business_name.replace(/\s+/g, '-').toLowerCase()}`}
             >
-              <History className="w-3.5 h-3.5" />
+              <CheckCircle2 className="w-4 h-4 mr-1" />
+              Mark as Paid
             </Button>
           </div>
-
-          <p className="text-xs text-muted-foreground mb-3">
-            Period: <span className="text-foreground font-medium">{cycleLabel}</span>
-          </p>
-
-          {!isPaid && (
-            <AutoTotalPanel
-              vendorId={vendor.id}
-              cycleStart={cycleStart}
-              cycleEnd={cycleEnd}
-              onTotal={(t) => setSystemTotal(t)}
-            />
-          )}
-
-          {isPaid && cycleLog && (
-            <div className="text-sm space-y-1">
-              {cycleLog.system_total != null && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">System Total</span>
-                  <span>{formatCurrency(cycleLog.system_total)}</span>
-                </div>
-              )}
-              {cycleLog.vendor_bill_amount != null && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Vendor Bill</span>
-                  <span>{formatCurrency(cycleLog.vendor_bill_amount)}</span>
-                </div>
-              )}
-              <div className="flex justify-between font-semibold text-green-700">
-                <span>Paid</span>
-                <span>{formatCurrency(cycleLog.total_paid)}</span>
-              </div>
-            </div>
-          )}
-
-          {!isPaid && (
-            <div className="flex gap-2 mt-3">
-              <Button
-                size="sm"
-                className="flex-1"
-                onClick={() => setMarkPaidOpen(true)}
-                data-testid={`btn-mark-paid-${vendor.business_name.replace(/\s+/g, '-').toLowerCase()}`}
-              >
-                <CheckCircle2 className="w-4 h-4 mr-1" />
-                Mark as Paid
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        )}
+      </SectionCard>
 
       <MarkPaidDialog
         open={markPaidOpen}
@@ -709,105 +708,98 @@ function SectionBCard({
 
   return (
     <>
-      <Card
-        className={`transition-all ${isPaid ? 'border-green-200 bg-green-50/30' : 'border-border'}`}
+      <SectionCard
+        className="transition-all"
+        status={isPaid ? 'success' : 'none'}
         data-testid={`vendor-card-${vendor.business_name.replace(/\s+/g, '-').toLowerCase()}`}
       >
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-foreground text-sm">{vendor.business_name}</h3>
-                {isPaid ? (
-                  <Badge className="bg-green-100 text-green-800 text-xs" variant="outline">
-                    <CheckCircle2 className="w-3 h-3 mr-1" /> Paid
-                  </Badge>
-                ) : bills.length > 0 ? (
-                  <Badge className="bg-amber-100 text-amber-800 text-xs" variant="outline">
-                    <Clock className="w-3 h-3 mr-1" /> Pending
-                  </Badge>
-                ) : (
-                  <Badge className="bg-muted text-muted-foreground text-xs" variant="outline">
-                    No Bills
-                  </Badge>
-                )}
-              </div>
-              {vendor.contact_name && (
-                <p className="text-xs text-muted-foreground mt-0.5">{vendor.contact_name}</p>
-              )}
-              {vendor.whatsapp_number && (
-                <p className="text-xs text-muted-foreground">WhatsApp: {vendor.whatsapp_number}</p>
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-foreground text-sm">{vendor.business_name}</h3>
+              {isPaid ? (
+                <StatusBadge status="paid" label="Paid" size="sm" />
+              ) : bills.length > 0 ? (
+                <StatusBadge status="pending" label="Pending" size="sm" />
+              ) : (
+                <StatusBadge status="inactive" label="No Bills" size="sm" />
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setHistoryOpen(true)}
-              className="h-8 text-xs gap-1"
-            >
-              <History className="w-3.5 h-3.5" />
-            </Button>
+            {vendor.contact_name && (
+              <p className="text-xs text-muted-foreground mt-0.5">{vendor.contact_name}</p>
+            )}
+            {vendor.whatsapp_number && (
+              <p className="text-xs text-muted-foreground">WhatsApp: {vendor.whatsapp_number}</p>
+            )}
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setHistoryOpen(true)}
+            className="h-8 text-xs gap-1"
+          >
+            <History className="w-3.5 h-3.5" />
+          </Button>
+        </div>
 
-          <p className="text-xs text-muted-foreground mb-3">
-            Period: <span className="text-foreground font-medium">{cycleLabel}</span>
-          </p>
+        <p className="text-xs text-muted-foreground mb-3">
+          Period: <span className="text-foreground font-medium">{cycleLabel}</span>
+        </p>
 
-          {bills.length > 0 && (
-            <div className="rounded-md border border-border bg-muted/30 p-3 mb-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                Bills This Cycle
-              </p>
-              <div className="space-y-1.5">
-                {bills.map((bill) => (
-                  <div key={bill.id} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{formatDate(bill.bill_date)}</span>
-                    <span className="font-medium">{formatCurrency(bill.amount)}</span>
-                  </div>
-                ))}
-                <Separator className="my-1" />
-                <div className="flex justify-between text-sm font-semibold">
-                  <span>Total Due</span>
-                  <span>{formatCurrency(totalDue)}</span>
+        {bills.length > 0 && (
+          <div className="rounded-md border border-border bg-muted/30 p-3 mb-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              Bills This Cycle
+            </p>
+            <div className="space-y-1.5">
+              {bills.map((bill) => (
+                <div key={bill.id} className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{formatDate(bill.bill_date)}</span>
+                  <AmountDisplay amount={bill.amount} size="sm" />
                 </div>
+              ))}
+              <Separator className="my-1" />
+              <div className="flex justify-between text-sm font-semibold">
+                <span>Total Due</span>
+                <AmountDisplay amount={totalDue} size="sm" />
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {!isPaid && (
-            <div className="flex gap-2 mt-1">
+        {!isPaid && (
+          <div className="flex gap-2 mt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setAddBillOpen(true)}
+              className="flex-1"
+              data-testid={`btn-add-bill-${vendor.business_name.replace(/\s+/g, '-').toLowerCase()}`}
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Add Bill
+            </Button>
+            {bills.length > 0 && (
               <Button
                 size="sm"
-                variant="outline"
-                onClick={() => setAddBillOpen(true)}
                 className="flex-1"
-                data-testid={`btn-add-bill-${vendor.business_name.replace(/\s+/g, '-').toLowerCase()}`}
+                onClick={() => setMarkPaidOpen(true)}
+                data-testid={`btn-mark-paid-${vendor.business_name.replace(/\s+/g, '-').toLowerCase()}`}
               >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Add Bill
+                <CheckCircle2 className="w-4 h-4 mr-1" />
+                Mark as Paid
               </Button>
-              {bills.length > 0 && (
-                <Button
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setMarkPaidOpen(true)}
-                  data-testid={`btn-mark-paid-${vendor.business_name.replace(/\s+/g, '-').toLowerCase()}`}
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-1" />
-                  Mark as Paid
-                </Button>
-              )}
-            </div>
-          )}
+            )}
+          </div>
+        )}
 
-          {isPaid && cycleLog && (
-            <div className="text-sm font-semibold text-green-700 flex justify-between">
-              <span>Paid</span>
-              <span>{formatCurrency(cycleLog.total_paid)}</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {isPaid && cycleLog && (
+          <div className="text-sm font-semibold text-green-700 flex justify-between">
+            <span>Paid</span>
+            <AmountDisplay amount={cycleLog.total_paid} size="sm" variant="positive" />
+          </div>
+        )}
+      </SectionCard>
 
       <AddBillDialog
         open={addBillOpen}
@@ -921,8 +913,8 @@ export default function VendorPaymentsPage() {
 
       {/* Cycle info cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-        <Card>
-          <CardContent className="p-3">
+        <SectionCard padding="compact">
+          <div className="p-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Mon/Thu Cycle
             </p>
@@ -932,10 +924,10 @@ export default function VendorPaymentsPage() {
                 Payment due today
               </Badge>
             )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3">
+          </div>
+        </SectionCard>
+        <SectionCard padding="compact">
+          <div className="p-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Kalingaraj Cycle (1st/11th/21st)
             </p>
@@ -945,16 +937,12 @@ export default function VendorPaymentsPage() {
                 Payment due today
               </Badge>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </SectionCard>
       </div>
 
       {vendorsLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-32 w-full" />
-          ))}
-        </div>
+        <CardGridSkeleton count={3} />
       ) : (
         <>
           {/* ── Section A — Auto-Calculated Vendors ─────────────────── */}
@@ -974,9 +962,11 @@ export default function VendorPaymentsPage() {
               Quantities auto-calculated from daily stock and snack entries × vendor rate.
             </p>
             {sectionAVendors.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6 bg-muted/30 rounded-lg">
-                No Section A vendors found. Add vendors matching the known snack vendor names.
-              </p>
+              <EmptyState
+                icon={AlertCircle}
+                title="No Section A vendors"
+                description="Add vendors matching the known snack vendor names."
+              />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {sectionAVendors.map((vendor) => {
@@ -1016,9 +1006,11 @@ export default function VendorPaymentsPage() {
               Vendors who send WhatsApp bills. Add each bill and mark as paid.
             </p>
             {sectionBVendors.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6 bg-muted/30 rounded-lg">
-                No Section B vendors found.
-              </p>
+              <EmptyState
+                icon={AlertCircle}
+                title="No Section B vendors"
+                description="No Section B vendors found."
+              />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {sectionBVendors.map((vendor) => {

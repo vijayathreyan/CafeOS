@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Package, Wallet, ClipboardList, Phone } from 'lucide-react'
 import PageContainer from '@/components/layouts/PageContainer'
+import PageHeader from '@/components/layouts/PageHeader'
 import SectionCard from '@/components/ui/SectionCard'
 
 export default function StaffDashboard() {
@@ -22,32 +23,10 @@ export default function StaffDashboard() {
 
   return (
     <PageContainer>
-      {/* Greeting header */}
-      <div style={{ marginBottom: 'var(--space-6)' }}>
-        <h1
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 'var(--text-2xl)',
-            fontWeight: 'var(--font-semibold)',
-            color: 'var(--gray-900)',
-            letterSpacing: '-0.025em',
-            margin: 0,
-          }}
-        >
-          Good morning, {firstName}
-        </h1>
-        <p
-          style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: 'var(--text-sm)',
-            color: 'var(--gray-600)',
-            marginTop: '2px',
-          }}
-        >
-          {today}
-          {branch ? ` · ${t(`branch.${branch}`)}` : ''}
-        </p>
-      </div>
+      <PageHeader
+        title={`Good morning, ${firstName}`}
+        subtitle={`${today}${branch ? ` · ${t(`branch.${branch}`)}` : ''}`}
+      />
 
       {/* Today's Shift CTA */}
       <SectionCard className="mb-4">
