@@ -365,15 +365,23 @@ function AppRouter() {
 
         {/* Phase 6 — Month End Closing Stock */}
         <Route
-          path="/owner/month-end-stock"
+          path="/staff/month-end-stock"
           element={
-            <ProtectedRoute allowedRoles={['owner']}>
+            <ProtectedRoute allowedRoles={['staff']}>
               <MonthEndStockPage />
             </ProtectedRoute>
           }
         />
         <Route
-          path="/owner/month-end-stock/history"
+          path="/supervisor/month-end-stock"
+          element={
+            <ProtectedRoute allowedRoles={['supervisor']}>
+              <MonthEndStockPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/reports/month-end-stock"
           element={
             <ProtectedRoute allowedRoles={['owner']}>
               <MonthEndStockHistoryPage />

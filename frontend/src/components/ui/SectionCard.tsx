@@ -14,6 +14,7 @@ interface SectionCardProps {
   className?: string
   onClick?: () => void
   hoverable?: boolean
+  'data-testid'?: string
 }
 
 const statusColors: Record<StatusAccent, string> = {
@@ -44,6 +45,7 @@ export default function SectionCard({
   className,
   onClick,
   hoverable = false,
+  'data-testid': dataTestId,
 }: SectionCardProps) {
   const hasHeader = !!(title || description || action)
   const contentPadding = paddingMap[padding]
@@ -54,6 +56,7 @@ export default function SectionCard({
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
+      data-testid={dataTestId}
       onKeyDown={
         onClick
           ? (e) => {

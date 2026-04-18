@@ -59,7 +59,12 @@
       "Bash(git stash:*)",
       "Bash(git checkout:*)",
       "Bash(curl -s \"http://localhost/\")",
-      "Bash(curl -s http://localhost/login)"
+      "Bash(curl -s http://localhost/login)",
+      "Bash(curl -s -X POST 'http://localhost/auth/v1/token?grant_type=password' -H 'Content-Type: application/json' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' -d '{\"email\":\"9999999999@cafeos.local\",\"password\":\"Owner@2026\"}')",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('OK - token received' if 'access_token' in d else d\\)\")",
+      "Bash(read f *)",
+      "Bash(python3 -c ' import json, sys for line in open\\('\\\\''__TRACKED_VAR__'\\\\''\\): try: obj = json.loads\\(line\\) msg = obj.get\\('\\\\''message'\\\\'', {}\\) if msg.get\\('\\\\''role'\\\\''\\) == '\\\\''assistant'\\\\'': for c in msg.get\\('\\\\''content'\\\\'', []\\): if c.get\\('\\\\''type'\\\\''\\) == '\\\\''tool_use'\\\\'' and c.get\\('\\\\''name'\\\\''\\) == '\\\\''Bash'\\\\'': cmd = c.get\\('\\\\''input'\\\\'', {}\\).get\\('\\\\''command'\\\\'', '\\\\'''\\\\''\\) print\\(cmd[:200]\\) except: pass ' done)",
+      "Bash(python3 *)"
     ]
   }
 }

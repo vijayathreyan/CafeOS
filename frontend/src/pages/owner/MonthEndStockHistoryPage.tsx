@@ -217,9 +217,9 @@ export default function MonthEndStockHistoryPage() {
         title="Month End Stock History"
         subtitle="Past closing stock submissions"
         action={
-          <Button variant="outline" size="sm" onClick={() => navigate('/owner/month-end-stock')}>
+          <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
             <ArrowLeft size={14} className="mr-1" />
-            Back to Entry
+            Back
           </Button>
         }
       />

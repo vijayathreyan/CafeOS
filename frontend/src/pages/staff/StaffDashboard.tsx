@@ -137,6 +137,45 @@ export default function StaffDashboard() {
             </div>
           </div>
         </SectionCard>
+
+        <SectionCard
+          padding="compact"
+          hoverable
+          onClick={() => navigate('/staff/month-end-stock')}
+          className="cursor-pointer"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--color-warning-bg)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Package size={20} style={{ color: 'var(--color-warning)' }} />
+            </div>
+            <div>
+              <p
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontWeight: 500,
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--gray-900)',
+                  margin: 0,
+                }}
+              >
+                Month End Stock
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
+                Closing stock entry
+              </p>
+            </div>
+          </div>
+        </SectionCard>
       </div>
 
       {/* Service contacts */}

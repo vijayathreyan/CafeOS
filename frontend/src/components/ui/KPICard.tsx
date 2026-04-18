@@ -19,6 +19,7 @@ interface KPICardProps {
   trend?: TrendIndicator
   status?: StatusAccent
   className?: string
+  'data-testid'?: string
 }
 
 const iconBgMap: Record<StatusAccent, string> = {
@@ -49,12 +50,18 @@ export default function KPICard({
   trend,
   status = 'none',
   className,
+  'data-testid': dataTestId,
 }: KPICardProps) {
   const iconBg = iconBgMap[status]
   const iconColor = iconColorMap[status]
 
   return (
-    <SectionCard status={status} padding="compact" className={cn(className)}>
+    <SectionCard
+      status={status}
+      padding="compact"
+      className={cn(className)}
+      data-testid={dataTestId}
+    >
       <div
         style={{
           display: 'flex',

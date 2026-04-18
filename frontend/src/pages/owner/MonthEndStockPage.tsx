@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Package, History, CheckCircle2, AlertCircle, Clock, Search, Bell } from 'lucide-react'
+import { Package, CheckCircle2, AlertCircle, Clock, Search, Bell } from 'lucide-react'
 import PageContainer from '@/components/layouts/PageContainer'
 import { PageHeader } from '@/components/layouts/PageHeader'
 import SectionCard from '@/components/ui/SectionCard'
-import AmountDisplay from '@/components/ui/AmountDisplay'
 import EmptyState from '@/components/ui/EmptyState'
 import { TableSkeleton } from '@/components/ui/LoadingSkeletons'
 import { Button } from '@/components/ui/button'
@@ -66,13 +64,11 @@ interface AdhocRow {
   unit: string
   open_units: number
   packed_units: number
-  rate_per_unit: number
 }
 
 interface ItemValues {
   open_units: number
   packed_units: number
-  rate_per_unit: number
 }
 
 // ─── Draft persist/restore helpers ────────────────────────────────────────────
@@ -123,12 +119,9 @@ interface ItemRowProps {
   unit: string
   open_units: number
   packed_units: number
-  rate_per_unit: number
-  previous_month_rate: number | null
   isSubmitted: boolean
   onChangeOpen: (v: number) => void
   onChangePacked: (v: number) => void
-  onChangeRate: (v: number) => void
 }
 
 function ItemRow({
@@ -136,19 +129,13 @@ function ItemRow({
   unit,
   open_units,
   packed_units,
-  rate_per_unit,
-  previous_month_rate,
   isSubmitted,
   onChangeOpen,
   onChangePacked,
-  onChangeRate,
 }: ItemRowProps) {
   const total = open_units + packed_units
-  const cost = total * rate_per_unit
-  const rateChanged =
-    previous_month_rate !== null && previous_month_rate > 0 && rate_per_unit !== previous_month_rate
 
-  const numInput = (value: number, onChange: (v: number) => void, amber?: boolean) => (
+  const numInput = (value: number, onChange: (v: number) => void) => (
     <Input
       type="number"
       min={0}
@@ -156,13 +143,7 @@ function ItemRow({
       disabled={isSubmitted}
       onFocus={(e) => e.target.select()}
       onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
-      style={{
-        width: '80px',
-        fontFamily: 'var(--font-mono)',
-        fontSize: '13px',
-        background: amber ? 'var(--color-warning-bg)' : undefined,
-        borderColor: amber ? 'var(--color-warning-border)' : undefined,
-      }}
+      style={{ width: '80px', fontFamily: 'var(--font-mono)', fontSize: '13px' }}
     />
   )
 
@@ -213,14 +194,6 @@ function ItemRow({
       >
         {total === 0 ? '' : total}
       </td>
-      <td style={{ padding: '8px 6px' }}>{numInput(rate_per_unit, onChangeRate, rateChanged)}</td>
-      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-        {cost > 0 ? (
-          <AmountDisplay amount={cost} size="sm" />
-        ) : (
-          <span style={{ color: 'var(--gray-300)', fontSize: '13px' }}>—</span>
-        )}
-      </td>
     </tr>
   )
 }
@@ -234,7 +207,6 @@ interface AdhocRowProps {
   onChangeUnit: (v: string) => void
   onChangeOpen: (v: number) => void
   onChangePacked: (v: number) => void
-  onChangeRate: (v: number) => void
 }
 
 function AdhocItemRow({
@@ -244,10 +216,8 @@ function AdhocItemRow({
   onChangeUnit,
   onChangeOpen,
   onChangePacked,
-  onChangeRate,
 }: AdhocRowProps) {
   const total = row.open_units + row.packed_units
-  const cost = total * row.rate_per_unit
 
   return (
     <tr style={{ borderBottom: 'var(--border-default)' }}>
@@ -301,40 +271,16 @@ function AdhocItemRow({
       >
         {total === 0 ? '' : total}
       </td>
-      <td style={{ padding: '8px 6px' }}>
-        <Input
-          type="number"
-          min={0}
-          value={row.rate_per_unit === 0 ? '' : String(row.rate_per_unit)}
-          disabled={isSubmitted}
-          onFocus={(e) => e.target.select()}
-          onChange={(e) => onChangeRate(e.target.value === '' ? 0 : Number(e.target.value))}
-          style={{ width: '80px', fontFamily: 'var(--font-mono)', fontSize: '13px' }}
-        />
-      </td>
-      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-        {cost > 0 ? (
-          <AmountDisplay amount={cost} size="sm" />
-        ) : (
-          <span style={{ color: 'var(--gray-300)', fontSize: '13px' }}>—</span>
-        )}
-      </td>
     </tr>
   )
 }
 
 // ─── Section table ────────────────────────────────────────────────────────────
 
-const TABLE_HEADERS = ['Item', 'Unit', 'Open Units', 'Packed', 'Total', 'Rate (₹)', 'Cost']
-const TABLE_WIDTHS = ['auto', '70px', '90px', '90px', '60px', '90px', '100px']
+const TABLE_HEADERS = ['Item', 'Unit', 'Open Units', 'Packed', 'Total']
+const TABLE_WIDTHS = ['auto', '70px', '90px', '90px', '60px']
 
-function SectionTable({
-  children,
-  sectionTotal,
-}: {
-  children: React.ReactNode
-  sectionTotal: number
-}) {
+function SectionTable({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -362,28 +308,6 @@ function SectionTable({
           </tr>
         </thead>
         <tbody>{children}</tbody>
-        {sectionTotal > 0 && (
-          <tfoot>
-            <tr style={{ background: 'var(--gray-50)', borderTop: 'var(--border-strong)' }}>
-              <td
-                colSpan={6}
-                style={{
-                  padding: '10px 12px',
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: 'var(--gray-700)',
-                  textAlign: 'right',
-                }}
-              >
-                Section Total
-              </td>
-              <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                <AmountDisplay amount={sectionTotal} size="sm" />
-              </td>
-            </tr>
-          </tfoot>
-        )}
       </table>
     </div>
   )
@@ -392,14 +316,16 @@ function SectionTable({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function MonthEndStockPage() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const { toast } = useToast()
 
   const { month: initMonth, year: initYear } = currentMonthYear()
   const [selectedMonth, setSelectedMonth] = useState(initMonth)
   const [selectedYear, setSelectedYear] = useState(initYear)
-  const [selectedBranch, setSelectedBranch] = useState<'KR' | 'C2'>('KR')
+  const isStaff = user?.role === 'staff'
+  const [selectedBranch, setSelectedBranch] = useState<'KR' | 'C2'>(
+    isStaff ? (user?.branch_access[0] ?? 'KR') : 'KR'
+  )
   const [searchText, setSearchText] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
 
@@ -424,7 +350,6 @@ export default function MonthEndStockPage() {
       unit: '',
       open_units: 0,
       packed_units: 0,
-      rate_per_unit: 0,
     }))
   )
 
@@ -447,7 +372,6 @@ export default function MonthEndStockPage() {
       map[it.item_name] = {
         open_units: it.open_units,
         packed_units: it.packed_units,
-        rate_per_unit: it.rate_per_unit,
       }
     }
     return map
@@ -478,7 +402,6 @@ export default function MonthEndStockPage() {
         next[row.item_name] = existing ?? {
           open_units: row.open_units,
           packed_units: row.packed_units,
-          rate_per_unit: row.rate_per_unit,
         }
       }
       return next
@@ -511,30 +434,6 @@ export default function MonthEndStockPage() {
     }
   }, [doAutoSave, isSubmitted])
 
-  // ── Computed totals ──
-
-  const { sectionTotals, overallTotal } = useMemo(() => {
-    const totals: Record<string, number> = {}
-    for (const section of STOCK_SECTIONS) totals[section] = 0
-
-    for (const row of configRows) {
-      const v = itemValues[row.item_name]
-      if (!v) continue
-      const cost = (v.open_units + v.packed_units) * v.rate_per_unit
-      totals[row.section] = (totals[row.section] ?? 0) + cost
-    }
-
-    // Adhoc rows go into Spices & Speciality
-    for (const ar of adhocRows) {
-      if (!ar.item_name) continue
-      const cost = (ar.open_units + ar.packed_units) * ar.rate_per_unit
-      totals['Spices & Speciality'] = (totals['Spices & Speciality'] ?? 0) + cost
-    }
-
-    const overall = Object.values(totals).reduce((a, b) => a + b, 0)
-    return { sectionTotals: totals, overallTotal: overall }
-  }, [configRows, itemValues, adhocRows])
-
   // ── Filter items ──
 
   const filteredRowsBySection = useMemo(() => {
@@ -563,24 +462,16 @@ export default function MonthEndStockPage() {
 
   const buildPayload = useCallback(() => {
     const items = configRows.map((row) => {
-      const v = itemValues[row.item_name] ?? {
-        open_units: 0,
-        packed_units: 0,
-        rate_per_unit: 0,
-      }
-      const rateChanged =
-        row.previous_month_rate !== null &&
-        row.previous_month_rate > 0 &&
-        v.rate_per_unit !== row.previous_month_rate
+      const v = itemValues[row.item_name] ?? { open_units: 0, packed_units: 0 }
       return {
         item_name: row.item_name,
         section: row.section,
         unit: row.unit,
         open_units: v.open_units,
         packed_units: v.packed_units,
-        rate_per_unit: v.rate_per_unit,
+        rate_per_unit: 0,
         previous_month_rate: row.previous_month_rate,
-        rate_changed: rateChanged,
+        rate_changed: false,
       }
     })
 
@@ -592,7 +483,7 @@ export default function MonthEndStockPage() {
         unit: ar.unit || 'number',
         open_units: ar.open_units,
         packed_units: ar.packed_units,
-        rate_per_unit: ar.rate_per_unit,
+        rate_per_unit: 0,
         previous_month_rate: null,
         rate_changed: false,
       })
@@ -636,14 +527,54 @@ export default function MonthEndStockPage() {
   const handleSubmit = async () => {
     if (!user) return
     try {
+      const payload = buildPayload()
       await submitMutation.mutateAsync({
-        ...buildPayload(),
+        ...payload,
         submitted_by: user.id,
         submitted_by_name: user.full_name,
       })
       clearDraftLocal(selectedBranch, selectedYear, selectedMonth)
       setShowSubmitDialog(false)
       toast({ title: 'Submitted successfully' })
+
+      // Fire-and-forget: log WhatsApp alert for owner
+      void (async () => {
+        try {
+          const { data: ownerRows } = await supabase
+            .from('employees')
+            .select('whatsapp_number, phone')
+            .eq('role', 'owner')
+            .eq('active', true)
+            .limit(1)
+          const owner = ownerRows?.[0]
+          const recipient = owner?.whatsapp_number ?? owner?.phone ?? 'owner'
+
+          const { data: unpricedRows } = await supabase
+            .from('item_master')
+            .select('id')
+            .eq('cost_price', 0)
+            .eq('active', true)
+          const unpricedCount = unpricedRows?.length ?? 0
+
+          const itemCount = payload.items.filter((it) => it.open_units + it.packed_units > 0).length
+          const branchName = selectedBranch === 'KR' ? 'Kaappi Ready' : 'Coffee Mate C2'
+          const period = `${monthName(selectedMonth)} ${selectedYear}`
+          let message = `📦 Month End Stock submitted\nBranch: ${branchName} | ${period}\nSubmitted by: ${user.full_name}\nItems recorded: ${itemCount}`
+          if (unpricedCount > 0) {
+            message += `\n⚠️ ${unpricedCount} item${unpricedCount > 1 ? 's' : ''} have no cost price set — check Item Master`
+          }
+
+          await supabase.from('alert_log').insert({
+            trigger_event: 'month_end_stock_submitted',
+            recipient,
+            channel: 'whatsapp',
+            message,
+            status: 'sent',
+          })
+        } catch {
+          // Best-effort — do not fail the submission
+        }
+      })()
     } catch {
       toast({ title: 'Submission failed', variant: 'destructive' })
     }
@@ -687,7 +618,7 @@ export default function MonthEndStockPage() {
     setItemValues((prev) => ({
       ...prev,
       [itemName]: {
-        ...(prev[itemName] ?? { open_units: 0, packed_units: 0, rate_per_unit: 0 }),
+        ...(prev[itemName] ?? { open_units: 0, packed_units: 0 }),
         [key]: value,
       },
     }))
@@ -804,22 +735,7 @@ export default function MonthEndStockPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Month End Stock"
-        subtitle="Record closing stock values for P&L accuracy"
-        action={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/owner/month-end-stock/history')}
-            >
-              <History size={14} className="mr-1" />
-              History
-            </Button>
-          </div>
-        }
-      />
+      <PageHeader title="Month End Stock" subtitle="Record closing stock values for end of month" />
 
       {/* Period selector */}
       <SectionCard className="mb-4">
@@ -850,15 +766,20 @@ export default function MonthEndStockPage() {
             </SelectContent>
           </Select>
 
-          <Select value={selectedBranch} onValueChange={(v) => setSelectedBranch(v as 'KR' | 'C2')}>
-            <SelectTrigger style={{ width: '160px' }}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="KR">Kaappi Ready</SelectItem>
-              <SelectItem value="C2">Coffee Mate C2</SelectItem>
-            </SelectContent>
-          </Select>
+          {!isStaff && (
+            <Select
+              value={selectedBranch}
+              onValueChange={(v) => setSelectedBranch(v as 'KR' | 'C2')}
+            >
+              <SelectTrigger style={{ width: '160px' }}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="KR">Kaappi Ready</SelectItem>
+                <SelectItem value="C2">Coffee Mate C2</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
 
           <div
             style={{
@@ -939,7 +860,7 @@ export default function MonthEndStockPage() {
 
       {/* Item tables */}
       {isLoading ? (
-        <TableSkeleton cols={7} />
+        <TableSkeleton cols={5} />
       ) : configRows.length === 0 ? (
         <SectionCard>
           <EmptyState
@@ -962,19 +883,12 @@ export default function MonthEndStockPage() {
               return null
             }
             return (
-              <SectionCard
-                key={section}
-                title={section}
-                description={`Section Total: `}
-                action={<AmountDisplay amount={sectionTotals[section] ?? 0} size="sm" />}
-                padding="none"
-              >
-                <SectionTable sectionTotal={sectionTotals[section] ?? 0}>
+              <SectionCard key={section} title={section} padding="none">
+                <SectionTable>
                   {sectionRows.map((row) => {
                     const v = itemValues[row.item_name] ?? {
                       open_units: row.open_units,
                       packed_units: row.packed_units,
-                      rate_per_unit: row.rate_per_unit,
                     }
                     return (
                       <ItemRow
@@ -983,12 +897,9 @@ export default function MonthEndStockPage() {
                         unit={row.unit}
                         open_units={v.open_units}
                         packed_units={v.packed_units}
-                        rate_per_unit={v.rate_per_unit}
-                        previous_month_rate={row.previous_month_rate}
                         isSubmitted={isSubmitted}
                         onChangeOpen={(val) => setItemVal(row.item_name, 'open_units', val)}
                         onChangePacked={(val) => setItemVal(row.item_name, 'packed_units', val)}
-                        onChangeRate={(val) => setItemVal(row.item_name, 'rate_per_unit', val)}
                       />
                     )
                   })}
@@ -1003,7 +914,6 @@ export default function MonthEndStockPage() {
                         onChangeUnit={(v) => setAdhocVal(idx, 'unit', v)}
                         onChangeOpen={(v) => setAdhocVal(idx, 'open_units', v)}
                         onChangePacked={(v) => setAdhocVal(idx, 'packed_units', v)}
-                        onChangeRate={(v) => setAdhocVal(idx, 'rate_per_unit', v)}
                       />
                     ))}
                 </SectionTable>
@@ -1011,36 +921,6 @@ export default function MonthEndStockPage() {
             )
           })}
         </div>
-      )}
-
-      {/* Overall total */}
-      {!isLoading && configRows.length > 0 && (
-        <SectionCard className="mt-4" status="info">
-          <div className="flex items-center justify-between">
-            <div>
-              <p
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '13px',
-                  color: 'var(--gray-500)',
-                  marginBottom: 'var(--space-1)',
-                }}
-              >
-                Total Closing Stock Value
-              </p>
-              <p
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '12px',
-                  color: 'var(--gray-400)',
-                }}
-              >
-                {periodLabel}
-              </p>
-            </div>
-            <AmountDisplay amount={overallTotal} size="xl" />
-          </div>
-        </SectionCard>
       )}
 
       {/* Action buttons */}
@@ -1056,9 +936,7 @@ export default function MonthEndStockPage() {
                 >
                   {saveDraftMutation.isLoading ? 'Saving…' : 'Save Draft'}
                 </Button>
-                <Button onClick={() => setShowSubmitDialog(true)} disabled={overallTotal === 0}>
-                  Submit
-                </Button>
+                <Button onClick={() => setShowSubmitDialog(true)}>Submit</Button>
               </>
             )}
             <Button
@@ -1099,21 +977,9 @@ export default function MonthEndStockPage() {
             <AlertDialogTitle>
               Submit month end stock for {monthName(selectedMonth)} {selectedYear} {selectedBranch}?
             </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div
-                style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}
-              >
-                <div
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                >
-                  <span>Total closing stock value:</span>
-                  <AmountDisplay amount={overallTotal} size="lg" />
-                </div>
-                <p style={{ fontSize: '13px', color: 'var(--gray-500)', marginTop: '4px' }}>
-                  Once submitted this will update your P&amp;L. You can request an edit from the
-                  owner login if needed.
-                </p>
-              </div>
+            <AlertDialogDescription>
+              Once submitted this will be recorded for P&amp;L calculation. You can request an edit
+              if needed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

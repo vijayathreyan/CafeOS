@@ -89,8 +89,8 @@ export default function OwnerDashboard() {
     },
     {
       title: 'Month End Stock',
-      subtitle: 'Monthly closing stock entry',
-      path: '/owner/month-end-stock',
+      subtitle: 'View monthly closing stock report',
+      path: '/owner/reports/month-end-stock',
       Icon: BookOpen,
       ready: true,
     },

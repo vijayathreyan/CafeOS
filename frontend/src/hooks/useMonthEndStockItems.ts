@@ -24,7 +24,7 @@ export function useMonthEndStockItems(
   branch: string,
   savedItemsMap?: Record<
     string,
-    { open_units: number; packed_units: number; rate_per_unit: number }
+    { open_units: number; packed_units: number; rate_per_unit?: number }
   >
 ) {
   const prevMonth = month === 1 ? 12 : month - 1

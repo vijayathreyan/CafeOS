@@ -216,6 +216,29 @@ export default function SupervisorDashboard() {
           ),
         },
         {
+          key: 'month_end_stock',
+          title: 'Month End Stock',
+          content: (
+            <div
+              style={{
+                padding: 'var(--space-4)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-3)',
+              }}
+            >
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)' }}>
+                Record closing stock quantities at month end for both branches.
+              </p>
+              <Button className="w-full" onClick={() => navigate('/supervisor/month-end-stock')}>
+                <Package size={16} style={{ marginRight: '8px' }} />
+                Open Month End Stock
+                <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
+              </Button>
+            </div>
+          ),
+        },
+        {
           key: 'tasks',
           title: `Tasks${tasks.length > 0 ? ` (${tasks.length})` : ''}`,
           content: (

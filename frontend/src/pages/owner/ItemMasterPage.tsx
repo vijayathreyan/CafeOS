@@ -736,6 +736,7 @@ export default function ItemMasterPage() {
   const { confirm, ConfirmDialog } = useConfirm()
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState<string>('all')
+  const [showUnpriced, setShowUnpriced] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   // editingItem carries the full list record — available synchronously for instant pre-fill
   const [editingItem, setEditingItem] = useState<ItemMaster | undefined>()
@@ -746,6 +747,7 @@ export default function ItemMasterPage() {
 
   const filtered = items.filter((item) => {
     if (filterType !== 'all' && item.item_type !== filterType) return false
+    if (showUnpriced && (item.cost_price ?? 0) > 0) return false
     if (
       search &&
       !item.name_en.toLowerCase().includes(search.toLowerCase()) &&
@@ -808,7 +810,7 @@ export default function ItemMasterPage() {
 
       {/* Filters */}
       <SectionCard className="mb-4" padding="compact">
-        <div className="p-4 flex flex-wrap gap-3">
+        <div className="p-4 flex flex-wrap gap-3 items-center">
           <Input
             className="flex-1 min-w-40"
             placeholder="Search items..."
@@ -827,6 +829,15 @@ export default function ItemMasterPage() {
               </option>
             ))}
           </select>
+          <Button
+            variant={showUnpriced ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowUnpriced((v) => !v)}
+          >
+            {showUnpriced
+              ? 'All Items'
+              : `Unpriced (${items.filter((i) => (i.cost_price ?? 0) === 0).length})`}
+          </Button>
         </div>
       </SectionCard>
 
@@ -853,7 +864,24 @@ export default function ItemMasterPage() {
             <TableBody>
               {filtered.map((item) => (
                 <TableRow key={item.id} className={!item.active ? 'opacity-50' : ''}>
-                  <TableCell className="font-medium">{item.name_en}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {item.name_en}
+                      {(item.cost_price ?? 0) === 0 && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs"
+                          style={{
+                            color: 'var(--color-warning)',
+                            borderColor: 'var(--color-warning-border)',
+                            background: 'var(--color-warning-bg)',
+                          }}
+                        >
+                          Rate not set
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{item.name_ta ?? '—'}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs capitalize">
