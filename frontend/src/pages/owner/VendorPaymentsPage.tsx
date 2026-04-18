@@ -942,7 +942,7 @@ export default function VendorPaymentsPage() {
       </div>
 
       {vendorsLoading ? (
-        <CardGridSkeleton count={3} />
+        <CardGridSkeleton />
       ) : (
         <>
           {/* ── Section A — Auto-Calculated Vendors ─────────────────── */}

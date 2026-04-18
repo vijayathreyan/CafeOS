@@ -832,7 +832,7 @@ export default function ItemMasterPage() {
 
       {/* Table */}
       {isLoading ? (
-        <TableSkeleton rows={5} />
+        <TableSkeleton cols={5} />
       ) : (
         <div className="rounded-md border border-border overflow-x-auto">
           <Table>

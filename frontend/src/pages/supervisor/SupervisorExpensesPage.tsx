@@ -141,7 +141,7 @@ export default function SupervisorExpensesPage() {
       </h2>
 
       {isLoading ? (
-        <TableSkeleton rows={3} />
+        <TableSkeleton cols={3} />
       ) : recentExpenses.length === 0 ? (
         <EmptyState
           icon={Plus}

@@ -253,7 +253,7 @@ export default function ManualExpensesPage() {
       </div>
 
       {isLoading ? (
-        <TableSkeleton rows={3} />
+        <TableSkeleton cols={3} />
       ) : expenses.length === 0 ? (
         <EmptyState
           icon={Plus}

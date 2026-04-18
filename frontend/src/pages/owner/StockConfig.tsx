@@ -103,7 +103,7 @@ export default function StockConfig() {
       >
         {isLoading && (
           <div className="p-4">
-            <TableSkeleton rows={5} />
+            <TableSkeleton cols={5} />
           </div>
         )}
 

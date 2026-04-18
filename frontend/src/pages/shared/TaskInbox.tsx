@@ -49,7 +49,7 @@ export default function TaskInbox() {
       <PageHeader title={t('nav.tasks')} subtitle="Your assigned tasks" />
 
       {authLoading || isLoading ? (
-        <CardGridSkeleton count={3} />
+        <CardGridSkeleton />
       ) : tasks.length === 0 ? (
         <EmptyState
           icon={CheckCircle2}

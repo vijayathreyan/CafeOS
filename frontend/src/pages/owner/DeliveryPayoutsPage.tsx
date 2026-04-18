@@ -183,7 +183,7 @@ export default function DeliveryPayoutsPage() {
       />
 
       {isLoading ? (
-        <TableSkeleton rows={3} />
+        <TableSkeleton cols={3} />
       ) : payouts.length === 0 ? (
         <EmptyState
           icon={Plus}

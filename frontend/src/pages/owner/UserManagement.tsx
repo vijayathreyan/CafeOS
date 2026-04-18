@@ -189,7 +189,7 @@ export default function UserManagement() {
 
       {/* Employee list */}
       {isLoading ? (
-        <TableSkeleton rows={4} />
+        <TableSkeleton cols={4} />
       ) : (
         <div className="space-y-3">
           {filtered.map((emp) => (

@@ -243,7 +243,7 @@ test.describe('Phase 6 — Draft Persistence', () => {
     await page.waitForSelector('[data-testid="month-end-stock-form"]', { timeout: 15000 })
     await page.locator('button:has-text("Save Draft")').click()
     // Should show toast or update saved indicator
-    await expect(page.locator('text=Draft saved')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('text=Draft saved').first()).toBeVisible({ timeout: 5000 })
   })
 })
 

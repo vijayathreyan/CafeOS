@@ -374,10 +374,9 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
           height: '100vh',
           position: 'sticky',
           top: 0,
-          display: 'none',
           flexDirection: 'column',
         }}
-        className="lg:flex"
+        className="hidden lg:flex"
       >
         <SidebarContent />
       </aside>

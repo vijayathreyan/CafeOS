@@ -441,7 +441,7 @@ export default function PostPaidCustomersPage() {
 
       {/* Customer cards */}
       {isLoading ? (
-        <CardGridSkeleton count={4} />
+        <CardGridSkeleton />
       ) : balances.length === 0 ? (
         <EmptyState
           icon={IndianRupee}

@@ -200,7 +200,7 @@ export default function VendorMaster() {
   if (isLoading) {
     return (
       <PageContainer>
-        <TableSkeleton rows={4} />
+        <TableSkeleton cols={4} />
       </PageContainer>
     )
   }
