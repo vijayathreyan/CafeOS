@@ -11,6 +11,7 @@ import {
   List,
   CreditCard,
   Banknote,
+  BookOpen,
   type LucideIcon,
 } from 'lucide-react'
 import PageContainer from '@/components/layouts/PageContainer'
@@ -84,6 +85,13 @@ export default function OwnerDashboard() {
       subtitle: 'Manage items across all modules',
       path: '/owner/item-master',
       Icon: List,
+      ready: true,
+    },
+    {
+      title: 'Month End Stock',
+      subtitle: 'Monthly closing stock entry',
+      path: '/owner/month-end-stock',
+      Icon: BookOpen,
       ready: true,
     },
     {

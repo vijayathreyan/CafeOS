@@ -21,6 +21,7 @@ import {
   Wallet,
   Database,
   Coins,
+  BookOpen,
 } from 'lucide-react'
 
 interface NavItem {
@@ -56,6 +57,11 @@ function useNavGroups(): NavGroup[] {
     {
       title: 'Owner',
       items: [
+        {
+          label: 'Month End Stock',
+          to: '/owner/month-end-stock',
+          icon: <BookOpen size={16} />,
+        },
         { label: 'Vendor Payments', to: '/owner/vendor-payments', icon: <CreditCard size={16} /> },
         {
           label: 'Post-paid Customers',

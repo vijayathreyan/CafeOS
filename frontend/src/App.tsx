@@ -40,6 +40,9 @@ import SupervisorExpensesPage from './pages/supervisor/SupervisorExpensesPage'
 // Phase 5 — Vendor Payments & Post-Paid Customers
 import VendorPaymentsPage from './pages/owner/VendorPaymentsPage'
 import PostPaidCustomersPage from './pages/owner/PostPaidCustomersPage'
+// Phase 6 — Month End Closing Stock
+import MonthEndStockPage from './pages/owner/MonthEndStockPage'
+import MonthEndStockHistoryPage from './pages/owner/MonthEndStockHistoryPage'
 
 function AuthLoadingScreen() {
   return (
@@ -356,6 +359,24 @@ function AppRouter() {
           element={
             <ProtectedRoute allowedRoles={['owner']}>
               <PostPaidCustomersPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Phase 6 — Month End Closing Stock */}
+        <Route
+          path="/owner/month-end-stock"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <MonthEndStockPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/month-end-stock/history"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <MonthEndStockHistoryPage />
             </ProtectedRoute>
           }
         />

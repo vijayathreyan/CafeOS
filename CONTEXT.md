@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 5 complete (vendor payments, post-paid customers, item alert threshold fields)
+**Build Phase:** Phase 6 complete (month end closing stock module)
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -571,12 +571,61 @@ When Phase 10 is built, the Alert Manager MUST implement:
 
 ---
 
-## What's NOT Built Yet (Phase 6 onwards)
+## What Was Built in Phase 6
+
+### ✅ Migration 011 — Month End Closing Stock schema + seed
+- `month_end_stock` — header row per branch/month/year (draft / submitted)
+- `month_end_stock_items` — line-item rows with generated `total_units` and `cost` columns
+- `month_end_stock_config` — 50 standard items seeded across 3 sections
+
+### ✅ TypeScript Types (`frontend/src/types/phase6.ts`)
+- `MonthEndStockEntry`, `MonthEndStockItem`, `MonthEndStockConfig`, `StockItemRow`
+- `MonthEndStockHistoryRecord`, `SaveMonthEndStockPayload`
+- `monthName()`, `branchLabel()`, `STOCK_SECTIONS` constants
+
+### ✅ Custom Hooks
+- `useMonthEndStock` — fetch header entry; `useMonthEndStockSavedItems` — fetch item rows
+- `useMonthEndStockItems` — config items combined with prev-month rates + saved values
+- `useSaveMonthEndStockDraft` — upsert draft; `useSubmitMonthEndStock` — submit + alert; `useUnlockMonthEndStock` — reopen for editing
+- `useMonthEndStockHistory` — all submissions with filters; `useMonthEndStockEntryItems` — read-only item view
+
+### ✅ Month End Stock Entry Page (`/owner/month-end-stock`)
+- Month/Year/Branch selector with period label ("April 2026 · Kaappi Ready")
+- Status banner: Green (Submitted) / Amber (Draft) / Blue (No entry)
+- Search filter + category filter (Beverages / Packaging / Spices / All)
+- Item count indicator ("Showing X of 50 items")
+- Three-section item table: Open Units, Packed Units, Total (auto), Rate, Cost (auto)
+- Rate highlighted amber when changed from previous month
+- 4 ad-hoc blank rows in Section 3
+- Section totals + overall total (AmountDisplay xl)
+- Auto-save to localStorage every 30s (draft_month_end_{branch}_{year}_{month})
+- Draft restoration Dialog on page load
+- Save Draft button → database upsert
+- Submit button → AlertDialog with total, then status → submitted
+- "Request Edit" / Unlock flow for owner correction
+- "Generate Reminder Task" button creates task in tasks table
+
+### ✅ Month End Stock History Page (`/owner/month-end-stock/history`)
+- DataTable of all past submissions with filters (branch, year, status)
+- View dialog: full item list read-only with AmountDisplay
+- StatusBadge: Draft / Submitted
+
+### ✅ Navigation
+- Owner sidebar: "Month End Stock" under Owner group (BookOpen icon)
+- Owner Dashboard tile: "Month End Stock" / "Monthly closing stock entry"
+- Routes: `/owner/month-end-stock` and `/owner/month-end-stock/history` (owner-only)
+
+### ✅ E2E Tests
+- `tests/e2e/phase6.spec.ts` — 31 tests covering navigation, item list, search, calculations, draft save, submit flow, history, branch switching
+- Note: owner login tests depend on Docker server being healthy (pre-existing server auth issue unrelated to Phase 6 code)
+
+---
+
+## What's NOT Built Yet (Phase 7 onwards)
 
 | Phase | Scope |
 |-------|-------|
-| 6 | Month End Closing Stock (3-page list) |
-| 7 | Milk Report, Consumption Report, Wastage & Complimentary Report, Expense Report |
+| 7 | Milk Report, Consumption Report, Wastage &amp; Complimentary Report, Expense Report |
 | 8 | Monthly P&L (fully automated), Daily Sales Summary |
 | 9 | Sales Reconciliation engine (10 methods), Cash Discrepancy Report |
 | 10 | Alert Manager (22 triggers, dual channel WhatsApp+SMS), Task Inbox (full), Whatomate integration |
@@ -647,7 +696,7 @@ Branch: main
 ### Database Migrations
 - Numbered sequentially: 000, 001, 002...
 - NEVER modify existing migration files
-- Next migration for Phase 6: `011_phase6_additions.sql`
+- Next migration for Phase 7: `012_phase7_additions.sql`
 - Track all migrations in `migrations_log` table
 - See `supabase/migrations/README.md` for full rules
 
@@ -675,5 +724,5 @@ Every component built in Phase 2 onwards must follow:
 
 ---
 
-*CafeOS v1.0 · Phase 5 Complete · April 2026*
+*CafeOS v1.0 · Phase 6 Complete · April 2026*
 *Requirements: UFW_Requirements_v3.6_Final.docx*
