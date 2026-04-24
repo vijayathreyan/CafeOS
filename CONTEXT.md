@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 7 complete (reports: hub, milk, consumption, wastage, expense)
+**Build Phase:** Phase 8 complete (P&L Report + Daily Sales Summary)
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -627,7 +627,7 @@ When Phase 10 is built, the Alert Manager MUST implement:
 - Replaced PlaceholderPage with ReportsHub — grid of report tiles (same card design as OwnerDashboard)
 - Owner Dashboard "Reports" tile now active (was Phase 7–9 placeholder)
 - Sidebar nav "Reports" link now leads to real hub
-- Tiles: Month End Stock (existing), Milk, Consumption, Wastage, Expense (all live); P&L, Daily Sales (Phase 8 — disabled)
+- Tiles: Month End Stock (existing), Milk, Consumption, Wastage, Expense (all live); P&L, Daily Sales (activated in Phase 8)
 
 ### ✅ TypeScript Types (`frontend/src/types/phase7.ts`)
 - `ReportFilters`, `MilkReportRow`, `ConsumptionReportRow`, `WastageReportRow`, `ExpenseReportRow`
@@ -667,12 +667,74 @@ When Phase 10 is built, the Alert Manager MUST implement:
 
 ---
 
-## What's NOT Built Yet (Phase 8 onwards)
+## What Was Built in Phase 8
+
+### ✅ Migration 014 — `pl_monthly_overrides`
+- New table: `pl_monthly_overrides` — per-branch, per-month EB bill override (branch, month DATE, eb_bill_amount, notes, updated_by)
+- UNIQUE(branch, month) constraint; index on branch+month
+- GRANT ALL to anon + authenticated
+
+### ✅ TypeScript Types (`frontend/src/types/phase8.ts`)
+- `PLBranch` ('KR' | 'C2' | 'Combined'), `PLLineItem`, `PLSection`, `PLReportData`, `PLMonthlyOverride`
+- `DailySalesSummaryRow`, `DailySalesSummaryTotals`
+- Helpers: `monthToYYYYMM()`, `monthToFirstDay()`, `monthToLastDay()`, `prevMonthDate()`, `datesInMonth()`, `fmtInr()`, `plBranchLabel()`
+
+### ✅ P&L Report Hook (`frontend/src/hooks/usePLReport.ts`)
+- `usePLReport({ branch, month })` — assembles all 5 P&L sections with current + previous month comparison
+- Section 1 — Fixed Expenses: from `fixed_expenses` table; falls back to hardcoded defaults if table empty
+- Section 2 — Raw Materials: opening stock (prev month_end_stock), KR HO expenses (Pioneer vendor payments), milk cost (litres purchased × rate), coffee/tea cost (grams consumed × cost_per_gram), shop expenses, momos, closing stock deducted
+- Section 3 — Bills: water bill (owner_manual_expenses), gas bill (expense_entries is_gas=true), EB bill (pl_monthly_overrides)
+- Section 4 — Salary: from `pl_salary_entries`
+- Section 5 — Revenue: Swiggy/Zomato (delivery_platform_entries, KR only), shop sales (cash + expenses + UPI + postpaid)
+- Capital purchases shown separately (not in Total Expenses)
+- Combined view merges KR + C2 branch data
+
+### ✅ Daily Sales Summary Hook (`frontend/src/hooks/useDailySalesSummary.ts`)
+- `useDailySalesSummary(branch, month)` — one row per date+branch for the full month
+- Aggregates: cash_in_hand, cash_expenses, UPI (null = not entered = show "—"), ITI/Ramco/Arun/Ajith postpaid (KR only), sales_from_collection, total_shop_sales, cash_deposited
+- Billed Sales column reserved for Phase 12 (POS), shows "—"
+- Month totals object with UPI missing-day count
+
+### ✅ EB Bill Override Hook (`frontend/src/hooks/usePLMonthlyOverride.ts`)
+- `usePLMonthlyOverride(branch, month)` — fetches single override
+- `usePLMonthlyOverrideBoth(month)` — fetches KR + C2 in parallel (Combined view)
+- `useSavePLOverride()` — upsert mutation with cache invalidation
+
+### ✅ Monthly P&L Page (`/reports/pl`)
+- KPI cards: Total Sales, Total Expenses, Gross Profit, Net Profit
+- Branch tabs (KR / C2 / Combined) + month picker
+- 5 section tables with Line Item / Current Month / Previous Month / Variance columns
+- Section 4 (Salary) has inline salary entry form embedded below the table (per branch)
+- EB Bill inline entry card below sections
+- Capital Purchases section (when present)
+- Summary footer with Gross/Net Profit highlighted
+- Fixed-cost fallback amber notice if DB has no fixed_expenses rows
+- PDF export (jsPDF + autotable) and Excel export (xlsx)
+- Route: `/reports/pl` — owner only
+
+### ✅ Daily Sales Summary Page (`/reports/daily-sales`)
+- KPI cards: Total Shop Sales, Total UPI (missing-day warning), Total Post-Paid, Cash Deposited
+- Branch tabs + month picker; Combined view adds Branch column
+- Full scrollable table with 14 columns; UPI null shown as "—" with tooltip
+- Month Total row pinned at bottom
+- PDF export (landscape jsPDF) and Excel export
+- Legend note: Billed Sales available after Phase 12 (POS)
+- Route: `/reports/daily-sales` — owner only
+
+### ✅ Navigation Updates
+- ReportsHub: Monthly P&L and Daily Sales Summary tiles activated (`ready: true`)
+- OwnerLayout sidebar: "P&L Report" and "Daily Sales Summary" links added under Reports group
+
+### ✅ E2E Tests (`tests/e2e/phase8.spec.ts`)
+- 29 tests — all passing
+- Coverage: Hub tile visibility + click navigation, sidebar links, access control (staff blocked), P&L page structure + branch tabs + salary form + EB bill, Daily Sales page structure + month total row
+
+---
+
+## What's NOT Built Yet (Phase 9 onwards)
 
 | Phase | Scope |
 |-------|-------|
-| 7 (remaining) | Month End Stock owner entry (staff/supervisor entry exists; owner view exists as history) |
-| 8 | Monthly P&L (fully automated), Daily Sales Summary |
 | 9 | Sales Reconciliation engine (10 methods), Cash Discrepancy Report |
 | 10 | Alert Manager (22 triggers, dual channel WhatsApp+SMS), Task Inbox (full), Whatomate integration |
 | 11 | Admin Settings full CRUD, Maintenance section, PDF exports, Mobile optimisation |
@@ -742,13 +804,13 @@ Branch: main
 ### Database Migrations
 - Numbered sequentially: 000, 001, 002...
 - NEVER modify existing migration files
-- Next migration for Phase 7: `012_phase7_additions.sql`
+- Next migration for Phase 9: `015_phase9_additions.sql`
 - Track all migrations in `migrations_log` table
 - See `supabase/migrations/README.md` for full rules
 
 ### Testing
 - Playwright E2E tests in `frontend/tests/e2e/`
-- All 141 tests passing
+- All 208 tests passing (179 Phase 1–7 + 29 Phase 8)
 - Test data uses `00000` prefix — auto-cleaned before/after each run
 - Protected accounts never deleted: `9999999999`, `9876543210`, `8888888888`, `9876543211`
 - Run: `npx playwright test`
@@ -770,5 +832,5 @@ Every component built in Phase 2 onwards must follow:
 
 ---
 
-*CafeOS v1.0 · Phase 6 Complete · April 2026*
+*CafeOS v1.0 · Phase 8 Complete · April 2026*
 *Requirements: UFW_Requirements_v3.6_Final.docx*
