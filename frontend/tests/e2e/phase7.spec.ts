@@ -174,7 +174,7 @@ test.describe('Phase 7 — Wastage Report', () => {
     await page.waitForSelector('h1:has-text("Wastage Report")', { timeout: 10000 })
     await expect(page.locator('text=Total Wastage')).toBeVisible()
     await expect(page.locator('text=Overall Wastage %')).toBeVisible()
-    await expect(page.locator('text=Complimentary')).toBeVisible()
+    await expect(page.getByText('Complimentary', { exact: true })).toBeVisible()
     await expect(page.locator('text=High Wastage Rows')).toBeVisible()
   })
 })
@@ -215,7 +215,8 @@ test.describe('Phase 7 — Expense Report', () => {
     await page.goto('/owner/reports/expenses')
     await page.waitForSelector('h1:has-text("Expense Report")', { timeout: 10000 })
     await page.locator('button:has-text("By Category")').click()
-    await expect(page.locator('button:has-text("By Category")')).toHaveAttribute('data-state', /.*/)
+    // After switching to summary view, the "% of Total" column header appears
+    await expect(page.getByText('% of Total', { exact: true })).toBeVisible()
   })
 
   test('Expense Report Back button returns to /reports', async ({ page }) => {
