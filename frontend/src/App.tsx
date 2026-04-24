@@ -15,7 +15,6 @@ import SupervisorDashboard from './pages/supervisor/SupervisorDashboard'
 import UserManagement from './pages/owner/UserManagement'
 import EmployeeOnboarding from './pages/owner/EmployeeOnboarding'
 import TaskInbox from './pages/shared/TaskInbox'
-import PlaceholderPage from './pages/PlaceholderPage'
 import StockEntry from './pages/staff/StockEntry'
 import ExpenseEntry from './pages/staff/ExpenseEntry'
 import SupervisorEntry from './pages/supervisor/SupervisorEntry'
@@ -43,6 +42,12 @@ import PostPaidCustomersPage from './pages/owner/PostPaidCustomersPage'
 // Phase 6 — Month End Closing Stock
 import MonthEndStockPage from './pages/owner/MonthEndStockPage'
 import MonthEndStockHistoryPage from './pages/owner/MonthEndStockHistoryPage'
+// Phase 7 — Reports Hub + individual reports
+import ReportsHub from './pages/owner/ReportsHub'
+import MilkReport from './pages/owner/reports/MilkReport'
+import ConsumptionReport from './pages/owner/reports/ConsumptionReport'
+import WastageReport from './pages/owner/reports/WastageReport'
+import ExpenseReport from './pages/owner/reports/ExpenseReport'
 
 function AuthLoadingScreen() {
   return (
@@ -170,11 +175,44 @@ function AppRouter() {
           }
         />
 
+        {/* Phase 7 — Reports Hub */}
         <Route
           path="/reports"
           element={
             <ProtectedRoute allowedRoles={['owner']}>
-              <PlaceholderPage title="Reports" subtitle="Phase 7–9" />
+              <ReportsHub />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/reports/milk"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <MilkReport />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/reports/consumption"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <ConsumptionReport />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/reports/wastage"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <WastageReport />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner/reports/expenses"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <ExpenseReport />
             </ProtectedRoute>
           }
         />

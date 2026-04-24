@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 6 complete (month end closing stock module)
+**Build Phase:** Phase 7 complete (reports: hub, milk, consumption, wastage, expense)
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -621,11 +621,57 @@ When Phase 10 is built, the Alert Manager MUST implement:
 
 ---
 
-## What's NOT Built Yet (Phase 7 onwards)
+## What Was Built in Phase 7
+
+### ✅ Reports Hub (`/reports`)
+- Replaced PlaceholderPage with ReportsHub — grid of report tiles (same card design as OwnerDashboard)
+- Owner Dashboard "Reports" tile now active (was Phase 7–9 placeholder)
+- Sidebar nav "Reports" link now leads to real hub
+- Tiles: Month End Stock (existing), Milk, Consumption, Wastage, Expense (all live); P&L, Daily Sales (Phase 8 — disabled)
+
+### ✅ TypeScript Types (`frontend/src/types/phase7.ts`)
+- `ReportFilters`, `MilkReportRow`, `ConsumptionReportRow`, `WastageReportRow`, `ExpenseReportRow`
+- Utility functions: `todayISO()`, `firstOfMonthISO()`, `formatDate()`, `branchLabel()`
+
+### ✅ Report Hooks (`frontend/src/hooks/useReports.ts`)
+- `useMilkReport` — 2-step query: daily_entries IDs → milk_entries; aggregates by date+branch per shift
+- `useConsumptionReport` — stock_entries direct query (has branch/entry_date); consumption = opening + purchase − closing; optional item name filter
+- `useWastageReport` — 2-step query: daily_entries IDs → snack_entries; wastage % computed
+- `useExpenseReport` — expense_entries direct query; gas flag preserved
+
+### ✅ Shared Filter Bar (`frontend/src/components/ReportFilterBar.tsx`)
+- Branch selector (All / KR / C2), From date, To date, row count, extra slot
+
+### ✅ Milk Report (`/owner/reports/milk`)
+- KPI cards: Total Coffee Milk, Total Tea Milk, Grand Total, Daily Average
+- Table: Date, Branch, S1 Coffee, S1 Tea, S2 Coffee, S2 Tea, Coffee Total, Tea Total, Day Total (all in litres)
+- Default filter: current month to today
+
+### ✅ Consumption Report (`/owner/reports/consumption`)
+- KPI cards: Total Consumed, Unique Items, Top Item by volume
+- Table: Date, Branch, Item, Unit, Opening, Purchase (+green if >0), Closing, Consumed (red if negative)
+- Extra filter: item name search box
+
+### ✅ Wastage Report (`/owner/reports/wastage`)
+- KPI cards: Total Wastage, Overall Wastage %, Complimentary, High Wastage Rows (≥10%)
+- Table: Date, Branch, Item, Supplied, Sold, Wastage (red), Comp (amber), Wastage % (colour-coded: green <10%, amber 10–19%, red ≥20%)
+
+### ✅ Expense Report (`/owner/reports/expenses`)
+- KPI cards: Grand Total, Shop Expenses, Gas Bill (with P&L note), Categories
+- Detail view: Date, Branch, Category (GAS badge for gas entries), Amount
+- By Category view: Category, Total Amount, % of Total — sorted by total descending
+- Toggle button switches between Detail and By Category views
+
+### ✅ E2E Tests (`tests/e2e/phase7.spec.ts`)
+- 20 tests across Hub, Milk, Consumption, Wastage, Expense report pages
+
+---
+
+## What's NOT Built Yet (Phase 8 onwards)
 
 | Phase | Scope |
 |-------|-------|
-| 7 | Milk Report, Consumption Report, Wastage &amp; Complimentary Report, Expense Report |
+| 7 (remaining) | Month End Stock owner entry (staff/supervisor entry exists; owner view exists as history) |
 | 8 | Monthly P&L (fully automated), Daily Sales Summary |
 | 9 | Sales Reconciliation engine (10 methods), Cash Discrepancy Report |
 | 10 | Alert Manager (22 triggers, dual channel WhatsApp+SMS), Task Inbox (full), Whatomate integration |

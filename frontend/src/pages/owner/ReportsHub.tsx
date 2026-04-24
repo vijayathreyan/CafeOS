@@ -1,24 +1,20 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Users,
-  BarChart3,
-  Handshake,
-  CheckSquare,
-  Settings,
-  Receipt,
-  Scale,
-  List,
-  CreditCard,
-  Banknote,
   BookOpen,
+  Milk,
+  TrendingDown,
+  Trash2,
+  Receipt,
+  BarChart3,
+  Scale,
   type LucideIcon,
 } from 'lucide-react'
 import PageContainer from '@/components/layouts/PageContainer'
 import PageHeader from '@/components/layouts/PageHeader'
 import StatusBadge from '@/components/ui/StatusBadge'
 
-interface DashCard {
+interface ReportCard {
   title: string
   subtitle: string
   path: string
@@ -27,124 +23,72 @@ interface DashCard {
   phase?: string
 }
 
-export default function OwnerDashboard() {
-  const navigate = useNavigate()
-  const today = new Date().toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
+const REPORT_CARDS: ReportCard[] = [
+  {
+    title: 'Month End Stock',
+    subtitle: 'Closing stock submissions and history',
+    path: '/owner/reports/month-end-stock',
+    Icon: BookOpen,
+    ready: true,
+  },
+  {
+    title: 'Milk Report',
+    subtitle: 'Daily coffee and tea milk consumption',
+    path: '/owner/reports/milk',
+    Icon: Milk,
+    ready: true,
+  },
+  {
+    title: 'Consumption Report',
+    subtitle: 'Stock usage per item per day',
+    path: '/owner/reports/consumption',
+    Icon: TrendingDown,
+    ready: true,
+  },
+  {
+    title: 'Wastage Report',
+    subtitle: 'Snack wastage and complimentary by item',
+    path: '/owner/reports/wastage',
+    Icon: Trash2,
+    ready: true,
+  },
+  {
+    title: 'Expense Report',
+    subtitle: 'Daily cash expenses by category',
+    path: '/owner/reports/expenses',
+    Icon: Receipt,
+    ready: true,
+  },
+  {
+    title: 'Monthly P&L',
+    subtitle: 'Fully automated profit and loss statement',
+    path: '/owner/reports/pl',
+    Icon: BarChart3,
+    ready: false,
+    phase: 'Phase 8',
+  },
+  {
+    title: 'Daily Sales Summary',
+    subtitle: 'Cash, UPI, delivery and reconciliation',
+    path: '/owner/reports/daily-sales',
+    Icon: Scale,
+    ready: false,
+    phase: 'Phase 8',
+  },
+]
 
-  const cards: DashCard[] = [
-    {
-      title: 'Users & Employees',
-      subtitle: 'Manage staff accounts',
-      path: '/users',
-      Icon: Users,
-      ready: true,
-    },
-    {
-      title: 'Reports',
-      subtitle: 'Milk, consumption, wastage, expenses',
-      path: '/reports',
-      Icon: BarChart3,
-      ready: true,
-    },
-    {
-      title: 'Data Entry',
-      subtitle: 'UPI, Swiggy, Zomato payouts',
-      path: '/owner/data-entry',
-      Icon: CreditCard,
-      ready: true,
-    },
-    {
-      title: 'Expenses',
-      subtitle: 'Bills, maintenance, HO expenses',
-      path: '/owner/expenses',
-      Icon: Receipt,
-      ready: true,
-    },
-    {
-      title: 'Vasanth Float',
-      subtitle: 'Supervisor cash float balance',
-      path: '/owner/vasanth-float',
-      Icon: Banknote,
-      ready: true,
-    },
-    {
-      title: 'Vendor Master',
-      subtitle: 'Manage suppliers and items',
-      path: '/vendors',
-      Icon: Handshake,
-      ready: true,
-    },
-    {
-      title: 'Item Master',
-      subtitle: 'Manage items across all modules',
-      path: '/owner/item-master',
-      Icon: List,
-      ready: true,
-    },
-    {
-      title: 'Month End Stock',
-      subtitle: 'View monthly closing stock report',
-      path: '/owner/reports/month-end-stock',
-      Icon: BookOpen,
-      ready: true,
-    },
-    {
-      title: 'Vendor Payments',
-      subtitle: 'Mon/Thu cycles and monthly payments',
-      path: '/owner/vendor-payments',
-      Icon: Handshake,
-      ready: true,
-    },
-    {
-      title: 'Post-Paid Customers',
-      subtitle: 'Credit sales and outstanding balances',
-      path: '/owner/postpaid-customers',
-      Icon: CreditCard,
-      ready: true,
-    },
-    {
-      title: 'Tasks',
-      subtitle: 'Assign and track tasks',
-      path: '/tasks',
-      Icon: CheckSquare,
-      ready: true,
-    },
-    {
-      title: 'Stock Configuration',
-      subtitle: 'Weight per unit settings',
-      path: '/owner/stock-config',
-      Icon: Scale,
-      ready: true,
-    },
-    {
-      title: 'Admin Settings',
-      subtitle: 'Configure all modules',
-      path: '/settings',
-      Icon: Settings,
-      ready: false,
-      phase: 'Phase 11',
-    },
-    {
-      title: 'POS / Billing',
-      subtitle: 'Shop billing system',
-      path: '/pos',
-      Icon: Receipt,
-      ready: false,
-      phase: 'Phase 12',
-    },
-  ]
+export default function ReportsHub() {
+  const navigate = useNavigate()
 
   return (
     <PageContainer>
-      <PageHeader title="Owner Dashboard" subtitle={`${today} · Unlimited Food Works`} />
+      <PageHeader
+        title="Reports"
+        subtitle="Operational and financial reports — Unlimited Food Works"
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {cards.map(({ title, subtitle, path, Icon, ready, phase }) => (
+        {REPORT_CARDS.map(({ title, subtitle, path, Icon, ready, phase }) => (
           <div
             key={path}
             onClick={() => ready && navigate(path)}
@@ -184,14 +128,17 @@ export default function OwnerDashboard() {
                 width: '40px',
                 height: '40px',
                 borderRadius: 'var(--radius-md)',
-                background: 'var(--gray-100)',
+                background: ready ? 'var(--brand-primary-subtle)' : 'var(--gray-100)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: 'var(--space-3)',
               }}
             >
-              <Icon size={20} style={{ color: 'var(--gray-700)' }} />
+              <Icon
+                size={20}
+                style={{ color: ready ? 'var(--brand-primary)' : 'var(--gray-500)' }}
+              />
             </div>
             <h3
               style={{
