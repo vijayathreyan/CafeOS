@@ -48,6 +48,9 @@ import MilkReport from './pages/owner/reports/MilkReport'
 import ConsumptionReport from './pages/owner/reports/ConsumptionReport'
 import WastageReport from './pages/owner/reports/WastageReport'
 import ExpenseReport from './pages/owner/reports/ExpenseReport'
+// Phase 8 — P&L Report + Daily Sales Summary
+import PLReport from './pages/reports/PLReport'
+import DailySalesSummary from './pages/reports/DailySalesSummary'
 
 function AuthLoadingScreen() {
   return (
@@ -213,6 +216,24 @@ function AppRouter() {
           element={
             <ProtectedRoute allowedRoles={['owner']}>
               <ExpenseReport />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Phase 8 — P&L Report + Daily Sales Summary */}
+        <Route
+          path="/reports/pl"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <PLReport />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports/daily-sales"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <DailySalesSummary />
             </ProtectedRoute>
           }
         />

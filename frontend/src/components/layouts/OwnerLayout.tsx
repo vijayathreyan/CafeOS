@@ -15,6 +15,8 @@ import {
   Package,
   Store,
   BarChart2,
+  BarChart3,
+  Scale,
   Settings,
   Menu,
   LogOut,
@@ -49,8 +51,15 @@ function useNavGroups(): NavGroup[] {
         },
         { label: t('employees.title'), to: '/users', icon: <Users size={16} /> },
         { label: t('nav.tasks'), to: '/tasks', icon: <CheckSquare size={16} /> },
-        { label: t('nav.reports'), to: '/reports', icon: <BarChart2 size={16} /> },
         { label: t('nav.settings'), to: '/settings', icon: <Settings size={16} /> },
+      ],
+    },
+    {
+      title: 'Reports',
+      items: [
+        { label: 'Reports Hub', to: '/reports', icon: <BarChart2 size={16} /> },
+        { label: 'P&L Report', to: '/reports/pl', icon: <BarChart3 size={16} /> },
+        { label: 'Daily Sales Summary', to: '/reports/daily-sales', icon: <Scale size={16} /> },
       ],
     },
     {

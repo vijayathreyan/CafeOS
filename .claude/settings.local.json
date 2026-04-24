@@ -64,7 +64,8 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('OK - token received' if 'access_token' in d else d\\)\")",
       "Bash(read f *)",
       "Bash(python3 -c ' import json, sys for line in open\\('\\\\''__TRACKED_VAR__'\\\\''\\): try: obj = json.loads\\(line\\) msg = obj.get\\('\\\\''message'\\\\'', {}\\) if msg.get\\('\\\\''role'\\\\''\\) == '\\\\''assistant'\\\\'': for c in msg.get\\('\\\\''content'\\\\'', []\\): if c.get\\('\\\\''type'\\\\''\\) == '\\\\''tool_use'\\\\'' and c.get\\('\\\\''name'\\\\''\\) == '\\\\''Bash'\\\\'': cmd = c.get\\('\\\\''input'\\\\'', {}\\).get\\('\\\\''command'\\\\'', '\\\\'''\\\\''\\) print\\(cmd[:200]\\) except: pass ' done)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(BASE_URL=http://localhost:4173 npx playwright test tests/e2e/phase7.spec.ts --reporter=list)"
     ]
   }
 }

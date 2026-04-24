@@ -62,18 +62,16 @@ const REPORT_CARDS: ReportCard[] = [
   {
     title: 'Monthly P&L',
     subtitle: 'Fully automated profit and loss statement',
-    path: '/owner/reports/pl',
+    path: '/reports/pl',
     Icon: BarChart3,
-    ready: false,
-    phase: 'Phase 8',
+    ready: true,
   },
   {
     title: 'Daily Sales Summary',
     subtitle: 'Cash, UPI, delivery and reconciliation',
-    path: '/owner/reports/daily-sales',
+    path: '/reports/daily-sales',
     Icon: Scale,
-    ready: false,
-    phase: 'Phase 8',
+    ready: true,
   },
 ]
 
