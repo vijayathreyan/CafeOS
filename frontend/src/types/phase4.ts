@@ -95,7 +95,7 @@ export interface OwnerManualExpense {
   created_at: string
 }
 
-export interface VasanthFloatTopup {
+export interface SupervisorFloatTopup {
   id: string
   topup_date: string
   amount: number
@@ -106,11 +106,17 @@ export interface VasanthFloatTopup {
   created_at: string
 }
 
-export interface VasanthFloatBalance {
+/** @deprecated Use SupervisorFloatTopup */
+export type VasanthFloatTopup = SupervisorFloatTopup
+
+export interface SupervisorFloatBalance {
   id: string
   current_balance: number
   last_updated_at: string
 }
+
+/** @deprecated Use SupervisorFloatBalance */
+export type VasanthFloatBalance = SupervisorFloatBalance
 
 export interface FloatTransaction {
   id: string

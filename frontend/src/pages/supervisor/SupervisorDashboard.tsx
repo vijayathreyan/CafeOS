@@ -36,9 +36,13 @@ export default function SupervisorDashboard() {
     navigate('/supervisor-shift')
   }
 
-  // ── Vasanth Float Balance ──
-  const { data: floatData } = useQuery('vasanth_float', async () => {
-    const { data } = await supabase.from('vasanth_float_balance').select('*').limit(1).maybeSingle()
+  // ── Supervisor Float Balance ──
+  const { data: floatData } = useQuery('supervisor_float', async () => {
+    const { data } = await supabase
+      .from('supervisor_float_balance')
+      .select('*')
+      .limit(1)
+      .maybeSingle()
     return data
   })
 
@@ -82,7 +86,7 @@ export default function SupervisorDashboard() {
                 margin: 0,
               }}
             >
-              Vasanth Float Balance
+              Supervisor Float Balance
             </p>
             <div style={{ marginTop: 'var(--space-1)' }}>
               {floatData != null ? (

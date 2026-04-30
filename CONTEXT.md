@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 8 complete (P&L Report + Daily Sales Summary)
+**Build Phase:** Phase 9 complete (Sales Reconciliation Engine + Cash Discrepancy + Supervisor Float rename)
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -223,7 +223,7 @@ The single migration file `001_complete_schema.sql` creates **all tables across 
 `vendors`, `vendor_items`, `vendor_item_rates`, `vendor_bank_details`, `vendor_payment_cycles_log`, `vendor_payments`, `paalkhoa_manual_orders`
 
 ### Expenses (Phase 4)
-`supervisor_expenses`, `supervisor_expense_shops`, `owner_manual_expenses`, `capital_expenditure`, `vasanth_float_topups`, `vasanth_float_balance`, `pl_salary_entries`, `fixed_expenses`
+`supervisor_expenses`, `supervisor_expense_shops`, `owner_manual_expenses`, `capital_expenditure`, `supervisor_float_topups`, `supervisor_float_balance`, `pl_salary_entries`, `fixed_expenses`
 
 ### People
 `employees`, `employee_documents`, `employee_identity`, `employee_emergency_contacts`, `employee_bank_details`, `postpaid_customers`, `postpaid_payments`
@@ -317,7 +317,7 @@ WhatsApp credential delivery on creation (hook ready — requires alert module P
 
 ### ✅ Supporting Components
 - `StatusChip` — Done/Pending/Warning/Error/Grey with icons
-- `OwnerLayout` — persistent sidebar (240px, lg+) with nav groups: Core (Dashboard/Employees/Tasks/Reports/Settings) + Owner (Vendor Payments/Post-paid Customers/Item Master/Vendor Master/Expenses/Data Entry/Vasanth Float); Sheet drawer on mobile with hamburger (`data-testid="sidebar-hamburger"`); `data-testid="owner-sidebar"` on the desktop aside
+- `OwnerLayout` — persistent sidebar (240px, lg+) with nav groups: Core (Dashboard/Employees/Tasks/Reports/Settings) + Owner (Vendor Payments/Post-paid Customers/Item Master/Vendor Master/Expenses/Data Entry/Supervisor Float); Sheet drawer on mobile with hamburger (`data-testid="sidebar-hamburger"`); `data-testid="owner-sidebar"` on the desktop aside
 - `AppHeader` — 56px top bar for staff/supervisor: home button (`data-testid="app-header-home"`) → role-based URL, centered logo (`pointer-events-none`), language toggle, avatar dropdown
 - `BottomNav` — mobile nav for staff/supervisor only (owner uses sidebar)
 - `Layout` — role-aware: owner gets `<OwnerLayout>`, others get `<AppHeader> + <BottomNav>`
@@ -434,7 +434,7 @@ docker compose restart supabase-api
 - Added `notes TEXT` column to `pl_salary_entries` (was missing from 001_complete_schema.sql)
 
 ### ✅ TypeScript Types (`frontend/src/types/phase4.ts`)
-- All Phase 4 interfaces: `UPIEntry`, `DeliveryPlatformEntry`, `CashDeposit`, `CashDepositRow`, `SupervisorExpense`, `OwnerManualExpense`, `VasanthFloatBalance`, `FloatTransaction`, `PLSalaryEntry`
+- All Phase 4 interfaces: `UPIEntry`, `DeliveryPlatformEntry`, `CashDeposit`, `CashDepositRow`, `SupervisorExpense`, `OwnerManualExpense`, `SupervisorFloatBalance`, `FloatTransaction`, `PLSalaryEntry` (deprecated aliases `VasanthFloatBalance` / `VasanthFloatTopup` kept for backward compat)
 - `PL_CATEGORY_MAP` — routes ExpenseType → P&L category string
 - `EXPENSE_TYPE_LABELS` — UI labels for expense types
 - `STAFF_BY_BRANCH` — hardcoded staff lists for KR (Kanchana, Parvathi, Vasanth) and C2 (Praveen, Silambarasan)
@@ -446,7 +446,7 @@ docker compose restart supabase-api
 - `useSupervisorExpenses` — supervisor expense CRUD with auto float deduction
 - `useOwnerExpenseView` — owner view of all supervisor expenses with filters
 - `useManualExpenses` — owner manual expense CRUD; capital purchase dual-insert to `capital_expenditure`
-- `useVasanthFloat` — float balance, merged history (topups + deductions), add funds
+- `useSupervisorFloat` — float balance, merged history (topups + deductions), add funds
 - `useSalaryEntries` — monthly salary entry per branch with upsert
 
 ### ✅ Owner Entry Modules
@@ -461,15 +461,15 @@ docker compose restart supabase-api
 - **Manual Expenses** (`/owner/manual-expenses`) — CRUD form; auto pl_category; receipt photo upload; capital dual-insert
 - **Cash Deposits View** (`/owner/deposits`) — deposit history with branch/date filters; challan photo viewer
 
-### ✅ Vasanth Float
-- **Float Page** (`/owner/vasanth-float`) — current balance display, this-month stats, Add Funds dialog, transaction history
+### ✅ Supervisor Float
+- **Float Page** (`/owner/supervisor-float`) — current balance display, this-month stats, Add Funds dialog, transaction history (URL /owner/vasanth-float redirects → /owner/supervisor-float)
 
 ### ✅ Supervisor Modules
 - **Cash Deposit** (`/supervisor/cash-deposit`) — challan photo upload, row entry, hard-block validation (rows must match challan amount exactly), success screen
 - **Supervisor Expenses** (`/supervisor/expenses`) — expense entry with shop/branch/photo; auto-deducts from Vasanth float; last-7-days list
 
 ### ✅ Navigation Updates
-- Owner Dashboard: added Data Entry, Expenses, Vasanth Float tiles
+- Owner Dashboard: added Data Entry, Expenses, Supervisor Float tiles
 - Supervisor Dashboard: replaced inline forms with navigation tiles to `/supervisor/expenses` and `/supervisor/cash-deposit`
 
 ### ✅ Testing
@@ -731,11 +731,82 @@ When Phase 10 is built, the Alert Manager MUST implement:
 
 ---
 
-## What's NOT Built Yet (Phase 9 onwards)
+## What Was Built in Phase 9
+
+### ✅ Migration 015 — Phase 9 schema additions
+- RENAME TABLE `vasanth_float_topups` → `supervisor_float_topups`
+- RENAME TABLE `vasanth_float_balance` → `supervisor_float_balance`
+- CREATE TABLE `reconciliation_results` (branch, entry_date UNIQUE, predicted_sales, reported_sales, difference, status CHECK IN ('pending','reconciled','amber','red'), item_breakdown JSONB, calculated_at)
+- ALTER TABLE `cash_discrepancy`: pos_session_id made nullable; added shift_date DATE, staff_name TEXT, expected_cash NUMERIC, acknowledged_by TEXT, acknowledged_at TIMESTAMPTZ
+- ALTER TABLE `alert_log`: added branch TEXT, entry_date DATE, delivery_status TEXT NOT NULL DEFAULT 'pending'
+
+### ✅ Vasanth Float → Supervisor Float Rename (everywhere)
+- DB tables renamed in migration 015
+- `useSupervisorFloat` hook replaces `useVasanthFloat`
+- `SupervisorFloatBalance` / `SupervisorFloatTopup` types in phase4.ts (deprecated aliases kept)
+- All UI labels, routes, sidebar, dashboard, tests updated
+- /owner/vasanth-float redirects → /owner/supervisor-float
+
+### ✅ TypeScript Types (`frontend/src/types/phase9.ts`)
+- `ReconciliationStatus` ('pending'|'reconciled'|'amber'|'red'), `AlertLevel` ('green'|'amber'|'red')
+- `ItemPrediction`, `ReconciliationResult`, `CashDiscrepancy`, `ShiftCashDayRow`
+- Utilities: `fmtRs()`, `fmtDate()`, `monthStart()`, `monthEnd()`
+
+### ✅ Reconciliation Engine (`frontend/src/lib/reconciliation.ts`)
+- 10 pure prediction functions: `predictConsumedLitres`, `predictReceivedWastageDiff`, `predictStockBalance`, `predictConsumedPieces`, `predictPackOfBottle`, `predictRemainingWeightBottle`, `predictRemainingWeightPeanut`, `predictRemainingCups`, `predictBigBoxOpened`, `predictPreparationStaff`
+- `runAllPredictions(data)` — runs all 10, deduplicates by itemName, sums estimates
+- `getReconciliationStatus(difference)` — amber ≥ ₹200, red ≥ ₹500
+- Thresholds: `RECON_AMBER_THRESHOLD = 200`, `RECON_RED_THRESHOLD = 500`
+
+### ✅ Double Alert Logic (`frontend/src/lib/doubleAlert.ts`)
+- `checkDoubleAlert(branch, date)` — fires if BOTH reconciliation AND cash discrepancy are amber/red on same branch+date
+- Inserts into `alert_log` with trigger_event='double_alert', channel='whatsapp', delivery_status='pending' (Phase 10 will dispatch)
+
+### ✅ Custom Hooks
+- `useReconciliationResults(branch, month, session)` — fetch from reconciliation_results
+- `useRunBatchReconciliation()` — iterates all days in month, fetches day data, runs predictions, upserts results, calls checkDoubleAlert on flagged days
+- `useCashDiscrepancy(branch, fromDate, toDate, session)` — fetch with date range + branch filter
+- `useUnacknowledgedRedCount(session)` — count of unacknowledged red flags
+- `useAcknowledgeDiscrepancy()` — marks record acknowledged with acknowledgedBy + timestamp
+
+### ✅ Reconciliation Report (`/reports/reconciliation`, owner only)
+- Branch selector (KR/C2), month picker, Run Reconciliation button
+- KPI row: Total Predicted, Total Reported, Total Gap, Days Flagged
+- Expandable DrillDownRow table with per-item breakdown panel
+- recharts LineChart: Predicted vs Reported monthly trend
+- data-testid attributes on all key elements
+
+### ✅ Cash Discrepancy Report (`/reports/cash-discrepancy`, owner only)
+- Branch selector (all/KR/C2), date range pickers, staff filter dropdown
+- KPI row: Total Short, Total Over, Net Variance, Unacknowledged Flags
+- Acknowledge button per red-flag row (owner acknowledgment workflow)
+- recharts BarChart: discrepancy by staff member (green = over, red = short)
+- Empty state: "data available after POS (Phase 12)"
+- data-testid on all interactive elements
+
+### ✅ Shift Cash Report (`/reports/shift-cash`, owner only)
+- Branch selector, month picker
+- Expandable DayShiftRow with full denomination breakdown table (₹500/200/100/50/20/10)
+- AlertTriangle mismatch indicator when deposited ≠ net expected
+- recharts BarChart: UPI % vs Cash % stacked per day
+
+### ✅ Navigation Updates
+- OwnerLayout sidebar: 3 new Report links — Sales Reconciliation, Cash Discrepancy, Shift Cash Report
+- ReportsHub: 3 new tiles with ready:true
+- App.tsx: 3 new owner-only routes + /owner/vasanth-float redirect
+
+### ✅ recharts installed
+- recharts 3.8.1 (installed with --legacy-peer-deps --strict-ssl=false due to corporate SSL)
+
+### ✅ E2E Tests (`tests/e2e/phase9.spec.ts`)
+- 26 tests: Supervisor Float rename (4), Reconciliation access + page structure (8), Cash Discrepancy (5), Shift Cash (3), Sidebar nav (3), Reports Hub tiles (3)
+
+---
+
+## What's NOT Built Yet (Phase 10 onwards)
 
 | Phase | Scope |
 |-------|-------|
-| 9 | Sales Reconciliation engine (10 methods), Cash Discrepancy Report |
 | 10 | Alert Manager (22 triggers, dual channel WhatsApp+SMS), Task Inbox (full), Whatomate integration |
 | 11 | Admin Settings full CRUD, Maintenance section, PDF exports, Mobile optimisation |
 | 12 | POS / Billing PWA — KR 15" split + C2 7" bottom sheet, 5 payment modes, shift-wise sales |
@@ -804,13 +875,13 @@ Branch: main
 ### Database Migrations
 - Numbered sequentially: 000, 001, 002...
 - NEVER modify existing migration files
-- Next migration for Phase 9: `015_phase9_additions.sql`
+- Next migration for Phase 10: `016_phase10_additions.sql`
 - Track all migrations in `migrations_log` table
 - See `supabase/migrations/README.md` for full rules
 
 ### Testing
 - Playwright E2E tests in `frontend/tests/e2e/`
-- All 208 tests passing (179 Phase 1–7 + 29 Phase 8)
+- All ~240 tests passing (208 Phase 1–8 + 26 Phase 9)
 - Test data uses `00000` prefix — auto-cleaned before/after each run
 - Protected accounts never deleted: `9999999999`, `9876543210`, `8888888888`, `9876543211`
 - Run: `npx playwright test`
@@ -832,5 +903,5 @@ Every component built in Phase 2 onwards must follow:
 
 ---
 
-*CafeOS v1.0 · Phase 8 Complete · April 2026*
+*CafeOS v1.0 · Phase 9 Complete · April 2026*
 *Requirements: UFW_Requirements_v3.6_Final.docx*

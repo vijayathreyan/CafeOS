@@ -8,6 +8,9 @@ import {
   Receipt,
   BarChart3,
   Scale,
+  GitCompare,
+  Banknote,
+  Clock,
   type LucideIcon,
 } from 'lucide-react'
 import PageContainer from '@/components/layouts/PageContainer'
@@ -71,6 +74,27 @@ const REPORT_CARDS: ReportCard[] = [
     subtitle: 'Cash, UPI, delivery and reconciliation',
     path: '/reports/daily-sales',
     Icon: Scale,
+    ready: true,
+  },
+  {
+    title: 'Sales Reconciliation',
+    subtitle: 'Predicted vs reported sales — 10 methods',
+    path: '/reports/reconciliation',
+    Icon: GitCompare,
+    ready: true,
+  },
+  {
+    title: 'Cash Discrepancy',
+    subtitle: 'Shift cash shortages and overages',
+    path: '/reports/cash-discrepancy',
+    Icon: Banknote,
+    ready: true,
+  },
+  {
+    title: 'Shift Cash Report',
+    subtitle: 'Daily denomination breakdown by shift',
+    path: '/reports/shift-cash',
+    Icon: Clock,
     ready: true,
   },
 ]

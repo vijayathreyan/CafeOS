@@ -1,24 +1,24 @@
 import { useMutation, useQueryClient } from 'react-query'
 import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
-import type { VasanthFloatBalance, FloatTransaction } from '../types/phase4'
+import type { SupervisorFloatBalance, FloatTransaction } from '../types/phase4'
 
 /**
- * Fetches the current Vasanth float balance (single-row table).
+ * Fetches the current Supervisor float balance (single-row table).
  * Used by both Owner (with controls) and Supervisor (read-only display).
  *
  * @param session - Auth session guard (only fetches when truthy)
  */
-export function useVasanthFloat(session: boolean) {
-  return useSupabaseQuery<VasanthFloatBalance | null>(
-    'vasanth_float',
+export function useSupervisorFloat(session: boolean) {
+  return useSupabaseQuery<SupervisorFloatBalance | null>(
+    'supervisor_float',
     async () => {
       const { data } = await supabase
-        .from('vasanth_float_balance')
+        .from('supervisor_float_balance')
         .select('*')
         .limit(1)
         .maybeSingle()
-      return data as VasanthFloatBalance | null
+      return data as SupervisorFloatBalance | null
     },
     { enabled: !!session, retry: 2, staleTime: 15000 }
   )
@@ -36,7 +36,7 @@ export function useFloatHistory(session: boolean) {
     async () => {
       const [topupsRes, expensesRes] = await Promise.all([
         supabase
-          .from('vasanth_float_topups')
+          .from('supervisor_float_topups')
           .select('id, topup_date, amount, notes, transfer_ref, created_at'),
         supabase
           .from('supervisor_expenses')
@@ -108,8 +108,8 @@ interface AddFundsPayload {
 }
 
 /**
- * Adds funds to the Vasanth float.
- * Updates vasanth_float_balance.current_balance and inserts a topup record
+ * Adds funds to the Supervisor float.
+ * Updates supervisor_float_balance.current_balance and inserts a topup record
  * with running_balance_after for audit purposes.
  */
 export function useAddFloatFunds() {
@@ -117,7 +117,7 @@ export function useAddFloatFunds() {
   return useMutation(
     async (payload: AddFundsPayload) => {
       const { data: bal, error: balErr } = await supabase
-        .from('vasanth_float_balance')
+        .from('supervisor_float_balance')
         .select('id, current_balance')
         .limit(1)
         .single()
@@ -126,12 +126,12 @@ export function useAddFloatFunds() {
       const newBalance = Number(bal.current_balance) + payload.amount
 
       const { error: updateErr } = await supabase
-        .from('vasanth_float_balance')
+        .from('supervisor_float_balance')
         .update({ current_balance: newBalance, last_updated_at: new Date().toISOString() })
         .eq('id', bal.id)
       if (updateErr) throw new Error(updateErr.message)
 
-      const { error: insertErr } = await supabase.from('vasanth_float_topups').insert({
+      const { error: insertErr } = await supabase.from('supervisor_float_topups').insert({
         topup_date: payload.topup_date,
         amount: payload.amount,
         transfer_ref: payload.transfer_ref,
@@ -143,7 +143,7 @@ export function useAddFloatFunds() {
     },
     {
       onSuccess: () => {
-        qc.invalidateQueries('vasanth_float')
+        qc.invalidateQueries('supervisor_float')
         qc.invalidateQueries('float_history')
       },
     }

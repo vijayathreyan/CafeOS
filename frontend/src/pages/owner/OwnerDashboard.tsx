@@ -66,9 +66,9 @@ export default function OwnerDashboard() {
       ready: true,
     },
     {
-      title: 'Vasanth Float',
+      title: 'Supervisor Float',
       subtitle: 'Supervisor cash float balance',
-      path: '/owner/vasanth-float',
+      path: '/owner/supervisor-float',
       Icon: Banknote,
       ready: true,
     },

@@ -5,7 +5,11 @@ import AmountDisplay from '@/components/ui/AmountDisplay'
 import SectionCard from '@/components/ui/SectionCard'
 import KPICard from '@/components/ui/KPICard'
 import { useAuth } from '../../contexts/AuthContext'
-import { useVasanthFloat, useFloatHistory, useAddFloatFunds } from '../../hooks/useVasanthFloat'
+import {
+  useSupervisorFloat,
+  useFloatHistory,
+  useAddFloatFunds,
+} from '../../hooks/useSupervisorFloat'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -37,7 +41,7 @@ export default function VasanthFloatPage() {
   const [addOpen, setAddOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
 
-  const { data: balance, isLoading: balLoading } = useVasanthFloat(!!user)
+  const { data: balance, isLoading: balLoading } = useSupervisorFloat(!!user)
   const { data: history = [], isLoading: histLoading } = useFloatHistory(!!user)
   const addFunds = useAddFloatFunds()
 
@@ -85,7 +89,7 @@ export default function VasanthFloatPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Vasanth Float"
+        title="Supervisor Float"
         subtitle="Supervisor cash float management"
         action={
           <div className="flex gap-2">

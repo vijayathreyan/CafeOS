@@ -34,6 +34,10 @@ import OwnerHOExpensesPage from './pages/owner/OwnerHOExpensesPage'
 import ManualExpensesPage from './pages/owner/ManualExpensesPage'
 import OwnerDepositsPage from './pages/owner/OwnerDepositsPage'
 import VasanthFloatPage from './pages/owner/VasanthFloatPage'
+// Phase 9 — Sales Reconciliation + Cash Discrepancy + Supervisor Float rename
+import ReconciliationReport from './pages/reports/ReconciliationReport'
+import CashDiscrepancyReport from './pages/reports/CashDiscrepancyReport'
+import ShiftCashReport from './pages/reports/ShiftCashReport'
 import CashDepositPage from './pages/supervisor/CashDepositPage'
 import SupervisorExpensesPage from './pages/supervisor/SupervisorExpensesPage'
 // Phase 5 — Vendor Payments & Post-Paid Customers
@@ -397,6 +401,10 @@ function AppRouter() {
         />
         <Route
           path="/owner/vasanth-float"
+          element={<Navigate to="/owner/supervisor-float" replace />}
+        />
+        <Route
+          path="/owner/supervisor-float"
           element={
             <ProtectedRoute allowedRoles={['owner']}>
               <VasanthFloatPage />
@@ -444,6 +452,32 @@ function AppRouter() {
           element={
             <ProtectedRoute allowedRoles={['owner']}>
               <MonthEndStockHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Phase 9 — Sales Reconciliation + Cash Discrepancy */}
+        <Route
+          path="/reports/reconciliation"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <ReconciliationReport />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports/cash-discrepancy"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <CashDiscrepancyReport />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports/shift-cash"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <ShiftCashReport />
             </ProtectedRoute>
           }
         />

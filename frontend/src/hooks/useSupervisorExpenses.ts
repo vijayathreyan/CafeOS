@@ -67,8 +67,8 @@ interface CreateExpensePayload {
 }
 
 /**
- * Creates a supervisor expense and automatically deducts from Vasanth float balance.
- * Updates vasanth_float_balance.current_balance in the same mutation sequence.
+ * Creates a supervisor expense and automatically deducts from Supervisor float balance.
+ * Updates supervisor_float_balance.current_balance in the same mutation sequence.
  * NOTE: WhatsApp alert will be wired in Phase 10.
  */
 export function useCreateSupervisorExpense() {
@@ -88,7 +88,7 @@ export function useCreateSupervisorExpense() {
 
       // Auto-deduct from float balance
       const { data: bal, error: balErr } = await supabase
-        .from('vasanth_float_balance')
+        .from('supervisor_float_balance')
         .select('id, current_balance')
         .limit(1)
         .single()
@@ -96,7 +96,7 @@ export function useCreateSupervisorExpense() {
       if (!balErr && bal) {
         const newBalance = Number(bal.current_balance) - payload.amount
         await supabase
-          .from('vasanth_float_balance')
+          .from('supervisor_float_balance')
           .update({ current_balance: newBalance, last_updated_at: new Date().toISOString() })
           .eq('id', bal.id)
       }
@@ -104,7 +104,7 @@ export function useCreateSupervisorExpense() {
     {
       onSuccess: () => {
         qc.invalidateQueries(['supervisor_expenses'])
-        qc.invalidateQueries('vasanth_float')
+        qc.invalidateQueries('supervisor_float')
       },
     }
   )

@@ -23,6 +23,9 @@ import {
   Wallet,
   Database,
   Coins,
+  GitCompare,
+  Banknote,
+  Clock,
 } from 'lucide-react'
 
 interface NavItem {
@@ -60,6 +63,17 @@ function useNavGroups(): NavGroup[] {
         { label: 'Reports Hub', to: '/reports', icon: <BarChart2 size={16} /> },
         { label: 'P&L Report', to: '/reports/pl', icon: <BarChart3 size={16} /> },
         { label: 'Daily Sales Summary', to: '/reports/daily-sales', icon: <Scale size={16} /> },
+        {
+          label: 'Sales Reconciliation',
+          to: '/reports/reconciliation',
+          icon: <GitCompare size={16} />,
+        },
+        {
+          label: 'Cash Discrepancy',
+          to: '/reports/cash-discrepancy',
+          icon: <Banknote size={16} />,
+        },
+        { label: 'Shift Cash Report', to: '/reports/shift-cash', icon: <Clock size={16} /> },
       ],
     },
     {
@@ -75,7 +89,7 @@ function useNavGroups(): NavGroup[] {
         { label: 'Vendor Master', to: '/vendors', icon: <Store size={16} /> },
         { label: 'Expenses', to: '/owner/expenses', icon: <Wallet size={16} /> },
         { label: 'Data Entry', to: '/owner/data-entry', icon: <Database size={16} /> },
-        { label: 'Vasanth Float', to: '/owner/vasanth-float', icon: <Coins size={16} /> },
+        { label: 'Supervisor Float', to: '/owner/supervisor-float', icon: <Coins size={16} /> },
       ],
     },
   ]

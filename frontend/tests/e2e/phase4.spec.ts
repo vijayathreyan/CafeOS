@@ -37,12 +37,12 @@ test.describe('Phase 4 — Owner Dashboard Navigation', () => {
     await expect(page.locator('h1')).toContainText('Expenses')
   })
 
-  test('Vasanth Float tile navigates to float page', async ({ page }) => {
+  test('Supervisor Float tile navigates to float page', async ({ page }) => {
     await loginAsOwner(page)
-    await page.waitForSelector('h3:has-text("Vasanth Float")', { timeout: 10000 })
-    await page.locator('h3:has-text("Vasanth Float")').click()
-    await page.waitForURL('**/owner/vasanth-float', { timeout: 8000 })
-    await expect(page.locator('h1')).toContainText('Vasanth Float')
+    await page.waitForSelector('h3:has-text("Supervisor Float")', { timeout: 10000 })
+    await page.locator('h3:has-text("Supervisor Float")').click()
+    await page.waitForURL('**/owner/supervisor-float', { timeout: 8000 })
+    await expect(page.locator('h1')).toContainText('Supervisor Float')
   })
 })
 
@@ -340,20 +340,20 @@ test.describe('Owner Expenses Hub', () => {
 })
 
 // ─────────────────────────────────────────────────────────────
-// FEATURE 7 — Vasanth Float
+// FEATURE 7 — Supervisor Float (renamed from Vasanth Float)
 // ─────────────────────────────────────────────────────────────
 
-test.describe('Vasanth Float', () => {
+test.describe('Supervisor Float', () => {
   test('owner can view float page with balance', async ({ page }) => {
     await loginAsOwner(page)
-    await page.goto('/owner/vasanth-float')
+    await page.goto('/owner/supervisor-float')
     await page.waitForSelector('[data-testid="float-balance-card"]', { timeout: 10000 })
     await expect(page.locator('[data-testid="float-balance"]')).toBeVisible()
   })
 
   test('Add Funds button opens dialog', async ({ page }) => {
     await loginAsOwner(page)
-    await page.goto('/owner/vasanth-float')
+    await page.goto('/owner/supervisor-float')
     await page.waitForSelector('[data-testid="add-funds-btn"]', { timeout: 10000 })
     await page.click('[data-testid="add-funds-btn"]')
     await page.waitForSelector('text=Add Funds to Float', { timeout: 6000 })
@@ -362,22 +362,22 @@ test.describe('Vasanth Float', () => {
 
   test('supervisor sees read-only float balance on dashboard', async ({ page }) => {
     await loginAsSupervisor(page)
-    await page.waitForSelector('text=Vasanth Float Balance', { timeout: 10000 })
-    await expect(page.locator('text=Vasanth Float Balance')).toBeVisible()
+    await page.waitForSelector('text=Supervisor Float Balance', { timeout: 10000 })
+    await expect(page.locator('text=Supervisor Float Balance')).toBeVisible()
     // Supervisor should NOT see add funds button (it's on the dashboard in read-only mode)
     await expect(page.locator('[data-testid="add-funds-btn"]')).not.toBeVisible()
   })
 
   test('supervisor cannot access owner float page', async ({ page }) => {
     await loginAsSupervisor(page)
-    await page.goto('/owner/vasanth-float')
-    await expect(page).not.toHaveURL(/\/owner\/vasanth-float$/)
+    await page.goto('/owner/supervisor-float')
+    await expect(page).not.toHaveURL(/\/owner\/supervisor-float$/)
   })
 
   test('add funds saves correctly with no database errors', async ({ page }) => {
     test.setTimeout(30000)
     await loginAsOwner(page)
-    await page.goto('/owner/vasanth-float')
+    await page.goto('/owner/supervisor-float')
     await page.waitForSelector('[data-testid="add-funds-btn"]', { timeout: 10000 })
 
     await page.click('[data-testid="add-funds-btn"]')

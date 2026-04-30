@@ -8,7 +8,7 @@ import SectionCard from '@/components/ui/SectionCard'
 const tiles = [
   {
     title: 'View HO Expenses',
-    subtitle: "Vasanth's bill-wise expense submissions",
+    subtitle: "Supervisor's bill-wise expense submissions",
     path: '/owner/ho-expenses',
     Icon: Eye,
   },
