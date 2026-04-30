@@ -1,0 +1,65 @@
+# Whatomate Configuration — CafeOS
+# Copy config.example.toml to add more settings.
+# Production: change jwt.secret and app.encryption_key.
+
+[app]
+name = "Whatomate"
+environment = "development"
+debug = false
+encryption_key = ""
+
+[server]
+host = "0.0.0.0"
+port = 8080
+read_timeout = 30
+write_timeout = 30
+base_path = ""
+allowed_origins = ""
+
+[database]
+host = "whatomate-db"
+port = 5432
+user = "whatomate"
+password = "whatomate"
+name = "whatomate"
+ssl_mode = "disable"
+max_open_conns = 25
+max_idle_conns = 5
+conn_max_lifetime = 300
+
+[redis]
+host = "whatomate-redis"
+port = 6379
+username = ""
+password = ""
+db = 0
+tls = false
+
+[jwt]
+secret = "cafeos-whatomate-jwt-secret-change-in-production"
+access_expiry_mins = 15
+refresh_expiry_days = 1
+
+[storage]
+type = "local"
+local_path = "./uploads"
+
+[cookie]
+domain = ""
+secure = false
+
+[rate_limit]
+enabled = false
+login_max_attempts = 10
+register_max_attempts = 10
+refresh_max_attempts = 30
+sso_max_attempts = 10
+window_seconds = 60
+trust_proxy = false
+api_max_requests = 200
+api_window_seconds = 60
+
+[default_admin]
+email = "admin@admin.com"
+password = "admin"
+full_name = "Admin"

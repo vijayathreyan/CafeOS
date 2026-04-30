@@ -101,6 +101,7 @@ services:
         VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
         VITE_SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
         VITE_APP_NAME: CafeOS
+        VITE_WHATOMATE_URL: http://localhost:3001
     container_name: cafeos_app
     restart: unless-stopped
     networks:
@@ -151,30 +152,70 @@ services:
     networks:
       - cafeos_net
 
-  # 8. Whatomate — WhatsApp Business API alerts
-  # Commented out until Phase 10 (Alert Manager).
-  # Image to use when re-enabling: muhdominic/whatomate:latest
-  # Uncomment the entire block below and run: docker compose up -d whatomate
-  #
-  # whatomate:
-  #   image: muhdominic/whatomate:latest
-  #   container_name: cafeos_whatomate
-  #   restart: unless-stopped
-  #   environment:
-  #     WHATSAPP_TOKEN: ${WHATSAPP_TOKEN}
-  #     WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
-  #     WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN}
-  #   networks:
-  #     - cafeos_net
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #       max-size: "10m"
-  #       max-file: "3"
+  # 8. Whatomate — WhatsApp Business API alerts (Phase 10)
+  whatomate:
+    image: shridh0r/whatomate:latest
+    container_name: cafeos_whatomate
+    restart: unless-stopped
+    depends_on:
+      whatomate-db:
+        condition: service_healthy
+      whatomate-redis:
+        condition: service_healthy
+    ports:
+      - "3001:8080"
+    volumes:
+      - ./config.toml:/app/config.toml:ro
+      - whatomate_uploads:/app/uploads
+    command: ["server", "-migrate", "-config", "/app/config.toml"]
+    networks:
+      - cafeos_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 9. Dedicated PostgreSQL for Whatomate
+  whatomate-db:
+    image: postgres:17-alpine
+    container_name: cafeos_whatomate_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: whatomate
+      POSTGRES_PASSWORD: whatomate
+      POSTGRES_DB: whatomate
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U whatomate -d whatomate"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - whatomate_db_data:/var/lib/postgresql/data
+    networks:
+      - cafeos_net
+
+  # 10. Redis for Whatomate
+  whatomate-redis:
+    image: redis:7-alpine
+    container_name: cafeos_whatomate_redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - whatomate_redis_data:/data
+    networks:
+      - cafeos_net
 
 volumes:
   postgres_data:
   storage_data:
+  whatomate_db_data:
+  whatomate_redis_data:
+  whatomate_uploads:
 
 networks:
   cafeos_net:
