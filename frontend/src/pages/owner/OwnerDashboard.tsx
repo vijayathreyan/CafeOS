@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { checkScheduledAlerts } from '../../lib/scheduledAlerts'
 import {
   Users,
   BarChart3,
@@ -29,6 +30,11 @@ interface DashCard {
 
 export default function OwnerDashboard() {
   const navigate = useNavigate()
+
+  useEffect(() => {
+    checkScheduledAlerts()
+  }, [])
+
   const today = new Date().toLocaleDateString('en-IN', {
     weekday: 'long',
     day: 'numeric',

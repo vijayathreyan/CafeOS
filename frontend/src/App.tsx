@@ -14,7 +14,9 @@ import OwnerDashboard from './pages/owner/OwnerDashboard'
 import SupervisorDashboard from './pages/supervisor/SupervisorDashboard'
 import UserManagement from './pages/owner/UserManagement'
 import EmployeeOnboarding from './pages/owner/EmployeeOnboarding'
-import TaskInbox from './pages/shared/TaskInbox'
+import TaskInbox from './pages/tasks/TaskInbox'
+// Phase 10 — Alert Manager
+import AlertManager from './pages/settings/AlertManager'
 import StockEntry from './pages/staff/StockEntry'
 import ExpenseEntry from './pages/staff/ExpenseEntry'
 import SupervisorEntry from './pages/supervisor/SupervisorEntry'
@@ -452,6 +454,16 @@ function AppRouter() {
           element={
             <ProtectedRoute allowedRoles={['owner']}>
               <MonthEndStockHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Phase 10 — Alert Manager */}
+        <Route
+          path="/settings/alerts"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <AlertManager />
             </ProtectedRoute>
           }
         />

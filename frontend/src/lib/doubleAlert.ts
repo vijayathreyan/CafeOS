@@ -1,10 +1,5 @@
-// ─── Phase 9 — Double Alert Logic ─────────────────────────────────────────────
-//
-// Fires when BOTH a cash discrepancy AND a reconciliation gap are flagged for
-// the same branch on the same date. Inserts a record into alert_log with
-// delivery_status = 'pending'. Phase 10 Alert Manager will dispatch it.
-
 import { supabase } from './supabase'
+import { sendAlertForTrigger } from './alertService'
 
 export interface DoubleAlertResult {
   doubleAlertTriggered: boolean
@@ -45,16 +40,15 @@ export async function checkDoubleAlert(
   const branchLabel = branch === 'KR' ? 'Kaappi Ready' : 'Coffee Mate C2'
   const message = `⚠️⚠️ ${branchLabel} — ${date} — Cash discrepancy AND Sales gap both flagged. Investigate immediately.`
 
-  await supabase.from('alert_log').insert({
-    trigger_event: 'double_alert',
-    recipient: 'owner',
-    channel: 'whatsapp',
-    message,
-    status: 'pending',
-    branch,
-    entry_date: date,
-    delivery_status: 'pending',
-  })
+  await sendAlertForTrigger(
+    'double_alert',
+    {
+      branch,
+      date,
+      item_name: branchLabel,
+    },
+    { branch }
+  )
 
   return { doubleAlertTriggered: true, message }
 }

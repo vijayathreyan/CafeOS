@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from 'react-query'
 import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
+import { sendAlertForTrigger } from '../lib/alertService'
 import type {
   VendorPaymentCycleLog,
   VendorManualBill,
@@ -286,10 +287,14 @@ export function useMarkVendorPaid() {
       if (payErr) throw new Error(payErr.message)
     },
     {
-      onSuccess: () => {
+      onSuccess: (_, vars) => {
         qc.invalidateQueries('vendor_cycle_logs')
         qc.invalidateQueries('vendor_payment_history')
         qc.invalidateQueries('vendor_manual_bills_cycle')
+        sendAlertForTrigger('vendor_payment_marked_paid', {
+          amount: String(vars.amount_paid),
+          date: vars.cycle_end,
+        })
       },
     }
   )

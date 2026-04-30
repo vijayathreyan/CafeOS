@@ -65,7 +65,13 @@
       "Bash(read f *)",
       "Bash(python3 -c ' import json, sys for line in open\\('\\\\''__TRACKED_VAR__'\\\\''\\): try: obj = json.loads\\(line\\) msg = obj.get\\('\\\\''message'\\\\'', {}\\) if msg.get\\('\\\\''role'\\\\''\\) == '\\\\''assistant'\\\\'': for c in msg.get\\('\\\\''content'\\\\'', []\\): if c.get\\('\\\\''type'\\\\''\\) == '\\\\''tool_use'\\\\'' and c.get\\('\\\\''name'\\\\''\\) == '\\\\''Bash'\\\\'': cmd = c.get\\('\\\\''input'\\\\'', {}\\).get\\('\\\\''command'\\\\'', '\\\\'''\\\\''\\) print\\(cmd[:200]\\) except: pass ' done)",
       "Bash(python3 *)",
-      "Bash(BASE_URL=http://localhost:4173 npx playwright test tests/e2e/phase7.spec.ts --reporter=list)"
+      "Bash(BASE_URL=http://localhost:4173 npx playwright test tests/e2e/phase7.spec.ts --reporter=list)",
+      "Bash(npm list *)",
+      "Bash(docker cp *)",
+      "Read(//c/Users/MANASVIN V/AppData/Local/Temp/claude/C--VibeCode-CafeOS/692bcdb2-d92c-4a70-8d4d-907ab8a5f5d3/tasks/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:4173/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:80/)"
     ]
   }
 }

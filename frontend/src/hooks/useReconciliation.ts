@@ -10,6 +10,7 @@ import {
   type MilkRow,
 } from '../lib/reconciliation'
 import { checkDoubleAlert } from '../lib/doubleAlert'
+import { sendAlertForTrigger } from '../lib/alertService'
 import type { ReconciliationResult } from '../types/phase9'
 
 // ─── Query key ────────────────────────────────────────────────────────────────
@@ -285,6 +286,16 @@ export function useRunBatchReconciliation() {
         })
 
         if (status === 'amber' || status === 'red') {
+          const triggerEvent = status === 'red' ? 'reconciliation_red' : 'reconciliation_amber'
+          sendAlertForTrigger(
+            triggerEvent,
+            {
+              branch,
+              date,
+              amount: String(Math.round(Math.abs(difference))),
+            },
+            { branch }
+          )
           await checkDoubleAlert(branch, date)
         }
       }

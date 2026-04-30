@@ -26,13 +26,16 @@ import {
   GitCompare,
   Banknote,
   Clock,
+  Bell,
 } from 'lucide-react'
+import { useMyTaskCount } from '@/hooks/useTasks'
 
 interface NavItem {
   label: string
   to: string
   icon: React.ReactNode
   end?: boolean
+  badge?: React.ReactNode
 }
 
 interface NavGroup {
@@ -42,6 +45,29 @@ interface NavGroup {
 
 function useNavGroups(): NavGroup[] {
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const { data: taskCount = 0 } = useMyTaskCount(user?.id)
+
+  const taskBadge =
+    taskCount > 0 ? (
+      <span
+        style={{
+          marginLeft: 'auto',
+          background: 'var(--color-danger)',
+          color: '#fff',
+          borderRadius: 'var(--radius-full)',
+          fontSize: 10,
+          fontWeight: 700,
+          padding: '1px 6px',
+          minWidth: 18,
+          textAlign: 'center',
+          fontFamily: 'var(--font-mono)',
+        }}
+      >
+        {taskCount > 99 ? '99+' : taskCount}
+      </span>
+    ) : undefined
+
   return [
     {
       title: 'Core',
@@ -53,8 +79,14 @@ function useNavGroups(): NavGroup[] {
           end: true,
         },
         { label: t('employees.title'), to: '/users', icon: <Users size={16} /> },
-        { label: t('nav.tasks'), to: '/tasks', icon: <CheckSquare size={16} /> },
+        {
+          label: t('nav.tasks'),
+          to: '/tasks',
+          icon: <CheckSquare size={16} />,
+          badge: taskBadge,
+        },
         { label: t('nav.settings'), to: '/settings', icon: <Settings size={16} /> },
+        { label: 'Alert Manager', to: '/settings/alerts', icon: <Bell size={16} /> },
       ],
     },
     {
@@ -263,6 +295,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                         {item.icon}
                       </span>
                       {item.label}
+                      {item.badge}
                     </>
                   )}
                 </NavLink>

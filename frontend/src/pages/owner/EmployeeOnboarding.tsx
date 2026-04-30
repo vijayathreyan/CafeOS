@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { CheckCircle2 } from 'lucide-react'
 import { showToast } from '@/lib/dialogs'
+import { sendAlertForTrigger } from '../../lib/alertService'
 
 const SECTIONS = ['systemAccess', 'personal', 'identity', 'emergency', 'work', 'bank'] as const
 type Section = (typeof SECTIONS)[number]
@@ -593,6 +594,11 @@ export default function EmployeeOnboarding() {
         throw relErr
       }
 
+      sendAlertForTrigger('employee_account_created', {
+        item_name: data.full_name,
+        branch: data.branch_kr && data.branch_c2 ? 'KR+C2' : data.branch_kr ? 'KR' : 'C2',
+        date: new Date().toISOString().slice(0, 10),
+      })
       setSuccess(true)
       setTimeout(() => navigate('/users'), 1500)
     } catch (e: unknown) {

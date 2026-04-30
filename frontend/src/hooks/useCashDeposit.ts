@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from 'react-query'
 import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
+import { sendAlertForTrigger } from '../lib/alertService'
 import type { CashDeposit, CashDepositRow } from '../types/phase4'
 
 /**
@@ -52,6 +53,15 @@ export function useCreateCashDeposit() {
       })
       if (error) throw new Error(error.message)
     },
-    { onSuccess: () => qc.invalidateQueries('deposit_history') }
+    {
+      onSuccess: (_, vars) => {
+        qc.invalidateQueries('deposit_history')
+        sendAlertForTrigger('cash_deposit_logged', {
+          branch: vars.rows[0]?.branch ?? '',
+          amount: String(vars.total_amount),
+          date: vars.deposit_date,
+        })
+      },
+    }
   )
 }

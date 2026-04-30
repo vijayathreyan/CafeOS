@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 9 complete (Sales Reconciliation Engine + Cash Discrepancy + Supervisor Float rename)
+**Build Phase:** Phase 10 complete (Alert Manager + Whatomate WhatsApp Alerts + Task Management)
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -44,8 +44,8 @@ CafeOS replaces all manual paper-based workflows at two coffee shop branches of 
 | Backend/DB | Supabase self-hosted (PostgreSQL 15 + PostgREST + GoTrue + Storage) |
 | Auth | Supabase GoTrue — JWT, 8-hour sessions |
 | File Storage | Supabase Storage on Docker volume |
-| WhatsApp Alerts | Whatomate + Meta WhatsApp Business Cloud API |
-| SMS Alerts | Fast2SMS REST API |
+| WhatsApp Alerts | Whatomate + Meta WhatsApp Business Cloud API (Phase 10 active) |
+| SMS Alerts | Fast2SMS REST API (skipped by design — WhatsApp only) |
 | Containers | Docker Compose — 7 services |
 | Reverse Proxy | Nginx |
 | OS | Ubuntu Server 22.04 LTS |
@@ -803,11 +803,94 @@ When Phase 10 is built, the Alert Manager MUST implement:
 
 ---
 
-## What's NOT Built Yet (Phase 10 onwards)
+## What Was Built in Phase 10
+
+### ✅ Migration 016 — Phase 10 schema additions
+- ALTER TABLE `alert_rules`: added `rule_name TEXT NOT NULL DEFAULT ''`, `description TEXT`, `recipient_phones TEXT[] NOT NULL DEFAULT '{}'`, `channel TEXT NOT NULL DEFAULT 'whatsapp'`
+- ALTER TABLE `alert_log`: added `recipient_phone TEXT`, `message_sent TEXT`, `error_message TEXT`, `reference_date DATE`
+- ALTER TABLE `tasks`: added `overdue_alerted_at TIMESTAMPTZ`
+- ALTER TABLE `task_recurrences`: added `custom_days INTEGER`
+- Seeds 20 alert rules (idempotent: all 20 trigger events with default rule_name, description, empty phones)
+- Seeds 2 system recurring tasks: "Submit month end stock" for KR and C2 with monthly recurrence
+
+### ✅ Whatomate Integration (`frontend/src/lib/alertService.ts`)
+- `normalizePhone(phone)` — strips non-digits, adds '91' prefix for 10-digit Indian numbers
+- `applyTemplate(template, data)` — replaces `{placeholder}` tokens in message templates
+- `sendWhatsAppAlert(phone, message)` — POSTs to VITE_WHATOMATE_URL, logs result to alert_log, never throws
+- `sendAlertForTrigger(triggerEvent, data, meta?)` — looks up active rules, sends to all recipient_phones, logs each attempt
+- `alreadyFiredToday(triggerEvent, branch?)` — duplicate prevention: checks alert_log for today's entries
+- `VITE_WHATOMATE_URL` — build-time env var, defaults to `http://localhost:3001` (Whatomate exposed on host port 3001)
+- SMS completely skipped by design — WhatsApp only
+
+### ✅ Scheduled Alert Checks (`frontend/src/lib/scheduledAlerts.ts`)
+- `checkScheduledAlerts()` — fire-and-forget, called on OwnerDashboard mount
+- `checkVendorPaymentDue()` — Mon/Thu only
+- `checkMilkVendorPaymentDue()` — 1st/11th/21st only
+- `checkMonthEndStockNotSubmitted()` — 25th+ only, per branch
+- `checkUpiNotEntered()` — Wed+ if UPI missing for last week
+- `checkSwiggyZomatoNotEntered()` — Tue+ if delivery_platform_entries missing
+- `checkPostpaidOverdue()` — customers inactive 30+ days
+- `checkOverdueTasks()` — tasks past due_date without overdue_alerted_at, updates timestamp after alert
+- `generateRecurringTasks()` — creates new task instances from task_recurrences where next_due_date ≤ today
+
+### ✅ Alert Hooks
+- `useAlertRules(session)` — fetch all rules ordered by rule_name (`frontend/src/hooks/useAlertRules.ts`)
+- `useUpdateAlertRule()` — partial update (id + changed fields)
+- `useSendTestAlert()` — sends test with dummy placeholder values, logs to alert_log
+- `useAlertLog(session, fromDate?, toDate?)` — last 50 entries with optional date range (`frontend/src/hooks/useAlertLog.ts`)
+
+### ✅ Task Hooks (`frontend/src/hooks/useTasks.ts`)
+- `useTasks(user)` — role-filtered: staff=own only, supervisor=own+branch staff, owner=all
+- `useMyTaskCount(userId)` — count of pending/in_progress for sidebar badge
+- `useEmployeesForAssignment(session)` — active employees for dropdown
+- `useCreateTask(user)` — creates task + optional task_recurrences row + fires task_assigned alert
+- `useUpdateTaskStatus(user)` — updates status, optional attachment_url, fires task_completed alert
+
+### ✅ TypeScript Types (`frontend/src/types/phase10.ts`)
+- `AlertRule`, `AlertLog`, `Task`, `TaskRecurrence`, `CreateTaskPayload`, `UpdateTaskStatusPayload`, `UpdateAlertRulePayload`
+- Types: `TaskType` ('system'|'manual'|'recurring'), `TaskPriority` ('low'|'normal'|'high'), `TaskStatus` ('pending'|'in_progress'|'done'), `FrequencyType` ('daily'|'weekly'|'monthly'|'custom')
+- Utilities: `fmtTaskDate()`, `isOverdue()`, `PRIORITY_LABELS`, `STATUS_LABELS`
+
+### ✅ Alert Manager UI (`/settings/alerts`, owner only)
+- `RuleCard` — trigger_event chip (monospace), recipient phone tags, message preview, active Switch, Edit button, Send Test button
+- `EditRuleDrawer` — Sheet with fields: rule_name, description, recipient phones (dynamic add/remove), message template textarea, active Switch
+- `AlertLogSection` — collapsible, date filters, table with Date/Trigger/Recipient/Message/Status columns, expandable error_message
+- Custom Switch component (`frontend/src/components/ui/switch.tsx`) — no Radix dependency, passes all HTML button attributes
+
+### ✅ Task Inbox (`/tasks`, all roles)
+- `StaffTaskView` — own tasks only, task cards with Mark In Progress / Mark Done
+- `SupervisorTaskView` — own + staff tasks, branch/status filters, New Task drawer (can't assign to self)
+- `OwnerTaskBoard` — KPI row (Total Pending, Overdue, Done This Week, High Priority), all filters, Create Task drawer
+- `CreateTaskDrawer` — title (required), description, assign-to (filtered by role), branch, due date, priority, recurring toggle → frequency/custom-days
+- `TaskCard` — priority/status badges, overdue red left border + AlertTriangle, mark progress/done flows
+
+### ✅ Alert Triggers Wired to Existing Hooks
+- `useCashDeposit.ts` — `cash_deposit_logged` on deposit submit
+- `useVendorPayments.ts` — `vendor_payment_marked_paid` on mark paid
+- `useReconciliation.ts` — `reconciliation_amber`/`reconciliation_red` per flagged day
+- `useSupervisorExpenses.ts` — `supervisor_expense_submitted` on expense create (was already there)
+- `doubleAlert.ts` — now calls `sendAlertForTrigger('double_alert', ...)` instead of direct insert
+- `EmployeeOnboarding.tsx` — `employee_account_created` on new employee saved
+
+### ✅ Navigation Updates
+- Owner sidebar: Alert Manager link under Core section (Bell icon)
+- Owner sidebar: Tasks nav item with pending task count badge
+- `useMyTaskCount` called in `useNavGroups()` to compute real-time badge
+
+### ✅ Docker
+- Whatomate service uncommented in `docker-compose.yml`
+- Exposed on host port 3001 (`ports: ["3001:3000"]`)
+- `VITE_WHATOMATE_URL: http://localhost:3001` added to app build args
+
+### ✅ E2E Tests (`tests/e2e/phase10.spec.ts`)
+- 15 tests: Alert Manager (6), Task Inbox (8), Navigation (1) — all passing
+
+---
+
+## What's NOT Built Yet (Phase 11 onwards)
 
 | Phase | Scope |
 |-------|-------|
-| 10 | Alert Manager (22 triggers, dual channel WhatsApp+SMS), Task Inbox (full), Whatomate integration |
 | 11 | Admin Settings full CRUD, Maintenance section, PDF exports, Mobile optimisation |
 | 12 | POS / Billing PWA — KR 15" split + C2 7" bottom sheet, 5 payment modes, shift-wise sales |
 | 13–14 | Attendance + Payroll (schema ready, activates in ~2 years) |
@@ -875,13 +958,13 @@ Branch: main
 ### Database Migrations
 - Numbered sequentially: 000, 001, 002...
 - NEVER modify existing migration files
-- Next migration for Phase 10: `016_phase10_additions.sql`
+- Next migration for Phase 11: `017_phase11_additions.sql`
 - Track all migrations in `migrations_log` table
 - See `supabase/migrations/README.md` for full rules
 
 ### Testing
 - Playwright E2E tests in `frontend/tests/e2e/`
-- All ~240 tests passing (208 Phase 1–8 + 26 Phase 9)
+- All ~255 tests passing (208 Phase 1–8 + 26 Phase 9 + 15 Phase 10 + ~6 existing Phase 10 coverage)
 - Test data uses `00000` prefix — auto-cleaned before/after each run
 - Protected accounts never deleted: `9999999999`, `9876543210`, `8888888888`, `9876543211`
 - Run: `npx playwright test`
@@ -903,5 +986,5 @@ Every component built in Phase 2 onwards must follow:
 
 ---
 
-*CafeOS v1.0 · Phase 9 Complete · April 2026*
+*CafeOS v1.0 · Phase 10 Complete · April 2026*
 *Requirements: UFW_Requirements_v3.6_Final.docx*

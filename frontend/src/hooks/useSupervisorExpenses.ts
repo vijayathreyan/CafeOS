@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from 'react-query'
 import { useSupabaseQuery } from './useSupabaseQuery'
 import { supabase } from '../lib/supabase'
+import { sendAlertForTrigger } from '../lib/alertService'
 import type { SupervisorExpense } from '../types/phase4'
 
 /**
@@ -69,7 +70,7 @@ interface CreateExpensePayload {
 /**
  * Creates a supervisor expense and automatically deducts from Supervisor float balance.
  * Updates supervisor_float_balance.current_balance in the same mutation sequence.
- * NOTE: WhatsApp alert will be wired in Phase 10.
+ * Fires supervisor_expense_submitted WhatsApp alert.
  */
 export function useCreateSupervisorExpense() {
   const qc = useQueryClient()
@@ -102,9 +103,19 @@ export function useCreateSupervisorExpense() {
       }
     },
     {
-      onSuccess: () => {
+      onSuccess: (_, vars) => {
         qc.invalidateQueries(['supervisor_expenses'])
         qc.invalidateQueries('supervisor_float')
+        sendAlertForTrigger(
+          'supervisor_expense_submitted',
+          {
+            branch: vars.branch,
+            amount: String(vars.amount),
+            date: vars.expense_date,
+            item_name: vars.shop_name,
+          },
+          { branch: vars.branch }
+        )
       },
     }
   )
