@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Receipt } from 'lucide-react'
+import { ArrowLeft, Receipt, Download, FileSpreadsheet } from 'lucide-react'
 import PageContainer from '@/components/layouts/PageContainer'
 import PageHeader from '@/components/layouts/PageHeader'
 import SectionCard from '@/components/ui/SectionCard'
@@ -15,12 +15,21 @@ import { useExpenseReport } from '@/hooks/useReports'
 import { firstOfMonthISO, todayISO, formatDate, branchLabel } from '@/types/phase7'
 import type { ExpenseReportRow, ReportFilters } from '@/types/phase7'
 import type { ColumnDef } from '@/components/ui/DataTable'
+import { exportToPDF, exportToExcel } from '@/lib/exportUtils'
+import type { ExportColumn } from '@/lib/exportUtils'
 
 interface CategorySummary {
   category: string
   total: number
   is_gas: boolean
 }
+
+const EXPENSE_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Date', key: 'date', width: 14 },
+  { header: 'Branch', key: 'branch', width: 16 },
+  { header: 'Category', key: 'category', width: 24 },
+  { header: 'Amount (₹)', key: 'amount', width: 14, align: 'right' },
+]
 
 export default function ExpenseReport() {
   const navigate = useNavigate()
@@ -37,6 +46,24 @@ export default function ExpenseReport() {
   const gasTotal = (rows ?? []).filter((r) => r.is_gas).reduce((s, r) => s + r.amount, 0)
   const shopTotal = grandTotal - gasTotal
   const numEntries = (rows ?? []).length
+
+  const branchStr =
+    filters.branch === 'all' ? 'All Branches' : branchLabel(filters.branch as 'KR' | 'C2')
+  const period = `${filters.from_date} to ${filters.to_date}`
+
+  const exportRows = (rows ?? []).map((r) => ({
+    date: formatDate(r.entry_date),
+    branch: branchLabel(r.branch),
+    category: r.category,
+    amount: r.amount,
+  }))
+
+  const exportTotals = {
+    date: 'TOTAL',
+    branch: '',
+    category: '',
+    amount: grandTotal,
+  }
 
   // Build category summary
   const catMap = new Map<string, CategorySummary>()
@@ -154,10 +181,48 @@ export default function ExpenseReport() {
         title="Expense Report"
         subtitle="Daily cash expenses by category and branch"
         action={
-          <Button variant="outline" size="sm" onClick={() => navigate('/reports')}>
-            <ArrowLeft size={14} className="mr-1" />
-            Reports
-          </Button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                exportToPDF(
+                  'Expense Report',
+                  branchStr,
+                  period,
+                  EXPENSE_EXPORT_COLUMNS,
+                  exportRows,
+                  exportTotals
+                )
+              }
+              disabled={!rows?.length}
+            >
+              <Download size={14} className="mr-1" />
+              PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                exportToExcel(
+                  'Expense Report',
+                  branchStr,
+                  period,
+                  EXPENSE_EXPORT_COLUMNS,
+                  exportRows,
+                  exportTotals
+                )
+              }
+              disabled={!rows?.length}
+            >
+              <FileSpreadsheet size={14} className="mr-1" />
+              Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/reports')}>
+              <ArrowLeft size={14} className="mr-1" />
+              Reports
+            </Button>
+          </div>
         }
       />
 

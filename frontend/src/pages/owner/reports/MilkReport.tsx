@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Milk } from 'lucide-react'
+import { ArrowLeft, Milk, Download, FileSpreadsheet } from 'lucide-react'
 import PageContainer from '@/components/layouts/PageContainer'
 import PageHeader from '@/components/layouts/PageHeader'
 import SectionCard from '@/components/ui/SectionCard'
@@ -14,10 +14,24 @@ import { useMilkReport } from '@/hooks/useReports'
 import { firstOfMonthISO, todayISO, formatDate, branchLabel } from '@/types/phase7'
 import type { MilkReportRow, ReportFilters } from '@/types/phase7'
 import type { ColumnDef } from '@/components/ui/DataTable'
+import { exportToPDF, exportToExcel } from '@/lib/exportUtils'
+import type { ExportColumn } from '@/lib/exportUtils'
 
 function litres(val: number): string {
   return val.toFixed(2) + ' L'
 }
+
+const MILK_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Date', key: 'date', width: 14 },
+  { header: 'Branch', key: 'branch', width: 16 },
+  { header: 'S1 Coffee (L)', key: 's1_coffee', width: 14, align: 'right' },
+  { header: 'S1 Tea (L)', key: 's1_tea', width: 12, align: 'right' },
+  { header: 'S2 Coffee (L)', key: 's2_coffee', width: 14, align: 'right' },
+  { header: 'S2 Tea (L)', key: 's2_tea', width: 12, align: 'right' },
+  { header: 'Coffee Total (L)', key: 'coffee_total', width: 16, align: 'right' },
+  { header: 'Tea Total (L)', key: 'tea_total', width: 14, align: 'right' },
+  { header: 'Day Total (L)', key: 'day_total', width: 14, align: 'right' },
+]
 
 export default function MilkReport() {
   const navigate = useNavigate()
@@ -34,6 +48,40 @@ export default function MilkReport() {
   const totalMilk = totalCoffee + totalTea
   const days = (rows ?? []).length
   const dailyAvg = days > 0 ? totalMilk / days : 0
+
+  const branchStr =
+    filters.branch === 'all' ? 'All Branches' : branchLabel(filters.branch as 'KR' | 'C2')
+  const period = `${filters.from_date} to ${filters.to_date}`
+
+  const exportRows = (rows ?? []).map((r) => ({
+    date: formatDate(r.entry_date),
+    branch: branchLabel(r.branch),
+    s1_coffee: r.s1_coffee.toFixed(2),
+    s1_tea: r.s1_tea.toFixed(2),
+    s2_coffee: r.s2_coffee.toFixed(2),
+    s2_tea: r.s2_tea.toFixed(2),
+    coffee_total: r.total_coffee.toFixed(2),
+    tea_total: r.total_tea.toFixed(2),
+    day_total: r.grand_total.toFixed(2),
+  }))
+
+  const exportTotals = {
+    date: 'TOTAL',
+    branch: '',
+    s1_coffee: (rows ?? []).reduce((s, r) => s + r.s1_coffee, 0).toFixed(2),
+    s1_tea: (rows ?? []).reduce((s, r) => s + r.s1_tea, 0).toFixed(2),
+    s2_coffee: (rows ?? []).reduce((s, r) => s + r.s2_coffee, 0).toFixed(2),
+    s2_tea: (rows ?? []).reduce((s, r) => s + r.s2_tea, 0).toFixed(2),
+    coffee_total: totalCoffee.toFixed(2),
+    tea_total: totalTea.toFixed(2),
+    day_total: totalMilk.toFixed(2),
+  }
+
+  const handlePDFExport = () =>
+    exportToPDF('Milk Report', branchStr, period, MILK_EXPORT_COLUMNS, exportRows, exportTotals)
+
+  const handleExcelExport = () =>
+    exportToExcel('Milk Report', branchStr, period, MILK_EXPORT_COLUMNS, exportRows, exportTotals)
 
   const columns: ColumnDef<MilkReportRow>[] = [
     {
@@ -141,10 +189,25 @@ export default function MilkReport() {
         title="Milk Report"
         subtitle="Daily coffee and tea milk consumption by shift"
         action={
-          <Button variant="outline" size="sm" onClick={() => navigate('/reports')}>
-            <ArrowLeft size={14} className="mr-1" />
-            Reports
-          </Button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <Button variant="outline" size="sm" onClick={handlePDFExport} disabled={!rows?.length}>
+              <Download size={14} className="mr-1" />
+              PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExcelExport}
+              disabled={!rows?.length}
+            >
+              <FileSpreadsheet size={14} className="mr-1" />
+              Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/reports')}>
+              <ArrowLeft size={14} className="mr-1" />
+              Reports
+            </Button>
+          </div>
         }
       />
 

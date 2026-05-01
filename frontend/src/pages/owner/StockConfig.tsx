@@ -183,7 +183,7 @@ export default function StockConfig() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-green-600 hover:text-green-700"
+                            className="h-10 w-10 text-green-600 hover:text-green-700"
                             onClick={() => saveEdit(cfg.item_id, cfg.entry_unit)}
                             disabled={isSaving}
                             aria-label="Save weight"
@@ -193,7 +193,7 @@ export default function StockConfig() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive/70"
+                            className="h-10 w-10 text-destructive hover:text-destructive/70"
                             onClick={() => cancelEdit(cfg.item_id)}
                             disabled={isSaving}
                             aria-label="Cancel edit"

@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
-import { ArrowLeft, AlertTriangle, FileSearch } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, FileSearch, Download, FileSpreadsheet } from 'lucide-react'
 import PageContainer from '@/components/layouts/PageContainer'
 import PageHeader from '@/components/layouts/PageHeader'
 import SectionCard from '@/components/ui/SectionCard'
@@ -29,6 +29,8 @@ import {
 import type { AlertLevel } from '@/types/phase9'
 import { fmtRs, fmtDate } from '@/types/phase9'
 import { useToast } from '@/hooks/use-toast'
+import { exportToPDF, exportToExcel } from '@/lib/exportUtils'
+import type { ExportColumn } from '@/lib/exportUtils'
 
 function alertStatusProps(level: AlertLevel): {
   status: 'success' | 'warning' | 'danger'
@@ -65,6 +67,16 @@ const thStyle: React.CSSProperties = {
   borderBottom: 'var(--border-strong)',
   textAlign: 'left',
 }
+
+const DISCREPANCY_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Date', key: 'date', width: 14 },
+  { header: 'Branch', key: 'branch', width: 16 },
+  { header: 'Staff', key: 'staff', width: 18 },
+  { header: 'Expected (₹)', key: 'expected', width: 14, align: 'right' },
+  { header: 'Actual (₹)', key: 'actual', width: 14, align: 'right' },
+  { header: 'Variance (₹)', key: 'variance', width: 14, align: 'right' },
+  { header: 'Status', key: 'status', width: 12 },
+]
 
 export default function CashDiscrepancyReport() {
   const { user } = useAuth()
@@ -110,6 +122,50 @@ export default function CashDiscrepancyReport() {
     return { name, discrepancy: total }
   })
 
+  const branchStr =
+    branch === 'all' ? 'All Branches' : branch === 'KR' ? 'Kaappi Ready' : 'Coffee Mate C2'
+  const period = `${fromDate} to ${toDate}`
+
+  const exportRows = filtered.map((r) => ({
+    date: r.shift_date ? fmtDate(r.shift_date) : '—',
+    branch: r.branch ?? '—',
+    staff: r.staff_name ?? '—',
+    expected: r.expected_cash ?? 0,
+    actual: r.declared_cash,
+    variance: r.difference,
+    status: r.alert_level,
+  }))
+
+  const exportTotals = {
+    date: 'TOTAL',
+    branch: '',
+    staff: '',
+    expected: filtered.reduce((s, r) => s + (r.expected_cash ?? 0), 0),
+    actual: filtered.reduce((s, r) => s + r.declared_cash, 0),
+    variance: netVariance,
+    status: '',
+  }
+
+  const handlePDFExport = () =>
+    exportToPDF(
+      'Cash Discrepancy Report',
+      branchStr,
+      period,
+      DISCREPANCY_EXPORT_COLUMNS,
+      exportRows,
+      exportTotals
+    )
+
+  const handleExcelExport = () =>
+    exportToExcel(
+      'Cash Discrepancy Report',
+      branchStr,
+      period,
+      DISCREPANCY_EXPORT_COLUMNS,
+      exportRows,
+      exportTotals
+    )
+
   const handleAcknowledge = async (id: string) => {
     try {
       await acknowledge.mutateAsync({ id, acknowledgedBy: user!.full_name })
@@ -129,10 +185,30 @@ export default function CashDiscrepancyReport() {
         title="Cash Discrepancy Report"
         subtitle="Shift cash shortages and overages — POS data from Phase 12"
         action={
-          <Button variant="outline" size="sm" onClick={() => navigate('/reports')}>
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Reports
-          </Button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePDFExport}
+              disabled={!filtered.length}
+            >
+              <Download size={14} className="mr-1" />
+              PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExcelExport}
+              disabled={!filtered.length}
+            >
+              <FileSpreadsheet size={14} className="mr-1" />
+              Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/reports')}>
+              <ArrowLeft size={14} className="mr-1" />
+              Reports
+            </Button>
+          </div>
         }
       />
 

@@ -27,6 +27,7 @@ import {
   Banknote,
   Clock,
   Bell,
+  ShoppingCart,
 } from 'lucide-react'
 import { useMyTaskCount } from '@/hooks/useTasks'
 
@@ -87,6 +88,7 @@ function useNavGroups(): NavGroup[] {
         },
         { label: t('nav.settings'), to: '/settings', icon: <Settings size={16} /> },
         { label: 'Alert Manager', to: '/settings/alerts', icon: <Bell size={16} /> },
+        { label: 'POS', to: '/pos', icon: <ShoppingCart size={16} /> },
       ],
     },
     {

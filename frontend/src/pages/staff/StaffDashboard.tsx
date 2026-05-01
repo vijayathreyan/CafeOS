@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../contexts/AuthContext'
 import { Button } from '@/components/ui/button'
-import { Package, Wallet, ClipboardList, Phone } from 'lucide-react'
+import { Package, Wallet, ClipboardList, Phone, Monitor } from 'lucide-react'
 import PageContainer from '@/components/layouts/PageContainer'
 import PageHeader from '@/components/layouts/PageHeader'
 import SectionCard from '@/components/ui/SectionCard'
@@ -172,6 +172,45 @@ export default function StaffDashboard() {
               </p>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
                 Closing stock entry
+              </p>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* POS — coming in Phase 12 */}
+        <SectionCard
+          padding="compact"
+          className="opacity-50 cursor-not-allowed"
+          title="Coming soon — Phase 12"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--gray-100)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Monitor size={20} style={{ color: 'var(--gray-400)' }} />
+            </div>
+            <div>
+              <p
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontWeight: 500,
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--gray-400)',
+                  margin: 0,
+                }}
+              >
+                Point of Sale
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>
+                Coming soon — Phase 12
               </p>
             </div>
           </div>

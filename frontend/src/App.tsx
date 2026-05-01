@@ -57,6 +57,8 @@ import ExpenseReport from './pages/owner/reports/ExpenseReport'
 // Phase 8 — P&L Report + Daily Sales Summary
 import PLReport from './pages/reports/PLReport'
 import DailySalesSummary from './pages/reports/DailySalesSummary'
+// Phase 11 — POS Placeholder
+import POSPage from './pages/pos/POSPage'
 
 function AuthLoadingScreen() {
   return (
@@ -490,6 +492,16 @@ function AppRouter() {
           element={
             <ProtectedRoute allowedRoles={['owner']}>
               <ShiftCashReport />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Phase 11 — POS Placeholder */}
+        <Route
+          path="/pos"
+          element={
+            <ProtectedRoute>
+              <POSPage />
             </ProtectedRoute>
           }
         />

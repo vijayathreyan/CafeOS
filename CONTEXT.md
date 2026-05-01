@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 10 complete (Alert Manager + Whatomate WhatsApp Alerts + Task Management)
+**Build Phase:** Phase 11 complete (Admin Settings Full CRUD + PDF Exports + Mobile Optimisation)
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -887,11 +887,62 @@ When Phase 10 is built, the Alert Manager MUST implement:
 
 ---
 
-## What's NOT Built Yet (Phase 11 onwards)
+## What Was Built in Phase 11
+
+### ✅ Migration 017 — Phase 11 schema additions (`supabase/migrations/017_phase11_admin_settings.sql`)
+- `snack_item_config` — admin-managed snack items per branch (name EN/Tamil, input_type qty/prepared, sort_order, active)
+- `cash_expense_categories` — cash expense categories per branch with `gas_for_pl_gas_bill` flag
+- `supervisor_expense_categories` — shared supervisor categories with `flows_to_hk_misc` flag
+- `reconciliation_config` — per-branch thresholds (amber/red/cash_discrepancy_tolerance/upi_drop_alert_percent/wastage_alert_percent)
+- `pl_salary_config` — staff list for P&L salary section
+- `service_contacts` — plumbers, electricians, etc. per branch with phone
+- `fixed_expenses`: added `annual_basis TEXT` and `updated_at TIMESTAMPTZ` columns
+
+### ✅ Admin Settings Full CRUD (`frontend/src/pages/owner/AdminSettings.tsx`)
+- 6-tab layout: Items & Stock | Expenses & Categories | POS Configuration | People & Access | Thresholds & Limits | Fixed Costs
+- **Tab 1 — Items & Stock:** Snack Items CRUD (branch/input_type/sort_order), Stock Item Weight inline edit (existing), Month-End Stock Config
+- **Tab 2 — Expenses & Categories:** Cash Expense Categories KR + C2 + Supervisor Categories — all with Add/Edit/Active toggle
+- **Tab 3 — POS Configuration:** POS Items, POS Categories, Post-Paid Customers — placeholders until Phase 12
+- **Tab 4 — People & Access:** User Accounts redirect button, P&L Salary Staff List, Service Contacts CRUD
+- **Tab 5 — Thresholds & Limits:** Reconciliation thresholds per branch (amber/red/tolerance/UPI drop/wastage), inline Save
+- **Tab 6 — Fixed Costs:** Editable fixed cost rows per branch (Rent, FSSAI, etc.) with pencil inline edit
+
+### ✅ React Query Hooks (Phase 11)
+- `useSnackItemConfig.ts` — useSnackItems, useCreateSnackItem, useUpdateSnackItem
+- `useCashExpenseCategories.ts` — useCashExpenseCategories, useCreateCashExpenseCategory, useUpdateCashExpenseCategory
+- `useSupervisorExpenseCategories.ts` — useSupervisorExpenseCategories, useCreateSupervisorExpenseCategory, useUpdateSupervisorExpenseCategory
+- `useReconciliationConfig.ts` — useReconciliationConfig, useUpdateReconciliationConfig
+- `usePLSalaryConfig.ts` — usePLSalaryConfig, useCreatePLSalaryConfig, useUpdatePLSalaryConfig
+- `useServiceContacts.ts` — useServiceContacts, useCreateServiceContact, useUpdateServiceContact, useDeleteServiceContact
+- `usePOSConfig.ts` — usePOSItems, useCreatePOSItem, useUpdatePOSItem, usePOSCategories, useCreatePOSCategory, useUpdatePOSCategory, usePostPaidCustomerConfig, useCreatePostPaidCustomer, useUpdatePostPaidCustomer
+- `useMonthEndStockConfig.ts` — useMonthEndStockConfig, useCreateMonthEndStockItem, useUpdateMonthEndStockItem
+
+### ✅ TypeScript Types (`frontend/src/types/phase11.ts`)
+- SnackItemConfig, CashExpenseCategory, SupervisorExpenseCategory, ReconciliationConfig, PLSalaryConfig, ServiceContact, POSItem, POSCategory, FixedExpenseRow, MonthEndStockConfigItem — plus Create/Update payload types
+
+### ✅ PDF & Excel Exports — all owner reports
+- Milk Report, Consumption Report, Wastage Report, Expense Report, Reconciliation Report — all have PDF + Excel export buttons
+- PDF generated via jsPDF + jspdf-autotable; Excel via xlsx (SheetJS)
+
+### ✅ Mobile Optimisation
+- DataTable wrapped in `overflow-x-auto` scroll container
+- Sheets open full-width (w-full) on mobile < sm breakpoint
+- Admin Settings tabs wrap to multiple rows on 375px viewport
+
+### ✅ POS Placeholder
+- `/pos` route — "Coming in Phase 12" placeholder page
+- Staff dashboard POS card shows disabled state with "Coming soon — Phase 12" tooltip
+
+### ✅ E2E Tests (`tests/e2e/phase11.spec.ts`)
+- 32 tests: Admin Settings (20), Export Buttons (7), Mobile Optimisation (3), POS Placeholder (2) — all passing
+- Next migration: **018**
+
+---
+
+## What's NOT Built Yet (Phase 12 onwards)
 
 | Phase | Scope |
 |-------|-------|
-| 11 | Admin Settings full CRUD, Maintenance section, PDF exports, Mobile optimisation |
 | 12 | POS / Billing PWA — KR 15" split + C2 7" bottom sheet, 5 payment modes, shift-wise sales |
 | 13–14 | Attendance + Payroll (schema ready, activates in ~2 years) |
 | 15 | Metabase BI — add container, connect to existing Postgres |

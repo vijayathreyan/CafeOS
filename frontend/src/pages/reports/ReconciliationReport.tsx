@@ -10,7 +10,15 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { ArrowLeft, Play, ChevronDown, ChevronRight, FileSearch } from 'lucide-react'
+import {
+  ArrowLeft,
+  Play,
+  ChevronDown,
+  ChevronRight,
+  FileSearch,
+  Download,
+  FileSpreadsheet,
+} from 'lucide-react'
 import PageContainer from '@/components/layouts/PageContainer'
 import PageHeader from '@/components/layouts/PageHeader'
 import SectionCard from '@/components/ui/SectionCard'
@@ -25,6 +33,8 @@ import { useReconciliationResults, useRunBatchReconciliation } from '@/hooks/use
 import type { ReconciliationResult, ReconciliationStatus } from '@/types/phase9'
 import { fmtRs, fmtDate } from '@/types/phase9'
 import { useToast } from '@/hooks/use-toast'
+import { exportToPDF, exportToExcel } from '@/lib/exportUtils'
+import type { ExportColumn } from '@/lib/exportUtils'
 
 // ─── Status badge mapping ─────────────────────────────────────────────────────
 
@@ -172,6 +182,16 @@ const thStyle: React.CSSProperties = {
   textAlign: 'left',
 }
 
+// ─── Export columns ────────────────────────────────────────────────────────────
+
+const RECON_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Date', key: 'date', width: 14 },
+  { header: 'Predicted (₹)', key: 'predicted', width: 16, align: 'right' },
+  { header: 'Reported (₹)', key: 'reported', width: 16, align: 'right' },
+  { header: 'Gap (₹)', key: 'gap', width: 14, align: 'right' },
+  { header: 'Status', key: 'status', width: 14 },
+]
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ReconciliationReport() {
@@ -194,6 +214,45 @@ export default function ReconciliationReport() {
   const totalReported = results.reduce((s, r) => s + Number(r.reported_sales), 0)
   const totalGap = totalPredicted - totalReported
   const daysFlagged = results.filter((r) => r.status === 'amber' || r.status === 'red').length
+
+  const branchStr = branch === 'KR' ? 'Kaappi Ready' : 'Coffee Mate C2'
+  const period = month
+
+  const exportRows = results.map((r) => ({
+    date: fmtDate(r.entry_date),
+    predicted: Number(r.predicted_sales),
+    reported: Number(r.reported_sales),
+    gap: Number(r.predicted_sales) - Number(r.reported_sales),
+    status: r.status,
+  }))
+
+  const exportTotals = {
+    date: 'TOTAL',
+    predicted: totalPredicted,
+    reported: totalReported,
+    gap: totalGap,
+    status: '',
+  }
+
+  const handlePDFExport = () =>
+    exportToPDF(
+      'Sales Reconciliation',
+      branchStr,
+      period,
+      RECON_EXPORT_COLUMNS,
+      exportRows,
+      exportTotals
+    )
+
+  const handleExcelExport = () =>
+    exportToExcel(
+      'Sales Reconciliation',
+      branchStr,
+      period,
+      RECON_EXPORT_COLUMNS,
+      exportRows,
+      exportTotals
+    )
 
   const chartData = results.map((r) => ({
     date: fmtDate(r.entry_date),
@@ -220,9 +279,27 @@ export default function ReconciliationReport() {
         title="Sales Reconciliation"
         subtitle="Predicted vs reported sales — all 10 prediction methods"
         action={
-          <div className="flex gap-2 items-center">
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePDFExport}
+              disabled={!results.length}
+            >
+              <Download size={14} className="mr-1" />
+              PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExcelExport}
+              disabled={!results.length}
+            >
+              <FileSpreadsheet size={14} className="mr-1" />
+              Excel
+            </Button>
             <Button variant="outline" size="sm" onClick={() => navigate('/reports')}>
-              <ArrowLeft className="w-4 h-4 mr-1" />
+              <ArrowLeft size={14} className="mr-1" />
               Reports
             </Button>
             <Button

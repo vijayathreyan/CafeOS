@@ -287,7 +287,7 @@ export default function ManualExpensesPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-10 w-10"
                       onClick={() => openEdit(e)}
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -295,7 +295,7 @@ export default function ManualExpensesPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive/70"
+                      className="h-10 w-10 text-destructive hover:text-destructive/70"
                       onClick={() => onDelete(e)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />

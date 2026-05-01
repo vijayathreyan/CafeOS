@@ -10,7 +10,15 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { ArrowLeft, ChevronDown, ChevronRight, AlertTriangle, FileSearch } from 'lucide-react'
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronRight,
+  AlertTriangle,
+  FileSearch,
+  Download,
+  FileSpreadsheet,
+} from 'lucide-react'
 import PageContainer from '@/components/layouts/PageContainer'
 import PageHeader from '@/components/layouts/PageHeader'
 import SectionCard from '@/components/ui/SectionCard'
@@ -22,6 +30,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useQuery } from 'react-query'
 import { supabase } from '@/lib/supabase'
 import { fmtRs, fmtDate, monthStart, monthEnd } from '@/types/phase9'
+import { exportToPDF, exportToExcel } from '@/lib/exportUtils'
+import type { ExportColumn } from '@/lib/exportUtils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -223,6 +233,17 @@ const thStyle: React.CSSProperties = {
   textAlign: 'left',
 }
 
+// ─── Export columns ────────────────────────────────────────────────────────────
+
+const SHIFT_CASH_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Date', key: 'date', width: 14 },
+  { header: 'Branch', key: 'branch', width: 16 },
+  { header: 'Shift 1 Total (₹)', key: 'shift1', width: 16, align: 'right' },
+  { header: 'Shift 2 Total (₹)', key: 'shift2', width: 16, align: 'right' },
+  { header: 'Day Total (₹)', key: 'day_total', width: 14, align: 'right' },
+  { header: 'Deposited (₹)', key: 'deposited', width: 14, align: 'right' },
+]
+
 // ─── Data hook ────────────────────────────────────────────────────────────────
 
 function useShiftCashData(branch: 'KR' | 'C2', month: string, session: boolean) {
@@ -339,6 +360,51 @@ export default function ShiftCashReport() {
     return null
   }
 
+  const branchStr = branch === 'KR' ? 'Kaappi Ready' : 'Coffee Mate C2'
+  const period = month
+
+  const exportRows = rows.map((r) => {
+    const s1 = shiftTotal(r.shift1)
+    const s2 = shiftTotal(r.shift2)
+    return {
+      date: fmtDate(r.date),
+      branch: branchStr,
+      shift1: s1,
+      shift2: s2,
+      day_total: s1 + s2,
+      deposited: r.deposited,
+    }
+  })
+
+  const exportTotals = {
+    date: 'TOTAL',
+    branch: '',
+    shift1: rows.reduce((s, r) => s + shiftTotal(r.shift1), 0),
+    shift2: rows.reduce((s, r) => s + shiftTotal(r.shift2), 0),
+    day_total: rows.reduce((s, r) => s + shiftTotal(r.shift1) + shiftTotal(r.shift2), 0),
+    deposited: rows.reduce((s, r) => s + r.deposited, 0),
+  }
+
+  const handlePDFExport = () =>
+    exportToPDF(
+      'Shift-Wise Cash Report',
+      branchStr,
+      period,
+      SHIFT_CASH_EXPORT_COLUMNS,
+      exportRows,
+      exportTotals
+    )
+
+  const handleExcelExport = () =>
+    exportToExcel(
+      'Shift-Wise Cash Report',
+      branchStr,
+      period,
+      SHIFT_CASH_EXPORT_COLUMNS,
+      exportRows,
+      exportTotals
+    )
+
   // Chart data — UPI% vs Cash% per day
   const chartData = rows.map((r) => {
     const totalCash = shiftTotal(r.shift1) + shiftTotal(r.shift2)
@@ -357,10 +423,20 @@ export default function ShiftCashReport() {
         title="Shift-Wise Cash Report"
         subtitle="Daily cash breakdown with denomination detail"
         action={
-          <Button variant="outline" size="sm" onClick={() => navigate('/reports')}>
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Reports
-          </Button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <Button variant="outline" size="sm" onClick={handlePDFExport} disabled={!rows.length}>
+              <Download size={14} className="mr-1" />
+              PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExcelExport} disabled={!rows.length}>
+              <FileSpreadsheet size={14} className="mr-1" />
+              Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/reports')}>
+              <ArrowLeft size={14} className="mr-1" />
+              Reports
+            </Button>
+          </div>
         }
       />
 

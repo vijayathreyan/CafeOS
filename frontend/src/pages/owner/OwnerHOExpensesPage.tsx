@@ -181,7 +181,7 @@ export default function OwnerHOExpensesPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-10 w-10"
                         onClick={() => openPhoto(e.bill_photo_url)}
                       >
                         <Image className="w-4 h-4" />
