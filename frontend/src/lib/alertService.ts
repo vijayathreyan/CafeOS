@@ -1,14 +1,14 @@
 /**
- * alertService — Whatomate WhatsApp alert dispatch + alert_log persistence.
+ * alertService — Meta WhatsApp Cloud API alert dispatch + alert_log persistence.
  * Never throws — all errors are caught and logged to alert_log.
  */
 
 import { supabase } from './supabase'
 
-const WHATOMATE_URL =
-  (import.meta.env.VITE_WHATOMATE_URL as string | undefined) ?? 'http://localhost:3001'
+const WHATSAPP_TOKEN = import.meta.env.VITE_WHATSAPP_TOKEN as string | undefined
+const WHATSAPP_PHONE_NUMBER_ID = import.meta.env.VITE_WHATSAPP_PHONE_NUMBER_ID as string | undefined
 
-/** Strip country code, add 91 prefix for India */
+/** Strip non-digits, add 91 prefix for India */
 function normalizePhone(phone: string): string {
   let p = phone.replace(/\D/g, '')
   if (p.startsWith('0')) p = p.slice(1)
@@ -44,30 +44,46 @@ async function writeLog(entry: LogEntry): Promise<void> {
   }
 }
 
+/** POST to Meta WhatsApp Cloud API; returns { ok, errorMessage } */
+async function callMetaWhatsApp(
+  normalizedPhone: string,
+  message: string
+): Promise<{ ok: boolean; errorMessage?: string }> {
+  if (!WHATSAPP_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
+    return { ok: false, errorMessage: 'WHATSAPP_TOKEN or WHATSAPP_PHONE_NUMBER_ID not configured' }
+  }
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v19.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: normalizedPhone,
+          type: 'text',
+          text: { body: message },
+        }),
+        signal: AbortSignal.timeout(10000),
+      }
+    )
+    return res.ok ? { ok: true } : { ok: false, errorMessage: `HTTP ${res.status}` }
+  } catch (err) {
+    return { ok: false, errorMessage: err instanceof Error ? err.message : 'Network error' }
+  }
+}
+
 /**
- * Send a WhatsApp message via Whatomate and log the result.
+ * Send a WhatsApp message via Meta Cloud API and log the result.
  * Returns true on successful delivery, false otherwise.
  */
 export async function sendWhatsAppAlert(phone: string, message: string): Promise<boolean> {
   const normalizedPhone = normalizePhone(phone)
-  let deliveryStatus: 'sent' | 'failed' = 'failed'
-  let errorMessage: string | undefined
-
-  try {
-    const res = await fetch(WHATOMATE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: normalizedPhone, message }),
-      signal: AbortSignal.timeout(10000),
-    })
-    if (res.ok) {
-      deliveryStatus = 'sent'
-    } else {
-      errorMessage = `HTTP ${res.status}`
-    }
-  } catch (err) {
-    errorMessage = err instanceof Error ? err.message : 'Network error'
-  }
+  const { ok, errorMessage } = await callMetaWhatsApp(normalizedPhone, message)
+  const deliveryStatus = ok ? 'sent' : 'failed'
 
   await writeLog({
     trigger_event: 'manual_send',
@@ -81,7 +97,7 @@ export async function sendWhatsAppAlert(phone: string, message: string): Promise
     error_message: errorMessage ?? null,
   })
 
-  return deliveryStatus === 'sent'
+  return ok
 }
 
 /**
@@ -118,24 +134,8 @@ export async function sendAlertForTrigger(
 
     for (const phone of phones) {
       const normalizedPhone = normalizePhone(phone)
-      let deliveryStatus: 'sent' | 'failed' = 'failed'
-      let errorMessage: string | undefined
-
-      try {
-        const res = await fetch(WHATOMATE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: normalizedPhone, message }),
-          signal: AbortSignal.timeout(10000),
-        })
-        if (res.ok) {
-          deliveryStatus = 'sent'
-        } else {
-          errorMessage = `HTTP ${res.status}`
-        }
-      } catch (err) {
-        errorMessage = err instanceof Error ? err.message : 'Network error'
-      }
+      const { ok, errorMessage } = await callMetaWhatsApp(normalizedPhone, message)
+      const deliveryStatus = ok ? 'sent' : 'failed'
 
       await writeLog({
         trigger_event: triggerEvent,
