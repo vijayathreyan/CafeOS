@@ -4,32 +4,39 @@ import { useTranslation } from 'react-i18next'
 import { useQueryClient } from 'react-query'
 import { useAuth } from '../../contexts/AuthContext'
 import { ScrollArea } from '@/components/ui/scroll-area'
+
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import {
   LayoutDashboard,
+  ShoppingCart,
   Users,
   CheckSquare,
+  TrendingUp,
+  CalendarDays,
+  Wallet,
+  Receipt,
   CreditCard,
-  UserCheck,
-  Package,
-  Store,
+  Banknote,
   BarChart2,
-  BarChart3,
-  Scale,
+  GitCompare,
+  AlertTriangle,
+  Clock,
+  Droplets,
+  TrendingDown,
+  Trash2,
+  PieChart,
+  Bell,
+  Archive,
+  Package,
+  Truck,
   Settings,
+  BellRing,
   Menu,
   LogOut,
-  Wallet,
-  Database,
-  Coins,
-  GitCompare,
-  Banknote,
-  Clock,
-  Bell,
-  ShoppingCart,
 } from 'lucide-react'
 import { useMyTaskCount } from '@/hooks/useTasks'
+import { useUnacknowledgedRedCount } from '@/hooks/useCashDiscrepancy'
 
 interface NavItem {
   label: string
@@ -44,58 +51,87 @@ interface NavGroup {
   items: NavItem[]
 }
 
+function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null
+  return (
+    <span
+      style={{
+        marginLeft: 'auto',
+        background: 'var(--color-danger)',
+        color: '#fff',
+        borderRadius: 'var(--radius-full)',
+        fontSize: 10,
+        fontWeight: 700,
+        padding: '1px 6px',
+        minWidth: 18,
+        textAlign: 'center',
+        fontFamily: 'var(--font-mono)',
+        flexShrink: 0,
+      }}
+    >
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
+
 function useNavGroups(): NavGroup[] {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { data: taskCount = 0 } = useMyTaskCount(user?.id)
-
-  const taskBadge =
-    taskCount > 0 ? (
-      <span
-        style={{
-          marginLeft: 'auto',
-          background: 'var(--color-danger)',
-          color: '#fff',
-          borderRadius: 'var(--radius-full)',
-          fontSize: 10,
-          fontWeight: 700,
-          padding: '1px 6px',
-          minWidth: 18,
-          textAlign: 'center',
-          fontFamily: 'var(--font-mono)',
-        }}
-      >
-        {taskCount > 99 ? '99+' : taskCount}
-      </span>
-    ) : undefined
+  const { data: discrepancyCount = 0 } = useUnacknowledgedRedCount(!!user)
 
   return [
     {
       title: 'Core',
       items: [
         {
-          label: t('nav.dashboard'),
-          to: '/',
+          label: 'Dashboard',
+          to: '/dashboard',
           icon: <LayoutDashboard size={16} />,
           end: true,
         },
-        { label: t('employees.title'), to: '/users', icon: <Users size={16} /> },
+        {
+          label: 'POS Billing',
+          to: '/pos',
+          icon: <ShoppingCart size={16} />,
+        },
+      ],
+    },
+    {
+      title: 'People',
+      items: [
+        {
+          label: t('employees.title'),
+          to: '/employees',
+          icon: <Users size={16} />,
+        },
         {
           label: t('nav.tasks'),
           to: '/tasks',
           icon: <CheckSquare size={16} />,
-          badge: taskBadge,
+          badge: <CountBadge count={taskCount} />,
         },
-        { label: t('nav.settings'), to: '/settings', icon: <Settings size={16} /> },
-        { label: 'Alert Manager', to: '/settings/alerts', icon: <Bell size={16} /> },
+      ],
+    },
+    {
+      title: 'Financials',
+      items: [
+        { label: 'P&L Report', to: '/reports/pl', icon: <TrendingUp size={16} /> },
+        {
+          label: 'Daily Sales Summary',
+          to: '/reports/daily-sales',
+          icon: <CalendarDays size={16} />,
+        },
+        { label: 'Vendor Payments', to: '/vendor-payments', icon: <Wallet size={16} /> },
+        { label: 'Expenses', to: '/expenses', icon: <Receipt size={16} /> },
+        { label: 'Post-paid Customers', to: '/postpaid-customers', icon: <CreditCard size={16} /> },
+        { label: 'Supervisor Float', to: '/supervisor-float', icon: <Banknote size={16} /> },
       ],
     },
     {
       title: 'Reports',
       items: [
-        { label: 'Reports Hub', to: '/reports', icon: <BarChart2 size={16} /> },
-        { label: 'P&L Report', to: '/reports/pl', icon: <BarChart3 size={16} /> },
-        { label: 'Daily Sales Summary', to: '/reports/daily-sales', icon: <Scale size={16} /> },
+        { label: 'Reports Hub', to: '/reports', icon: <BarChart2 size={16} />, end: true },
         {
           label: 'Sales Reconciliation',
           to: '/reports/reconciliation',
@@ -104,26 +140,34 @@ function useNavGroups(): NavGroup[] {
         {
           label: 'Cash Discrepancy',
           to: '/reports/cash-discrepancy',
-          icon: <Banknote size={16} />,
+          icon: <AlertTriangle size={16} />,
+          badge: <CountBadge count={discrepancyCount} />,
         },
         { label: 'Shift Cash Report', to: '/reports/shift-cash', icon: <Clock size={16} /> },
+        { label: 'Milk Report', to: '/reports/milk', icon: <Droplets size={16} /> },
+        {
+          label: 'Consumption Report',
+          to: '/reports/consumption',
+          icon: <TrendingDown size={16} />,
+        },
+        { label: 'Wastage Report', to: '/reports/wastage', icon: <Trash2 size={16} /> },
+        { label: 'Expense Report', to: '/reports/expense-report', icon: <PieChart size={16} /> },
+        { label: 'Alert Log', to: '/reports/alert-log', icon: <Bell size={16} /> },
+        { label: 'Month End Stock', to: '/reports/month-end-stock', icon: <Archive size={16} /> },
       ],
     },
     {
-      title: 'Owner',
+      title: 'Inventory',
       items: [
-        { label: 'Vendor Payments', to: '/owner/vendor-payments', icon: <CreditCard size={16} /> },
-        {
-          label: 'Post-paid Customers',
-          to: '/owner/postpaid-customers',
-          icon: <UserCheck size={16} />,
-        },
-        { label: 'Item Master', to: '/owner/item-master', icon: <Package size={16} /> },
-        { label: 'Vendor Master', to: '/vendors', icon: <Store size={16} /> },
-        { label: 'Expenses', to: '/owner/expenses', icon: <Wallet size={16} /> },
-        { label: 'Data Entry', to: '/owner/data-entry', icon: <Database size={16} /> },
-        { label: 'Supervisor Float', to: '/owner/supervisor-float', icon: <Coins size={16} /> },
-        { label: 'POS Billing', to: '/pos', icon: <ShoppingCart size={16} /> },
+        { label: 'Item Master', to: '/item-master', icon: <Package size={16} /> },
+        { label: 'Vendor Master', to: '/vendor-master', icon: <Truck size={16} /> },
+      ],
+    },
+    {
+      title: 'Settings',
+      items: [
+        { label: 'Admin Settings', to: '/settings', icon: <Settings size={16} />, end: true },
+        { label: 'Alert Manager', to: '/settings/alerts', icon: <BellRing size={16} /> },
       ],
     },
   ]
@@ -158,8 +202,6 @@ const navItemActive: React.CSSProperties = {
   background: 'var(--brand-primary-subtle)',
   color: 'var(--brand-primary)',
   fontWeight: 600,
-  borderLeft: '3px solid var(--brand-primary)',
-  paddingLeft: '9px', // compensate 3px left border
 }
 
 // ─── SidebarContent ──────────────────────────────────────────────────────────
@@ -179,6 +221,9 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         .slice(0, 2)
         .toUpperCase()
     : '?'
+
+  const roleLabel =
+    user?.role === 'owner' ? 'Owner' : user?.role === 'supervisor' ? 'Supervisor' : 'Staff'
 
   const handleLogout = async () => {
     qc.cancelQueries()
@@ -206,10 +251,10 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         style={{
           padding: '20px 16px 16px',
           borderBottom: 'var(--border-default)',
+          flexShrink: 0,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Logo mark */}
           <div
             style={{
               width: '32px',
@@ -255,7 +300,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       {/* ── Nav groups ── */}
       <ScrollArea style={{ flex: 1, paddingTop: '8px', paddingBottom: '8px' }}>
         {navGroups.map((group) => (
-          <div key={group.title} style={{ marginBottom: '8px' }}>
+          <div key={group.title} style={{ marginBottom: '4px' }}>
             {/* Group label */}
             <p
               style={{
@@ -296,7 +341,17 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                       >
                         {item.icon}
                       </span>
-                      {item.label}
+                      <span
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {item.label}
+                      </span>
                       {item.badge}
                     </>
                   )}
@@ -312,6 +367,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         style={{
           borderTop: 'var(--border-default)',
           padding: 'var(--space-3)',
+          flexShrink: 0,
         }}
       >
         {/* User info row */}
@@ -327,8 +383,8 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           {/* Avatar */}
           <div
             style={{
-              width: '32px',
-              height: '32px',
+              width: '36px',
+              height: '36px',
               borderRadius: '50%',
               background: 'var(--brand-primary-subtle)',
               display: 'flex',
@@ -364,17 +420,21 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             >
               {user?.full_name}
             </p>
-            <p
+            <span
               style={{
+                display: 'inline-block',
                 fontFamily: 'var(--font-body)',
-                fontSize: '12px',
-                color: 'var(--gray-500)',
-                margin: 0,
-                textTransform: 'capitalize',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--brand-primary)',
+                background: 'var(--brand-primary-subtle)',
+                borderRadius: 'var(--radius-full)',
+                padding: '1px 8px',
+                marginTop: '2px',
               }}
             >
-              {user?.role}
-            </p>
+              {roleLabel}
+            </span>
           </div>
         </div>
 
@@ -419,7 +479,7 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
       <aside
         data-testid="owner-sidebar"
         style={{
-          width: 'var(--sidebar-width)',
+          width: '240px',
           flexShrink: 0,
           background: 'var(--brand-surface)',
           borderRight: 'var(--border-default)',
@@ -484,10 +544,8 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
             </SheetTrigger>
             <SheetContent
               side="left"
-              style={{
-                width: 'var(--sidebar-width)',
-                padding: 0,
-              }}
+              style={{ width: '240px', padding: 0 }}
+              className="p-0 w-full sm:w-[240px]"
             >
               <SidebarContent onClose={() => setSheetOpen(false)} />
             </SheetContent>

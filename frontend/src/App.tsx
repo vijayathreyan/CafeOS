@@ -59,6 +59,8 @@ import PLReport from './pages/reports/PLReport'
 import DailySalesSummary from './pages/reports/DailySalesSummary'
 // Phase 12 — POS Billing PWA
 import POSShell from './pages/pos/POSShell'
+// Phase 12B — Alert Log report
+import AlertLogReport from './pages/reports/AlertLogReport'
 
 function AuthLoadingScreen() {
   return (
@@ -498,6 +500,45 @@ function AppRouter() {
             </ProtectedRoute>
           }
         />
+
+        {/* Phase 12B — Alert Log report */}
+        <Route
+          path="/reports/alert-log"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <AlertLogReport />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Phase 12B — Sidebar route aliases (short paths → existing pages) */}
+        <Route path="/employees" element={<Navigate to="/users" replace />} />
+        <Route path="/vendor-payments" element={<Navigate to="/owner/vendor-payments" replace />} />
+        <Route path="/expenses" element={<Navigate to="/owner/expenses" replace />} />
+        <Route
+          path="/postpaid-customers"
+          element={<Navigate to="/owner/postpaid-customers" replace />}
+        />
+        <Route
+          path="/supervisor-float"
+          element={<Navigate to="/owner/supervisor-float" replace />}
+        />
+        <Route path="/reports/milk" element={<Navigate to="/owner/reports/milk" replace />} />
+        <Route
+          path="/reports/consumption"
+          element={<Navigate to="/owner/reports/consumption" replace />}
+        />
+        <Route path="/reports/wastage" element={<Navigate to="/owner/reports/wastage" replace />} />
+        <Route
+          path="/reports/expense-report"
+          element={<Navigate to="/owner/reports/expenses" replace />}
+        />
+        <Route
+          path="/reports/month-end-stock"
+          element={<Navigate to="/owner/reports/month-end-stock" replace />}
+        />
+        <Route path="/item-master" element={<Navigate to="/owner/item-master" replace />} />
+        <Route path="/vendor-master" element={<Navigate to="/vendors" replace />} />
 
         {/* Phase 4 — Supervisor Modules */}
         <Route
