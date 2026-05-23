@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 11 complete (Admin Settings Full CRUD + PDF Exports + Mobile Optimisation)
+**Build Phase:** Phase 12 complete (POS Billing PWA — KR split layout + C2 bottom sheet + 5 payment modes + shift close + offline support)
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -939,11 +939,77 @@ When Phase 10 is built, the Alert Manager MUST implement:
 
 ---
 
-## What's NOT Built Yet (Phase 12 onwards)
+## What Was Built in Phase 12
+
+### ✅ Migration 018 — POS Billing schema additions (`supabase/migrations/018_phase12_pos.sql`)
+- `pos_sessions` — shift sessions per staff+branch (opened_at, closed_at, declared_cash, expected_cash, cash_discrepancy, discrepancy_alert_level)
+- `bills` — individual bills (payment_mode, total_amount, pos_session_id, postpaid_customer_id, delivery_platform, comp_type)
+- `bill_items` — line items per bill (pos_item_id, item_name, unit_price, quantity)
+- `pos_item_price_history` — audit log for price changes (old_price, new_price, effective_date, changed_by)
+- Seed: pos_categories (Hot Drinks, Cold Drinks, Snacks, Extras, Juices), pos_items with branch flags (branch_kr, branch_c2), selling_price, sort_order
+
+### ✅ POS Components
+- `POSShell.tsx` — branch selector dialog for supervisors/owners; auto-branch for single-branch staff (lazy useState initializer)
+- `ShiftOpenScreen.tsx` — open-shift screen with Open New Shift button (`data-testid="open-shift-btn"`)
+- `POSBillingScreen.tsx` — KR: desktop split layout (item grid left, bill panel right); C2: bottom sheet layout
+- `ItemGrid.tsx` — category filter bar + rate filter bar + item cards (`data-testid="item-grid"`, `data-testid^="item-card-"`)
+- `BillPanel.tsx` — bill lines with +/- qty + remove, bill total, 5 payment buttons
+- `ShiftCloseFlow.tsx` — 3-step: (1) bill counts summary, (2) denomination entry with running total, (3) confirmation (staff never see expected cash or rupee totals)
+
+### ✅ React Query Hooks (`frontend/src/hooks/usePOSBilling.ts`)
+- `useActiveSession` — fetch open pos_session for staff+branch
+- `useOpenSession` — insert new pos_sessions row
+- `useSessionBills` — fetch all bills for a session
+- `useShiftBillCounts` — counts per payment mode (cash/upi/postpaid/complimentary/delivery)
+- `useSaveBill` — insert bills + bill_items + postpaid_entries (auto-increment outstanding balance)
+- `useCloseSession` — compute cash discrepancy vs declared, update pos_sessions, insert cash_discrepancy, fire WhatsApp alert (amber/red)
+- `usePOSItemsForBilling` — branch-filtered active items; caches to localStorage for offline
+- `usePostPaidCustomersForBranch` — active postpaid customers for bill dialog
+- `useUpdatePOSItemPrice` — price change with pos_item_price_history audit row
+- Offline queue helpers: `enqueueBill`, `getQueuedBills`, `dequeueBill`, `clearBillQueue`, `getQueuedBillCount`
+- `usePOSDaySummary` — daily totals by payment mode for Daily Sales Summary billed_sales column
+
+### ✅ TypeScript Types (`frontend/src/types/phase12.ts`)
+- POSSession, Bill, BillItem, SaveBillPayload, ShiftBillCounts, PaymentMode
+
+### ✅ Payment Modes (5)
+- **Cash** — direct save + bill reset
+- **UPI** — direct save + bill reset
+- **Post-paid** — customer picker dialog (`data-testid^="postpaid-customer-"`) + auto-inserts postpaid_entries row
+- **Complimentary** — staff/others dialog (`data-testid="free-dialog"`) with free_staff / free_others comp_type
+- **Delivery** — Swiggy/Zomato dialog (`data-testid="delivery-dialog"`), KR only (hidden on C2)
+
+### ✅ Offline PWA Support
+- Service worker caches app shell (vite-plugin-pwa)
+- Bills queued in localStorage when offline; auto-sync on reconnect
+- Offline banner (`data-testid="offline-banner"`) shown when network lost
+- POS items served from localStorage placeholderData cache when offline
+
+### ✅ Dashboard & Navigation
+- `StaffDashboard.tsx` — Open POS card (`data-testid="open-pos-card"`) navigates to /pos
+- `SupervisorDashboard.tsx` — Open POS button (`data-testid="open-pos-btn"`) navigates to /pos
+- `App.tsx` — `/pos` route wired to POSShell (all roles)
+- `OwnerLayout.tsx` — POS link in owner sidebar
+
+### ✅ Reports Integration
+- `useDailySalesSummary.ts` — billed_sales column now populated from `usePOSDaySummary`
+- Daily Sales Summary table shows cash/UPI/swiggy/zomato/postpaid breakdown from bills table
+
+### ✅ Admin Settings POS Configuration Tab
+- POS Items CRUD with price history on price change (useUpdatePOSItemPrice)
+- POS Categories CRUD
+- Post-Paid Customers config
+
+### ✅ E2E Tests (`tests/e2e/phase12.spec.ts`)
+- 30 tests passing (workers=1, retries=0): Auth (2), Branch Selection (2), Shift Management (3), Item Grid (3), Bill Panel (3), Payments (6), Shift Close (4), Offline (3), Post-paid (1), Dashboard Buttons (2), POS Price History (1)
+- Next migration: **019**
+
+---
+
+## What's NOT Built Yet (Phase 13 onwards)
 
 | Phase | Scope |
 |-------|-------|
-| 12 | POS / Billing PWA — KR 15" split + C2 7" bottom sheet, 5 payment modes, shift-wise sales |
 | 13–14 | Attendance + Payroll (schema ready, activates in ~2 years) |
 | 15 | Metabase BI — add container, connect to existing Postgres |
 
@@ -1009,7 +1075,7 @@ Branch: main
 ### Database Migrations
 - Numbered sequentially: 000, 001, 002...
 - NEVER modify existing migration files
-- Next migration for Phase 11: `017_phase11_additions.sql`
+- Next migration for Phase 13: `019_phase13_*.sql`
 - Track all migrations in `migrations_log` table
 - See `supabase/migrations/README.md` for full rules
 
