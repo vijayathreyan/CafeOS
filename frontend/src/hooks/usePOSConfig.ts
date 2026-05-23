@@ -49,9 +49,10 @@ export function useCreatePOSItem() {
         name_ta: payload.name_ta ?? null,
         category_id: payload.category_id ?? null,
         selling_price: payload.selling_price,
-        active_kr: payload.active_kr,
-        active_c2: payload.active_c2,
+        branch_kr: payload.branch_kr,
+        branch_c2: payload.branch_c2,
         sort_order: payload.sort_order,
+        ml_per_serving: payload.ml_per_serving ?? null,
       })
       if (error) throw new Error(error.message)
     },

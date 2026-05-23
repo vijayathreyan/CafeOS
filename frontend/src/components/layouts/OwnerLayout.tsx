@@ -88,7 +88,6 @@ function useNavGroups(): NavGroup[] {
         },
         { label: t('nav.settings'), to: '/settings', icon: <Settings size={16} /> },
         { label: 'Alert Manager', to: '/settings/alerts', icon: <Bell size={16} /> },
-        { label: 'POS', to: '/pos', icon: <ShoppingCart size={16} /> },
       ],
     },
     {
@@ -124,6 +123,7 @@ function useNavGroups(): NavGroup[] {
         { label: 'Expenses', to: '/owner/expenses', icon: <Wallet size={16} /> },
         { label: 'Data Entry', to: '/owner/data-entry', icon: <Database size={16} /> },
         { label: 'Supervisor Float', to: '/owner/supervisor-float', icon: <Coins size={16} /> },
+        { label: 'POS Billing', to: '/pos', icon: <ShoppingCart size={16} /> },
       ],
     },
   ]

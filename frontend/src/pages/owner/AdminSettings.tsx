@@ -89,6 +89,7 @@ import {
   useCreatePostPaidCustomer,
   useUpdatePostPaidCustomer,
 } from '@/hooks/usePOSConfig'
+import { useUpdatePOSItemPrice } from '@/hooks/usePOSBilling'
 import {
   useMonthEndStockConfig,
   useCreateMonthEndStockItem,
@@ -970,6 +971,7 @@ type POSItemForm = z.infer<typeof posItemSchema>
 
 function POSItemsSection({ session }: { session: boolean }) {
   const { toast } = useToast()
+  const { user } = useAuth()
   const [drawer, setDrawer] = useState<{ open: boolean; item: POSItem | null }>({
     open: false,
     item: null,
@@ -977,6 +979,7 @@ function POSItemsSection({ session }: { session: boolean }) {
   const { data: rows, isLoading } = usePOSItems(session)
   const createMut = useCreatePOSItem()
   const updateMut = useUpdatePOSItem()
+  const updatePriceMut = useUpdatePOSItemPrice()
 
   const form = useForm<POSItemForm>({
     resolver: zodResolver(posItemSchema) as unknown as Resolver<POSItemForm>,
@@ -1009,13 +1012,39 @@ function POSItemsSection({ session }: { session: boolean }) {
         variant: 'destructive',
       })
     }
-    if (drawer.item)
-      updateMut.mutate({ id: drawer.item.id, ...vals }, { onSuccess: done, onError: err })
-    else
+    if (drawer.item) {
+      const priceChanged = vals.selling_price !== drawer.item.selling_price
+      if (priceChanged && user) {
+        // Record price history when price changes
+        updatePriceMut.mutate(
+          {
+            itemId: drawer.item.id,
+            oldPrice: drawer.item.selling_price,
+            newPrice: vals.selling_price,
+            changedBy: user.id,
+          },
+          {
+            onSuccess: () => {
+              // Then update the rest of the fields
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const { selling_price: _sp, ...otherVals } = vals
+              updateMut.mutate(
+                { id: drawer.item!.id, ...otherVals },
+                { onSuccess: done, onError: err }
+              )
+            },
+            onError: err,
+          }
+        )
+      } else {
+        updateMut.mutate({ id: drawer.item.id, ...vals }, { onSuccess: done, onError: err })
+      }
+    } else {
       createMut.mutate(
-        { ...vals, active_kr: true, active_c2: true },
+        { ...vals, branch_kr: true, branch_c2: true },
         { onSuccess: done, onError: err }
       )
+    }
   }
 
   const cols: ColumnDef<POSItem>[] = [
@@ -1036,8 +1065,8 @@ function POSItemsSection({ session }: { session: boolean }) {
       header: 'KR',
       accessor: (r) => (
         <ActiveSwitch
-          checked={r.active_kr}
-          onToggle={(v) => updateMut.mutate({ id: r.id, active_kr: v })}
+          checked={r.branch_kr}
+          onToggle={(v) => updateMut.mutate({ id: r.id, branch_kr: v })}
         />
       ),
     },
@@ -1045,8 +1074,8 @@ function POSItemsSection({ session }: { session: boolean }) {
       header: 'C2',
       accessor: (r) => (
         <ActiveSwitch
-          checked={r.active_c2}
-          onToggle={(v) => updateMut.mutate({ id: r.id, active_c2: v })}
+          checked={r.branch_c2}
+          onToggle={(v) => updateMut.mutate({ id: r.id, branch_c2: v })}
         />
       ),
     },

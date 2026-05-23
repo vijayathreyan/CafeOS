@@ -60,7 +60,7 @@ export interface DailySalesSummaryRow {
   total_postpaid: number
   sales_from_collection: number
   total_shop_sales: number
-  billed_sales: null
+  billed_sales: number | null
   difference_amount: null
   cash_deposited: number | null
   remarks: string | null

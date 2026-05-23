@@ -47,7 +47,7 @@ export function useDailySalesSummary(branch: PLBranch, month: Date) {
       const allDeIds = (dailyEntries ?? []).map((d) => d.id as string)
 
       // Parallel bulk fetches
-      const [cashRes, expenseRes, postpaidRes, upiRes, depositRes] = await Promise.all([
+      const [cashRes, expenseRes, postpaidRes, upiRes, depositRes, posRes] = await Promise.all([
         // Cash entries (denomination totals) — sum per daily_entry_id
         allDeIds.length > 0
           ? supabase
@@ -82,6 +82,13 @@ export function useDailySalesSummary(branch: PLBranch, month: Date) {
           .select('rows')
           .gte('deposit_date', firstDay)
           .lte('deposit_date', lastDay),
+        // POS bills — total per date+branch (Phase 12)
+        supabase
+          .from('bills')
+          .select('bill_date, branch, total_amount')
+          .in('branch', branches)
+          .gte('bill_date', firstDay)
+          .lte('bill_date', lastDay),
       ])
 
       // Build lookup maps for fast access
@@ -122,6 +129,13 @@ export function useDailySalesSummary(branch: PLBranch, month: Date) {
       for (const u of upiRes.data ?? []) {
         const key = `${u.entry_date}:${u.branch}`
         upiByDateBranch.set(key, u.upi_total !== null ? Number(u.upi_total) : null)
+      }
+
+      // POS bills: sum total_amount per date+branch
+      const posByDateBranch = new Map<string, number>()
+      for (const bill of posRes.data ?? []) {
+        const key = `${bill.bill_date}:${bill.branch}`
+        posByDateBranch.set(key, (posByDateBranch.get(key) ?? 0) + Number(bill.total_amount))
       }
 
       // Cash deposits: flatten JSONB rows into date+branch → amount
@@ -207,7 +221,7 @@ export function useDailySalesSummary(branch: PLBranch, month: Date) {
             total_postpaid: totalPostpaid,
             sales_from_collection: salesFromCollection,
             total_shop_sales: totalShopSales,
-            billed_sales: null,
+            billed_sales: posByDateBranch.get(key) ?? null,
             difference_amount: null,
             cash_deposited: cashDeposited,
             remarks: de?.notes ?? null,

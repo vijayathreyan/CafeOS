@@ -17,7 +17,15 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { ChevronDown, Banknote, ClipboardList, Package, Receipt, ArrowRight } from 'lucide-react'
+import {
+  ChevronDown,
+  Banknote,
+  ClipboardList,
+  Package,
+  Receipt,
+  ArrowRight,
+  ShoppingCart,
+} from 'lucide-react'
 import StatusBadge from '@/components/ui/StatusBadge'
 import PageContainer from '@/components/layouts/PageContainer'
 import PageHeader from '@/components/layouts/PageHeader'
@@ -117,6 +125,37 @@ export default function SupervisorDashboard() {
           >
             <Banknote size={24} style={{ color: 'var(--color-info)' }} />
           </div>
+        </div>
+      </SectionCard>
+
+      {/* Open POS — prominent primary button */}
+      <SectionCard className="mb-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'var(--text-lg)',
+                fontWeight: 'var(--font-semibold)',
+                color: 'var(--gray-900)',
+                margin: 0,
+              }}
+            >
+              POS Billing
+            </h2>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', marginTop: '2px' }}>
+              Open the point of sale to start billing
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate('/pos')}
+            className="w-full sm:w-auto"
+            style={{ gap: '6px' }}
+            data-testid="open-pos-btn"
+          >
+            <ShoppingCart size={16} />
+            Open POS
+          </Button>
         </div>
       </SectionCard>
 

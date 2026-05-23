@@ -70,10 +70,13 @@ export interface POSItem {
   name_ta: string | null
   category_id: string | null
   selling_price: number
-  active_kr: boolean
-  active_c2: boolean
+  branch_kr: boolean
+  branch_c2: boolean
   image_url: string | null
   sort_order: number
+  active: boolean
+  ml_per_serving: number | null
+  updated_at: string | null
   created_at: string
 }
 
@@ -176,12 +179,15 @@ export interface CreatePOSItemPayload {
   name_ta?: string
   category_id?: string
   selling_price: number
-  active_kr: boolean
-  active_c2: boolean
+  branch_kr: boolean
+  branch_c2: boolean
   sort_order: number
+  ml_per_serving?: number
 }
 
-export type UpdatePOSItemPayload = { id: string } & Partial<CreatePOSItemPayload>
+export type UpdatePOSItemPayload = { id: string } & Partial<
+  CreatePOSItemPayload & { active: boolean; selling_price: number }
+>
 
 export interface CreatePOSCategoryPayload {
   name_en: string

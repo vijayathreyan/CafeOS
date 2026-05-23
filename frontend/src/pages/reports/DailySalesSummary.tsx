@@ -597,7 +597,7 @@ export default function DailySalesSummary() {
           <span
             style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--gray-500)' }}
           >
-            {DASH} = not yet entered · Billed Sales available after Phase 12 (POS)
+            {DASH} = not yet entered · Billed Sales from POS (live from Phase 12)
           </span>
         </div>
       </div>

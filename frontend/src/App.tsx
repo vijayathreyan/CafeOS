@@ -57,8 +57,8 @@ import ExpenseReport from './pages/owner/reports/ExpenseReport'
 // Phase 8 — P&L Report + Daily Sales Summary
 import PLReport from './pages/reports/PLReport'
 import DailySalesSummary from './pages/reports/DailySalesSummary'
-// Phase 11 — POS Placeholder
-import POSPage from './pages/pos/POSPage'
+// Phase 12 — POS Billing PWA
+import POSShell from './pages/pos/POSShell'
 
 function AuthLoadingScreen() {
   return (
@@ -102,6 +102,9 @@ function AppRouter() {
           </ProtectedRoute>
         }
       />
+
+      {/* Phase 12 — POS runs fullscreen outside Layout (own top bar + no sidebar/bottom nav) */}
+      <Route path="/pos" element={<POSShell />} />
 
       {/* Protected layout routes */}
       <Route
@@ -492,16 +495,6 @@ function AppRouter() {
           element={
             <ProtectedRoute allowedRoles={['owner']}>
               <ShiftCashReport />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Phase 11 — POS Placeholder */}
-        <Route
-          path="/pos"
-          element={
-            <ProtectedRoute>
-              <POSPage />
             </ProtectedRoute>
           }
         />
