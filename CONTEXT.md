@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 12 complete (POS Billing PWA — KR split layout + C2 bottom sheet + 5 payment modes + shift close + offline support)
+**Build Phase:** Phase 12B complete (Real-time owner dashboard + intraday sales chart + sidebar reorganisation)
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -1003,6 +1003,48 @@ When Phase 10 is built, the Alert Manager MUST implement:
 ### ✅ E2E Tests (`tests/e2e/phase12.spec.ts`)
 - 30 tests passing (workers=1, retries=0): Auth (2), Branch Selection (2), Shift Management (3), Item Grid (3), Bill Panel (3), Payments (6), Shift Close (4), Offline (3), Post-paid (1), Dashboard Buttons (2), POS Price History (1)
 - Next migration: **019**
+
+---
+
+## What Was Built in Phase 12B
+
+### ✅ Sidebar Reorganisation (`frontend/src/components/layouts/OwnerLayout.tsx`)
+- 6 sections: CORE (Dashboard, POS Billing), PEOPLE (Employees, Tasks), FINANCIALS (P&L, Daily Sales, Vendor Payments, Expenses, Post-paid, Supervisor Float), REPORTS (10 items incl. Alert Log), INVENTORY (Item Master, Vendor Master), SETTINGS (Admin Settings, Alert Manager)
+- Badges: Tasks (pending count), Cash Discrepancy (unacknowledged red count)
+- User footer: avatar initials + full name + role chip + logout
+- Mobile: hamburger → Sheet drawer; sidebar hidden on <768px
+
+### ✅ Real-time Owner Dashboard (`frontend/src/pages/owner/OwnerDashboard.tsx`)
+- 10 independent sections (A–J), each with own loading skeleton and error boundary
+- Section A: Live Today Strip — KR and C2 branch cards, 60s auto-refresh
+- Section B: Money at a Glance — Today vs Same Day Last Week chart + Cash Flow breakdown
+- Section C: Post-Paid Outstanding
+- Section D: Active Alerts (hidden when no unacknowledged alerts)
+- Section E: Branch Operations Status — shift open, data entry, month-end stock, last deposit, reconciliation
+- Section F: Intraday Sales chart with branch toggle (KR/C2/Both) and date picker (historical mode)
+- Section G: Weekly Sales Trend chart (current week vs previous week)
+- Section H: Top Items This Week
+- Section I: Vendor Payments Due
+- Section J: Tasks Summary + Reconciliation Week dot grid
+- "Updated N mins ago" staleness indicator (turns amber after 3 min)
+- Removed orphaned "Stock Configuration" tile
+
+### ✅ 7 New Data Hooks (`frontend/src/hooks/`)
+- `useDashboardLiveTotals` — bills+sessions for branch+date, 60s refresh
+- `useBranchOperationsStatus` — 5 parallel queries (shift, entry, stock, deposit, recon), 60s refresh
+- `useIntradaySales` — hourly aggregation (JS-side), 60s if today, false if historical
+- `useWeeklySalesTrend` — current+prev week comparison, 5min refresh
+- `useActiveAlerts` — unacknowledged cash_discrepancy alerts, 60s refresh
+- `useTopItemsThisWeek` — top 8 items by revenue, 5min refresh
+- `useVendorPaymentsDue` — upcoming/overdue vendor cycles, 5min refresh
+
+### ✅ Alert Log Report (`frontend/src/pages/reports/AlertLogReport.tsx`)
+- Page at `/reports/alert-log` (owner-only)
+- Date range filters (from/to), table with trigger_event, recipient, message, delivery status
+- Color-coded status badges (sent=green, failed=red, pending=amber)
+
+### ✅ E2E Tests (`tests/e2e/phase12b.spec.ts`)
+- 28 tests passing (workers=1, retries=0): Dashboard sections (16), Sidebar groups (6), Mobile (2), Badges (2), Active state (1), Access control (1)
 
 ---
 
