@@ -159,23 +159,13 @@ export function useSaveBill() {
         if (itemsErr) throw new Error(itemsErr.message)
       }
 
-      // Auto-increment postpaid customer balance via postpaid_entries
-      if (payload.payment_mode === 'postpaid' && payload.postpaid_customer_id) {
-        await supabase.from('postpaid_entries').insert({
-          customer_id: payload.postpaid_customer_id,
-          customer_name: payload.postpaid_customer_name ?? '',
-          shift1_amount: payload.total_amount,
-          shift2_amount: 0,
-          daily_total: payload.total_amount,
-        })
-      }
-
       return billId
     },
     {
       onSuccess: (_, vars) => {
         qc.invalidateQueries(['pos_session_bills', vars.session_id])
         qc.invalidateQueries('postpaid_customers')
+        qc.invalidateQueries('postpaid_balances')
       },
     }
   )
