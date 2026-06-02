@@ -4,7 +4,7 @@
 
 **Project:** Unlimited Food Works — Internal Operations Web Application
 **Document Version:** v3.6 Final (March 2026)
-**Build Phase:** Phase 12B complete (Real-time owner dashboard + intraday sales chart + sidebar reorganisation)
+**Build Phase:** Phase 13 complete (Post-paid pipeline fix + month-wise ledger + milk report packet tracking)
 **Owner:** Vijay Athreyan (vijayathreyan) & Jhanani (co-owners)
 **Repository:** https://github.com/vijayathreyan/CafeOS
 
@@ -1048,12 +1048,48 @@ When Phase 10 is built, the Alert Manager MUST implement:
 
 ---
 
-## What's NOT Built Yet (Phase 13 onwards)
+## What Was Built in Phase 13
+
+### ✅ Fix 1 — Post-Paid Pipeline (`frontend/src/hooks/usePostPaidCustomers.ts`, `usePOSBilling.ts`)
+- `usePostPaidBalances` now queries BOTH `postpaid_entries` AND `bills` (payment_mode='postpaid') for total credit
+- Removed dead `postpaid_entries` insert from POS billing (was silently failing — daily_entry_id NOT NULL)
+- `useSaveBill.onSuccess` now invalidates `postpaid_balances` so dashboard and customers page refresh after POS bill
+- Dashboard Post-Paid Outstanding card automatically reflects POS post-paid bills
+
+### ✅ Fix 2 — Post-Paid Month-wise Ledger (`019_phase13_postpaid_monthly.sql`, PostPaidCustomersPage.tsx)
+- Migration 019: added `payment_month DATE` to `postpaid_payments`; added `postpaid_monthly_summary` table
+- New `usePostPaidMonthlyData` hook — computes month-wise credit/paid/outstanding/status per customer in JS
+- PostPaidCustomersPage redesigned: collapsible customer cards, month-wise DataTable per customer
+- Status chips: Settled (green) / Partial (amber) / Advance (blue) / Overdue (red)
+- Record Payment → Sheet drawer with month picker (oldest outstanding month default), Cash/UPI/Bank Transfer
+
+### ✅ Fix 3 — Milk Report Packet Tracking (`MilkReport.tsx`, `useReports.ts`, `phase7.ts`)
+- Added Opening Balance, Bought, Used, Remaining columns (from stock_entries item_name='Milk')
+- Per-branch carry-forward: separate running balance for KR and C2 when branch='all'
+- Pre-range opening balance via reliable 2-step query (no unreliable PostgREST embedded filters)
+- New KPI cards: Total Bought, Total Used, Closing Remaining
+- PDF/Excel exports updated with all 4 new columns (13 columns total)
+
+### ✅ Alert Log Test Data
+- 5 rows inserted into alert_log: cash_discrepancy_amber, reconciliation_red, vendor_payment_marked_paid, task_assigned, month_end_stock_not_submitted
+- delivery_status values: sent (3), failed (1), pending (1)
+- testids added to AlertLogReport: alert-log-table, filter-from-date, filter-to-date, status-{id}
+
+### ✅ E2E Tests (`tests/e2e/phase13.spec.ts`)
+- 13 tests passing (workers=1, retries=0): Post-Paid (5), Dashboard (1), Milk Report (4), Alert Log (3)
+- 448 total tests passing, 2 skipped, 0 failed
+- Pre-existing Phase 12B regressions fixed (22 tests): dashboard tile navigation → direct URL, strict mode violations, POS placeholder updates
+
+### ✅ Next migration: **020**
+
+---
+
+## What's NOT Built Yet (Phase 14 onwards)
 
 | Phase | Scope |
 |-------|-------|
-| 13–14 | Attendance + Payroll (schema ready, activates in ~2 years) |
-| 15 | Metabase BI — add container, connect to existing Postgres |
+| 14–15 | Attendance + Payroll (schema ready, activates in ~2 years) |
+| 16 | Metabase BI — add container, connect to existing Postgres |
 
 ---
 
@@ -1117,7 +1153,7 @@ Branch: main
 ### Database Migrations
 - Numbered sequentially: 000, 001, 002...
 - NEVER modify existing migration files
-- Next migration for Phase 13: `019_phase13_*.sql`
+- Next migration for Phase 14: `020_phase14_*.sql`
 - Track all migrations in `migrations_log` table
 - See `supabase/migrations/README.md` for full rules
 
