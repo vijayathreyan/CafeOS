@@ -52,6 +52,7 @@ export default function AlertLogReport() {
               value={fromDate}
               max={toDate}
               onChange={(e) => setFromDate(e.target.value)}
+              data-testid="filter-from-date"
               style={{
                 fontFamily: 'var(--font-body)',
                 fontSize: 13,
@@ -81,6 +82,7 @@ export default function AlertLogReport() {
               min={fromDate}
               max={today}
               onChange={(e) => setToDate(e.target.value)}
+              data-testid="filter-to-date"
               style={{
                 fontFamily: 'var(--font-body)',
                 fontSize: 13,
@@ -130,6 +132,7 @@ export default function AlertLogReport() {
           <SectionCard padding="none">
             <div style={{ overflowX: 'auto' }}>
               <table
+                data-testid="alert-log-table"
                 style={{
                   width: '100%',
                   borderCollapse: 'collapse',
@@ -219,6 +222,7 @@ export default function AlertLogReport() {
                       </td>
                       <td style={{ padding: '10px 16px' }}>
                         <span
+                          data-testid={`status-${log.id}`}
                           style={{
                             fontFamily: 'var(--font-body)',
                             fontSize: 11,

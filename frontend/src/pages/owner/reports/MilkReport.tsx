@@ -303,18 +303,21 @@ export default function MilkReport() {
           value={String(Math.round(totalBought)) + ' pkts'}
           subtitle="Packets purchased"
           status="info"
+          data-testid="kpi-total-bought"
         />
         <KPICard
           title="Total Used"
           value={String(Math.round(totalUsed)) + ' pkts'}
           subtitle="Packets consumed"
           status="success"
+          data-testid="kpi-total-used"
         />
         <KPICard
           title="Closing Remaining"
           value={String(Math.round(closingRemaining)) + ' pkts'}
           subtitle="End of period stock"
           status="none"
+          data-testid="kpi-closing-remaining"
         />
       </div>
 
@@ -322,7 +325,7 @@ export default function MilkReport() {
       <ReportFilterBar filters={filters} onChange={setFilters} count={rows?.length} />
 
       {/* Table */}
-      <SectionCard padding="none">
+      <SectionCard padding="none" data-testid="milk-table">
         {isLoading ? (
           <div style={{ padding: 'var(--space-4)' }}>
             <TableSkeleton cols={13} />
