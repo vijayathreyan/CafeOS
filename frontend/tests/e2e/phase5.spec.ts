@@ -302,6 +302,10 @@ test.describe('Post-Paid Customers — Page', () => {
     await page.goto('/owner/postpaid-customers')
     await page.waitForSelector('[data-testid="customer-list"]', { timeout: 12000 })
 
+    // Expand the first collapsible card to reveal the Record Payment button
+    await page.locator('[data-testid^="customer-ledger-"]').first().click()
+    await page.waitForSelector('[data-testid^="btn-record-payment-"]', { timeout: 5000 })
+
     // At least one Record Payment button per customer
     const payBtns = page.locator('[data-testid^="btn-record-payment-"]')
     await expect(payBtns.first()).toBeVisible()
@@ -311,6 +315,10 @@ test.describe('Post-Paid Customers — Page', () => {
     await loginAsOwner(page)
     await page.goto('/owner/postpaid-customers')
     await page.waitForSelector('[data-testid="customer-list"]', { timeout: 12000 })
+
+    // Expand the first collapsible card before clicking Record Payment
+    await page.locator('[data-testid^="customer-ledger-"]').first().click()
+    await page.waitForSelector('[data-testid^="btn-record-payment-"]', { timeout: 5000 })
 
     // Click first Record Payment button
     await page.locator('[data-testid^="btn-record-payment-"]').first().click()
@@ -327,12 +335,16 @@ test.describe('Post-Paid Customers — Page', () => {
     await page.goto('/owner/postpaid-customers')
     await page.waitForSelector('[data-testid="customer-list"]', { timeout: 12000 })
 
+    // Expand the first collapsible card before clicking Record Payment
+    await page.locator('[data-testid^="customer-ledger-"]').first().click()
+    await page.waitForSelector('[data-testid^="btn-record-payment-"]', { timeout: 5000 })
+
     await page.locator('[data-testid^="btn-record-payment-"]').first().click()
     await page.waitForSelector('[data-testid="input-payment-amount"]', { timeout: 5000 })
 
     // Submit without amount
     await page.locator('[data-testid="btn-save-payment"]').click()
-    await expect(page.locator('p:has-text("Amount is required")')).toBeVisible({ timeout: 3000 })
+    await expect(page.locator('p:has-text("Enter a valid amount")')).toBeVisible({ timeout: 3000 })
   })
 
   test('Record Payment saves and shows success', async ({ page }) => {
@@ -340,6 +352,10 @@ test.describe('Post-Paid Customers — Page', () => {
     await loginAsOwner(page)
     await page.goto('/owner/postpaid-customers')
     await page.waitForSelector('[data-testid="customer-list"]', { timeout: 12000 })
+
+    // Expand the first collapsible card before clicking Record Payment
+    await page.locator('[data-testid^="customer-ledger-"]').first().click()
+    await page.waitForSelector('[data-testid^="btn-record-payment-"]', { timeout: 5000 })
 
     // Open dialog for first customer
     await page.locator('[data-testid^="btn-record-payment-"]').first().click()

@@ -1,10 +1,6 @@
 import React, { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import {
-  usePostPaidBalances,
-  usePostPaidMonthlyData,
-  useRecordPostPaidPayment,
-} from '../../hooks/usePostPaidCustomers'
+import { usePostPaidMonthlyData, useRecordPostPaidPayment } from '../../hooks/usePostPaidCustomers'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,7 +22,7 @@ function todayStr() {
 }
 
 function formatCurrency(n: number) {
-  return `₹${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function firstOfCurrentMonth(): string {
@@ -140,7 +136,7 @@ function RecordPaymentSheet({ open, onClose, customerData }: PaymentSheetProps) 
               className={`font-semibold ${customerData.overall_outstanding > 0 ? 'text-destructive' : 'text-green-600'}`}
             >
               {customerData.overall_outstanding < 0
-                ? `+${formatCurrency(customerData.overall_outstanding)} advance`
+                ? `+${formatCurrency(Math.abs(customerData.overall_outstanding))} advance`
                 : formatCurrency(customerData.overall_outstanding)}
             </span>
           </div>
@@ -159,6 +155,7 @@ function RecordPaymentSheet({ open, onClose, customerData }: PaymentSheetProps) 
               onChange={(e) => setAmount(e.target.value)}
               className="mt-1"
               placeholder="0.00"
+              data-testid="input-payment-amount"
             />
             {amountError && <p className="text-destructive text-xs mt-1">{amountError}</p>}
           </div>
@@ -183,6 +180,7 @@ function RecordPaymentSheet({ open, onClose, customerData }: PaymentSheetProps) 
               value={paymentMonth}
               onChange={(e) => setPaymentMonth(e.target.value)}
               className={selectCls}
+              data-testid="select-payment-month"
             >
               {!hasCurrentMonth && <option value={currentFOM}>{currentML} (current month)</option>}
               {outstandingMonths.map((m) => (
@@ -203,6 +201,7 @@ function RecordPaymentSheet({ open, onClose, customerData }: PaymentSheetProps) 
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'upi' | 'bank_transfer')}
               className={selectCls}
+              data-testid="select-payment-method"
             >
               <option value="cash">Cash</option>
               <option value="upi">UPI</option>
@@ -225,7 +224,12 @@ function RecordPaymentSheet({ open, onClose, customerData }: PaymentSheetProps) 
           <Button type="button" variant="outline" onClick={handleClose} disabled={submitting}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleSave} disabled={submitting}>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={submitting}
+            data-testid="btn-save-payment"
+          >
             {submitting ? 'Saving...' : 'Save Payment'}
           </Button>
         </SheetFooter>
@@ -242,7 +246,7 @@ function MonthTable({ months }: { months: MonthlyRow[] }) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto" data-testid="month-table">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-muted-foreground">
@@ -279,7 +283,7 @@ function MonthTable({ months }: { months: MonthlyRow[] }) {
                   {row.outstanding === 0
                     ? '—'
                     : row.outstanding < 0
-                      ? `+${formatCurrency(row.outstanding)}`
+                      ? `+${formatCurrency(Math.abs(row.outstanding))}`
                       : formatCurrency(row.outstanding)}
                 </span>
               </td>
@@ -313,6 +317,15 @@ function CustomerLedgerCard({ customerData }: { customerData: CustomerMonthlyDat
         <div
           className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors select-none"
           onClick={() => setExpanded((v) => !v)}
+          role="button"
+          tabIndex={0}
+          data-testid={`customer-ledger-${customer.name.toLowerCase()}`}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              setExpanded((v) => !v)
+            }
+          }}
         >
           <div className="flex items-center gap-3 min-w-0">
             <span className="font-semibold text-foreground truncate">{customer.name}</span>
@@ -333,13 +346,19 @@ function CustomerLedgerCard({ customerData }: { customerData: CustomerMonthlyDat
               {overall_outstanding === 0
                 ? 'Settled'
                 : overall_outstanding < 0
-                  ? `+${formatCurrency(overall_outstanding)} advance`
+                  ? `+${formatCurrency(Math.abs(overall_outstanding))} advance`
                   : formatCurrency(overall_outstanding)}
             </span>
             {expanded ? (
-              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              <ChevronUp
+                className="w-4 h-4 text-muted-foreground"
+                data-testid={`expand-${customer.name.toLowerCase()}`}
+              />
             ) : (
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              <ChevronDown
+                className="w-4 h-4 text-muted-foreground"
+                data-testid={`expand-${customer.name.toLowerCase()}`}
+              />
             )}
           </div>
         </div>
@@ -382,17 +401,16 @@ function CustomerLedgerCard({ customerData }: { customerData: CustomerMonthlyDat
 export default function PostPaidCustomersPage() {
   const { user } = useAuth()
 
-  const { data: balances = [], isLoading: balancesLoading } = usePostPaidBalances(!!user)
-  const { data: monthlyData = [], isLoading: monthlyLoading } = usePostPaidMonthlyData(!!user)
+  const { data: monthlyData, isLoading } = usePostPaidMonthlyData(!!user)
 
-  const isLoading = balancesLoading || monthlyLoading
-
-  const totalOutstanding = balances.reduce((s, b) => s + Math.max(b.outstanding, 0), 0)
-
-  const overdueCount = monthlyData.reduce(
-    (s, cd) => s + (cd.months.some((m) => m.status === 'overdue') ? 1 : 0),
+  const totalOutstanding = (monthlyData ?? []).reduce(
+    (s, c) => s + Math.max(c.overall_outstanding, 0),
     0
   )
+
+  const overdueCount = (monthlyData ?? []).filter(
+    (c) => c.overall_outstanding > 0 && c.months.some((m) => m.status === 'overdue')
+  ).length
 
   return (
     <PageContainer data-testid="postpaid-customers-page">
@@ -401,7 +419,7 @@ export default function PostPaidCustomersPage() {
         subtitle="Month-wise credit ledger · KR &amp; C2 branches"
       />
 
-      {!isLoading && balances.length > 0 && (
+      {!isLoading && (monthlyData ?? []).length > 0 && (
         <div className="grid grid-cols-2 gap-3 mb-6">
           <KPICard
             title="Total Outstanding"
@@ -422,7 +440,7 @@ export default function PostPaidCustomersPage() {
 
       {isLoading ? (
         <CardGridSkeleton />
-      ) : monthlyData.length === 0 ? (
+      ) : (monthlyData ?? []).length === 0 ? (
         <EmptyState
           icon={IndianRupee}
           title="No post-paid customers"
@@ -430,7 +448,7 @@ export default function PostPaidCustomersPage() {
         />
       ) : (
         <div className="space-y-3" data-testid="customer-list">
-          {monthlyData.map((cd) => (
+          {(monthlyData ?? []).map((cd) => (
             <CustomerLedgerCard key={cd.customer.id} customerData={cd} />
           ))}
         </div>

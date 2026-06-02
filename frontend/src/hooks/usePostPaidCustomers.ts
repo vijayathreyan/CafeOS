@@ -189,8 +189,18 @@ export function useRecordPostPaidPayment() {
 
 // ─── Month-wise helpers ───────────────────────────────────────────────────────
 
-/** Returns 'YYYY-MM-DD' for the first day of the month containing the given date string. */
+/**
+ * Returns 'YYYY-MM-DD' for the first day of the month.
+ * When given a plain DATE string like '2026-05-15', uses the first 7 chars to
+ * avoid any UTC/local timezone shifting (timezone-safe path).
+ * When given a TIMESTAMPTZ string, falls back to UTC extraction.
+ */
 function firstOfMonth(dateStr: string): string {
+  // Plain DATE strings (YYYY-MM-DD) — timezone-safe: just slice
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr.substring(0, 7) + '-01'
+  }
+  // TIMESTAMPTZ fallback (used for bill_date and payment_date which may include time)
   const d = new Date(dateStr)
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`
 }
@@ -231,7 +241,7 @@ export function usePostPaidMonthlyData(session: boolean) {
         supabase.from('postpaid_customers').select('*').eq('active', true).order('name'),
         supabase
           .from('postpaid_entries')
-          .select('customer_id, daily_total, created_at')
+          .select('customer_id, daily_total, daily_entries!inner(entry_date)')
           .not('customer_id', 'is', null),
         supabase
           .from('postpaid_payments')
@@ -250,10 +260,12 @@ export function usePostPaidMonthlyData(session: boolean) {
       if (posBillsRes.error) throw new Error(posBillsRes.error.message)
 
       const customers = (customersRes.data ?? []) as PostPaidCustomer[]
-      const entries = (entriesRes.data ?? []) as {
+      // Supabase returns the inner-join relation as an object (not array) when using !inner.
+      // Cast via unknown to avoid the array-vs-object inference conflict.
+      const entries = (entriesRes.data ?? []) as unknown as {
         customer_id: string
         daily_total: number
-        created_at: string
+        daily_entries: { entry_date: string }
       }[]
       const payments = (paymentsRes.data ?? []) as {
         customer_id: string
@@ -268,10 +280,10 @@ export function usePostPaidMonthlyData(session: boolean) {
       }[]
 
       return customers.map((customer) => {
-        // Accumulate credit by month from entries
+        // Accumulate credit by month from entries (timezone-safe: use entry_date DATE field)
         const creditByMonth = new Map<string, number>()
         for (const e of entries.filter((x) => x.customer_id === customer.id)) {
-          const m = firstOfMonth(e.created_at)
+          const m = firstOfMonth(e.daily_entries.entry_date)
           creditByMonth.set(m, (creditByMonth.get(m) ?? 0) + (e.daily_total ?? 0))
         }
         // Accumulate credit by month from POS bills
