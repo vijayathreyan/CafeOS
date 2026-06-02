@@ -54,7 +54,11 @@ export default function MilkReport() {
   const dailyAvg = days > 0 ? totalMilk / days : 0
   const totalBought = (rows ?? []).reduce((s, r) => s + r.bought, 0)
   const totalUsed = (rows ?? []).reduce((s, r) => s + r.used, 0)
-  const closingRemaining = (rows ?? []).length > 0 ? (rows ?? [])[0].remaining : 0
+  // Fix 6: When branch='all', sum remaining across both branches for the latest date
+  const lastDate = (rows ?? [])[0]?.entry_date
+  const closingRemaining = lastDate
+    ? (rows ?? []).filter((r) => r.entry_date === lastDate).reduce((sum, r) => sum + r.remaining, 0)
+    : 0
 
   const branchStr =
     filters.branch === 'all' ? 'All Branches' : branchLabel(filters.branch as 'KR' | 'C2')

@@ -28,6 +28,48 @@ async function fetchDailyEntryIds(filters: ReportFilters) {
   return data ?? []
 }
 
+/**
+ * Fetches the most recent closing stock for 'Milk' before a given date, per branch.
+ * Uses a reliable 2-step approach (consistent with fetchDailyEntryIds pattern) instead
+ * of PostgREST embedded-filter dot-notation which is unreliable for ordering/filtering.
+ *
+ * @param fromDate - ISO date string; we want entries strictly before this date
+ * @param branch - 'all' | 'KR' | 'C2'
+ * @returns Record mapping branch name to its prior closing stock (0 if none found)
+ */
+async function fetchPriorClosingStock(
+  fromDate: string,
+  branch: string
+): Promise<Record<string, number>> {
+  const branches = branch === 'all' ? ['KR', 'C2'] : [branch]
+  const result: Record<string, number> = {}
+
+  for (const br of branches) {
+    const { data: priorEntries } = await supabase
+      .from('daily_entries')
+      .select('id')
+      .eq('branch', br)
+      .lt('entry_date', fromDate)
+      .order('entry_date', { ascending: false })
+      .limit(5)
+
+    if (priorEntries?.length) {
+      const priorIds = priorEntries.map((e) => e.id)
+      const { data: stockRows } = await supabase
+        .from('stock_entries')
+        .select('closing_stock, daily_entry_id')
+        .eq('item_name', 'Milk')
+        .in('daily_entry_id', priorIds)
+        .limit(1)
+      result[br] = Number(stockRows?.[0]?.closing_stock ?? 0)
+    } else {
+      result[br] = 0
+    }
+  }
+
+  return result
+}
+
 // ─── Milk Report ─────────────────────────────────────────────────────────────
 
 /**
@@ -54,7 +96,7 @@ export function useMilkReport(filters: ReportFilters) {
             .in('daily_entry_id', ids),
           supabase
             .from('stock_entries')
-            .select('daily_entry_id, opening_stock, purchase, closing_stock')
+            .select('daily_entry_id, purchase, closing_stock')
             .in('daily_entry_id', ids)
             .eq('item_name', 'Milk'),
         ])
@@ -62,36 +104,22 @@ export function useMilkReport(filters: ReportFilters) {
       if (milkError) throw new Error(milkError.message)
       if (stockError) throw new Error(stockError.message)
 
-      let priorQuery = supabase
-        .from('stock_entries')
-        .select('closing_stock, daily_entries!inner(entry_date, branch)')
-        .eq('item_name', 'Milk')
-        .lt('daily_entries.entry_date', filters.from_date)
-        .order('daily_entries.entry_date', { ascending: false })
-        .limit(1)
-      if (filters.branch !== 'all')
-        priorQuery = priorQuery.eq('daily_entries.branch', filters.branch)
-      const { data: priorData } = await priorQuery
-      const priorClosing = Number(priorData?.[0]?.closing_stock ?? 0)
+      // Fix 2+3: Per-branch prior closing stock via reliable 2-step query
+      const priorByBranch = await fetchPriorClosingStock(filters.from_date, filters.branch)
 
       const dailyMap = new Map(dailyEntries.map((d) => [d.id, d]))
 
-      const stockMap = new Map<
-        string,
-        { opening_stock: number; purchase: number; closing_stock: number }
-      >()
+      const stockMap = new Map<string, { purchase: number; closing_stock: number }>()
       for (const s of stockEntries ?? []) {
         const d = dailyMap.get(s.daily_entry_id)
         if (!d) continue
         const key = `${d.entry_date}:${d.branch}`
         const existing = stockMap.get(key)
         if (existing) {
-          existing.opening_stock += Number(s.opening_stock)
           existing.purchase += Number(s.purchase)
           existing.closing_stock += Number(s.closing_stock)
         } else {
           stockMap.set(key, {
-            opening_stock: Number(s.opening_stock),
             purchase: Number(s.purchase),
             closing_stock: Number(s.closing_stock),
           })
@@ -147,15 +175,19 @@ export function useMilkReport(filters: ReportFilters) {
         a.entry_date.localeCompare(b.entry_date)
       )
 
-      let runningBalance = priorClosing
+      // Fix 1: Per-branch running balance so KR and C2 don't pollute each other
+      const runningByBranch: Record<string, number> = {}
       for (const row of sortedAsc) {
-        const key = `${row.entry_date}:${row.branch}`
+        const br = row.branch
+        const key = `${row.entry_date}:${br}`
         const stock = stockMap.get(key)
-        row.opening_balance = runningBalance
+        const prior = runningByBranch[br] ?? priorByBranch[br] ?? 0
+        row.opening_balance = prior
         row.bought = stock?.purchase ?? 0
-        row.remaining = stock?.closing_stock ?? runningBalance + row.bought
-        row.used = row.opening_balance + row.bought - row.remaining
-        runningBalance = row.remaining
+        row.remaining = stock ? Number(stock.closing_stock) : prior + row.bought
+        // Fix 5: Clamp used to 0 to handle data entry errors
+        row.used = Math.max(0, row.opening_balance + row.bought - row.remaining)
+        runningByBranch[br] = row.remaining
       }
 
       return sortedAsc.sort((a, b) => b.entry_date.localeCompare(a.entry_date))
