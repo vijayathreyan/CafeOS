@@ -15,7 +15,9 @@ test.describe('Phase 11 — Admin Settings', () => {
   test('Admin Settings page loads with all 6 tabs visible', async ({ page }) => {
     await loginAsOwner(page)
     await page.goto('/settings')
-    await expect(page.getByText('Admin Settings')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: 'Admin Settings' })).toBeVisible({
+      timeout: 10000,
+    })
     await expect(page.getByRole('tab', { name: /Items.*Stock/i })).toBeVisible()
     await expect(page.getByRole('tab', { name: /Expenses.*Categories/i })).toBeVisible()
     await expect(page.getByRole('tab', { name: /POS Configuration/i })).toBeVisible()
@@ -274,7 +276,7 @@ test.describe('Phase 11 — Export Buttons', () => {
   test('Milk Report has PDF and Excel export buttons', async ({ page }) => {
     await loginAsOwner(page)
     await page.goto('/owner/reports/milk')
-    await expect(page.getByText('Milk Report')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: 'Milk Report' })).toBeVisible({ timeout: 10000 })
     await expect(page.getByRole('button', { name: /PDF/i })).toBeVisible({ timeout: 8000 })
     await expect(page.getByRole('button', { name: /Excel/i })).toBeVisible()
   })
@@ -310,7 +312,7 @@ test.describe('Phase 11 — Export Buttons', () => {
   test('PDF export on Milk Report triggers a download', async ({ page }) => {
     await loginAsOwner(page)
     await page.goto('/owner/reports/milk')
-    await expect(page.getByText('Milk Report')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: 'Milk Report' })).toBeVisible({ timeout: 10000 })
     const pdfBtn = page.getByRole('button', { name: /PDF/i })
     await expect(pdfBtn).toBeVisible({ timeout: 8000 })
     // If disabled (no data), just verify it's present
@@ -362,7 +364,7 @@ test.describe('Phase 11 — Mobile Optimisation', () => {
       expect(['auto', 'scroll']).toContain(overflow)
     } else {
       // Verify the settings page itself is responsive
-      await expect(page.getByText('Admin Settings')).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Admin Settings' })).toBeVisible()
     }
   })
 
@@ -385,7 +387,9 @@ test.describe('Phase 11 — Mobile Optimisation', () => {
     await page.setViewportSize({ width: 375, height: 812 })
     await loginAsOwner(page)
     await page.goto('/settings')
-    await expect(page.getByText('Admin Settings')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: 'Admin Settings' })).toBeVisible({
+      timeout: 10000,
+    })
     // All 6 tab triggers should be present (they wrap to multiple rows on mobile)
     const tabs = page.getByRole('tab')
     const count = await tabs.count()
@@ -393,19 +397,23 @@ test.describe('Phase 11 — Mobile Optimisation', () => {
   })
 })
 
-// ─── POS Placeholder Page ─────────────────────────────────────────────────────
+// ─── POS Page ─────────────────────────────────────────────────────────────────
 
-test.describe('Phase 11 — POS Placeholder', () => {
-  test('POS route renders placeholder page', async ({ page }) => {
+test.describe('Phase 11 — POS Page', () => {
+  test('POS route renders real POS billing interface (Phase 12 implemented)', async ({ page }) => {
     await loginAsOwner(page)
     await page.goto('/pos')
-    await expect(page.getByText(/Coming in Phase 12/i)).toBeVisible({ timeout: 10000 })
+    // Phase 12 implemented real POS — no longer a placeholder; verify page loads without crash
+    await page.waitForURL('**/pos', { timeout: 10000 })
+    await expect(page).toHaveURL(/.*pos.*/)
+    // Should not show "Coming in Phase 12" placeholder anymore
+    await expect(page.getByText(/Coming in Phase 12/i)).not.toBeVisible({ timeout: 5000 })
   })
 
-  test('Staff dashboard shows POS coming soon text', async ({ page }) => {
+  test('Staff dashboard POS card is present', async ({ page }) => {
     await loginAs(page, TEST_USERS.staff_kr)
     await page.waitForURL('**/staff-dashboard', { timeout: 12000 })
-    // POS card shows tooltip "Coming soon — Phase 12"
-    await expect(page.getByText('Coming soon — Phase 12').first()).toBeVisible({ timeout: 8000 })
+    // Phase 12 implemented real POS — POS card no longer shows "Coming soon — Phase 12"
+    await expect(page.locator('[data-testid="open-pos-card"]')).toBeVisible({ timeout: 8000 })
   })
 })

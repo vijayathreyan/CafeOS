@@ -30,8 +30,8 @@ test.describe('Phase 6 — Navigation', () => {
     page,
   }) => {
     await loginAsOwner(page)
-    await page.waitForSelector('h3:has-text("Month End Stock")', { timeout: 10000 })
-    await page.locator('h3:has-text("Month End Stock")').click()
+    // Navigate directly — the old dashboard tiles no longer exist (Phase 12B redesign)
+    await page.goto('/owner/reports/month-end-stock')
     await page.waitForURL('**/owner/reports/month-end-stock', { timeout: 8000 })
     await expect(page.locator('h1')).toContainText('Month End Stock')
   })

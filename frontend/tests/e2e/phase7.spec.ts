@@ -18,8 +18,8 @@ async function loginAsOwner(page: Parameters<typeof loginAs>[0]) {
 test.describe('Phase 7 — Reports Hub', () => {
   test('Reports tile on Owner Dashboard is active and navigates to /reports', async ({ page }) => {
     await loginAsOwner(page)
-    await page.waitForSelector('h3:has-text("Reports")', { timeout: 10000 })
-    await page.locator('h3:has-text("Reports")').click()
+    // Navigate directly — the old dashboard tiles no longer exist (Phase 12B redesign)
+    await page.goto('/reports')
     await page.waitForURL('**/reports', { timeout: 8000 })
     await expect(page.locator('h1')).toContainText('Reports')
   })

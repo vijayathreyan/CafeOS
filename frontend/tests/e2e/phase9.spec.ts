@@ -23,8 +23,10 @@ test.describe('Phase 9 — Supervisor Float rename', () => {
   test('Dashboard shows Supervisor Float tile (not Vasanth Float)', async ({ page }) => {
     await loginAsOwner(page)
     await page.goto('/dashboard')
-    await page.waitForSelector('h3:has-text("Supervisor Float")', { timeout: 10000 })
-    await expect(page.locator('h3:has-text("Supervisor Float")')).toBeVisible()
+    // Old dashboard tiles no longer exist (Phase 12B redesign) — verify sidebar link instead
+    await expect(page.locator('a[href="/supervisor-float"]').first()).toBeVisible({
+      timeout: 10000,
+    })
   })
 
   test('Supervisor Float page title reads Supervisor Float', async ({ page }) => {
@@ -44,7 +46,8 @@ test.describe('Phase 9 — Supervisor Float rename', () => {
   test('Sidebar shows Supervisor Float link', async ({ page }) => {
     await loginAsOwner(page)
     await page.goto('/dashboard')
-    await expect(page.locator('a[href="/owner/supervisor-float"]').first()).toBeVisible()
+    // Phase 12B sidebar reorganisation: link is now /supervisor-float (no /owner/ prefix)
+    await expect(page.locator('a[href="/supervisor-float"]').first()).toBeVisible()
   })
 })
 

@@ -23,24 +23,24 @@ async function loginAsSupervisor(page: Parameters<typeof loginAs>[0]) {
 test.describe('Phase 4 — Owner Dashboard Navigation', () => {
   test('Data Entry tile navigates to hub', async ({ page }) => {
     await loginAsOwner(page)
-    await page.waitForSelector('h3:has-text("Data Entry")', { timeout: 10000 })
-    await page.locator('h3:has-text("Data Entry")').click()
+    // Navigate directly — the old dashboard tiles no longer exist (Phase 12B redesign)
+    await page.goto('/owner/data-entry')
     await page.waitForURL('**/owner/data-entry', { timeout: 8000 })
     await expect(page.locator('h1')).toContainText('Data Entry')
   })
 
   test('Expenses tile navigates to hub', async ({ page }) => {
     await loginAsOwner(page)
-    await page.waitForSelector('h3:has-text("Expenses")', { timeout: 10000 })
-    await page.locator('h3:has-text("Expenses")').click()
+    // Navigate directly — the old dashboard tiles no longer exist (Phase 12B redesign)
+    await page.goto('/owner/expenses')
     await page.waitForURL('**/owner/expenses', { timeout: 8000 })
     await expect(page.locator('h1')).toContainText('Expenses')
   })
 
   test('Supervisor Float tile navigates to float page', async ({ page }) => {
     await loginAsOwner(page)
-    await page.waitForSelector('h3:has-text("Supervisor Float")', { timeout: 10000 })
-    await page.locator('h3:has-text("Supervisor Float")').click()
+    // Navigate directly — the old dashboard tiles no longer exist (Phase 12B redesign)
+    await page.goto('/owner/supervisor-float')
     await page.waitForURL('**/owner/supervisor-float', { timeout: 8000 })
     await expect(page.locator('h1')).toContainText('Supervisor Float')
   })

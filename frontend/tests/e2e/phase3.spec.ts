@@ -56,9 +56,8 @@ test.describe('Vendor Master List', () => {
 
   test('Item Master tile on owner dashboard navigates correctly', async ({ page }) => {
     await loginAsOwner(page)
-    await page.goto('/dashboard')
-    await page.waitForSelector('h3:has-text("Item Master")', { timeout: 10000 })
-    await page.locator('h3:has-text("Item Master")').click()
+    // Navigate directly — the old dashboard tiles no longer exist (Phase 12B redesign)
+    await page.goto('/owner/item-master')
     await page.waitForURL('**/owner/item-master', { timeout: 8000 })
     await expect(page.locator('h1')).toContainText('Item Master')
   })
@@ -502,10 +501,10 @@ test.describe('Seeded Data (Migration 006)', () => {
 test.describe('Item Master Enhanced Fields', () => {
   test('Item Master tile is visible on owner dashboard', async ({ page }) => {
     await loginAsOwner(page)
-    await page.goto('/dashboard')
-    await page.waitForSelector('h3:has-text("Item Master")', { timeout: 10000 })
-    await expect(page.locator('h3:has-text("Item Master")')).toBeVisible()
-    await expect(page.locator('text=Manage items across all modules')).toBeVisible()
+    await page.goto('/owner/item-master')
+    await page.waitForSelector('h1', { timeout: 10000 })
+    // Verify sidebar link to Item Master is present (dashboard tiles removed in Phase 12B)
+    await expect(page.locator('a[href="/item-master"]').first()).toBeVisible()
   })
 
   test('/owner/item-master loads correctly', async ({ page }) => {
