@@ -78,6 +78,26 @@ export interface PostPaidPayment {
   notes: string | null
   entered_by: string | null
   created_at: string
+  payment_month?: string | null // 'YYYY-MM-DD' first day of month; nullable (legacy rows)
+}
+
+// ─── Month-wise ledger types ──────────────────────────────────────────────────
+
+export type MonthlyRowStatus = 'settled' | 'partial' | 'advance' | 'overdue'
+
+export interface MonthlyRow {
+  month: string // 'YYYY-MM-DD' — first day of month
+  month_label: string // 'June 2026'
+  credit: number // total credit that month (entries + POS bills)
+  paid: number // total paid for that payment_month
+  outstanding: number // credit - paid (negative = advance)
+  status: MonthlyRowStatus
+}
+
+export interface CustomerMonthlyData {
+  customer: PostPaidCustomer
+  overall_outstanding: number
+  months: MonthlyRow[] // sorted newest first
 }
 
 export interface PostPaidCreditEntry {
@@ -132,6 +152,7 @@ export interface RecordPostPaidPaymentPayload {
   payment_method: string
   notes: string
   entered_by: string
+  payment_month?: string // 'YYYY-MM-DD' first day of month this payment covers
 }
 
 // ─── Cycle date helpers (shared by hooks + page) ──────────────────────────────

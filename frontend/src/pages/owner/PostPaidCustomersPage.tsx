@@ -2,48 +2,22 @@ import React, { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   usePostPaidBalances,
-  usePostPaidHistory,
+  usePostPaidMonthlyData,
   useRecordPostPaidPayment,
 } from '../../hooks/usePostPaidCustomers'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
-import SectionCard from '@/components/ui/SectionCard'
 import StatusBadge from '@/components/ui/StatusBadge'
-import AmountDisplay from '@/components/ui/AmountDisplay'
 import EmptyState from '@/components/ui/EmptyState'
 import KPICard from '@/components/ui/KPICard'
 import { CardGridSkeleton } from '@/components/ui/LoadingSkeletons'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet'
 import { showToast } from '@/lib/dialogs'
-import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { IndianRupee, History, Plus, AlertCircle } from 'lucide-react'
+import { ChevronDown, ChevronUp, IndianRupee, AlertCircle, Plus } from 'lucide-react'
 import { PageContainer } from '@/components/layouts/PageContainer'
 import { PageHeader } from '@/components/layouts/PageHeader'
-import type { PostPaidBalance } from '../../types/phase5'
-
-// ─── Schema ───────────────────────────────────────────────────────────────────
-
-const paymentSchema = z.object({
-  date: z.string().min(1, 'Date is required'),
-  amount: z
-    .string()
-    .min(1, 'Amount is required')
-    .refine((v) => !Number.isNaN(parseFloat(v)) && parseFloat(v) > 0, 'Enter a valid amount'),
-  payment_method: z.enum(['cash', 'upi', 'cheque']),
-  notes: z.string().optional(),
-})
-type PaymentForm = z.infer<typeof paymentSchema>
+import type { CustomerMonthlyData, MonthlyRow, MonthlyRowStatus } from '../../types/phase5'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -52,100 +26,127 @@ function todayStr() {
 }
 
 function formatCurrency(n: number) {
-  return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `₹${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
+function firstOfCurrentMonth(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
 }
 
-// ─── RecordPaymentDialog ──────────────────────────────────────────────────────
+function currentMonthLabel(): string {
+  return new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+}
 
-function RecordPaymentDialog({
-  open,
-  onClose,
-  balance,
-}: {
+// ─── Status badge for monthly row ────────────────────────────────────────────
+
+function MonthStatusBadge({ status }: { status: MonthlyRowStatus }) {
+  if (status === 'settled') return <StatusBadge status="settled" label="Settled" size="sm" />
+  if (status === 'advance') return <StatusBadge status="info" label="Advance" size="sm" />
+  if (status === 'overdue') return <StatusBadge status="overdue" label="Overdue" size="sm" />
+  return <StatusBadge status="warning" label="Partial" size="sm" />
+}
+
+// ─── RecordPaymentSheet ───────────────────────────────────────────────────────
+
+interface PaymentSheetProps {
   open: boolean
   onClose: () => void
-  balance: PostPaidBalance
-}) {
+  customerData: CustomerMonthlyData
+}
+
+function RecordPaymentSheet({ open, onClose, customerData }: PaymentSheetProps) {
   const { user } = useAuth()
   const recordPayment = useRecordPostPaidPayment()
 
-  const {
-    register,
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<PaymentForm>({
-    resolver: zodResolver(paymentSchema),
-    defaultValues: { date: todayStr(), amount: '', payment_method: 'cash', notes: '' },
-  })
+  const outstandingMonths = customerData.months.filter((m) => m.outstanding > 0)
+  const defaultMonth =
+    outstandingMonths.length > 0
+      ? outstandingMonths[outstandingMonths.length - 1].month // oldest outstanding
+      : firstOfCurrentMonth()
 
-  async function onSubmit(values: PaymentForm) {
-    try {
-      await recordPayment.mutateAsync({
-        customer_id: balance.customer.id,
-        payment_date: values.date,
-        amount_received: parseFloat(values.amount),
-        payment_method: values.payment_method,
-        notes: values.notes || '',
-        entered_by: user?.id ?? '',
-      })
-      showToast(
-        `Payment of ${formatCurrency(parseFloat(values.amount))} recorded for ${balance.customer.name}`,
-        'success'
-      )
-      reset()
-      onClose()
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Failed to record payment', 'error')
-    }
-  }
+  const [amount, setAmount] = useState('')
+  const [date, setDate] = useState(todayStr())
+  const [paymentMonth, setPaymentMonth] = useState(defaultMonth)
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'bank_transfer'>('cash')
+  const [notes, setNotes] = useState('')
+  const [amountError, setAmountError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   const selectCls =
     'mt-1 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring'
 
+  function handleClose() {
+    setAmount('')
+    setDate(todayStr())
+    setPaymentMonth(defaultMonth)
+    setPaymentMethod('cash')
+    setNotes('')
+    setAmountError('')
+    onClose()
+  }
+
+  async function handleSave() {
+    const parsed = parseFloat(amount)
+    if (!amount || Number.isNaN(parsed) || parsed <= 0) {
+      setAmountError('Enter a valid amount greater than 0')
+      return
+    }
+    setAmountError('')
+    setSubmitting(true)
+    try {
+      await recordPayment.mutateAsync({
+        customer_id: customerData.customer.id,
+        payment_date: date,
+        amount_received: parsed,
+        payment_method: paymentMethod,
+        notes: notes,
+        entered_by: user?.id ?? '',
+        payment_month: paymentMonth,
+      })
+      const monthLabelStr = new Date(paymentMonth).toLocaleDateString('en-IN', {
+        month: 'long',
+        year: 'numeric',
+      })
+      showToast(`Payment of ${formatCurrency(parsed)} recorded for ${monthLabelStr}`, 'success')
+      handleClose()
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Failed to record payment', 'error')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const currentFOM = firstOfCurrentMonth()
+  const currentML = currentMonthLabel()
+  const hasCurrentMonth = outstandingMonths.some((m) => m.month === currentFOM)
+
   return (
-    <Dialog
+    <Sheet
       open={open}
       onOpenChange={(o) => {
-        if (!o) {
-          reset()
-          onClose()
-        }
+        if (!o) handleClose()
       }}
     >
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Record Payment — {balance.customer.name}</DialogTitle>
-        </DialogHeader>
+      <SheetContent side="right" className="overflow-y-auto">
+        <SheetHeader className="mb-4">
+          <SheetTitle>Record Payment — {customerData.customer.name}</SheetTitle>
+        </SheetHeader>
 
-        <div className="rounded-md bg-muted/50 p-3 mb-2">
+        <div className="rounded-md bg-muted/50 p-3 mb-4">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Outstanding Balance</span>
+            <span className="text-muted-foreground">Overall Outstanding</span>
             <span
-              className={`font-semibold ${balance.outstanding > 0 ? 'text-destructive' : 'text-green-600'}`}
+              className={`font-semibold ${customerData.overall_outstanding > 0 ? 'text-destructive' : 'text-green-600'}`}
             >
-              {formatCurrency(balance.outstanding)}
+              {customerData.overall_outstanding < 0
+                ? `+${formatCurrency(customerData.overall_outstanding)} advance`
+                : formatCurrency(customerData.overall_outstanding)}
             </span>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <Label>
-              Date <span className="text-destructive">*</span>
-            </Label>
-            <Input type="date" {...register('date')} className="mt-1" />
-            {errors.date && <p className="text-destructive text-xs mt-1">{errors.date.message}</p>}
-          </div>
+        <div className="space-y-4">
           <div>
             <Label>
               Amount Received (₹) <span className="text-destructive">*</span>
@@ -154,248 +155,224 @@ function RecordPaymentDialog({
               type="number"
               step="0.01"
               min="0"
-              {...register('amount')}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
               className="mt-1"
               placeholder="0.00"
-              data-testid="input-payment-amount"
             />
-            {errors.amount && (
-              <p className="text-destructive text-xs mt-1">{errors.amount.message}</p>
-            )}
+            {amountError && <p className="text-destructive text-xs mt-1">{amountError}</p>}
           </div>
+
+          <div>
+            <Label>
+              Payment Date <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+
+          <div>
+            <Label>
+              Which month does this cover <span className="text-destructive">*</span>
+            </Label>
+            <select
+              value={paymentMonth}
+              onChange={(e) => setPaymentMonth(e.target.value)}
+              className={selectCls}
+            >
+              {!hasCurrentMonth && <option value={currentFOM}>{currentML} (current month)</option>}
+              {outstandingMonths.map((m) => (
+                <option key={m.month} value={m.month}>
+                  {m.month_label} — {formatCurrency(m.outstanding)} outstanding
+                  {m.status === 'overdue' ? ' ⚠' : ''}
+                </option>
+              ))}
+              {hasCurrentMonth && <option value={currentFOM}>{currentML} (current month)</option>}
+            </select>
+          </div>
+
           <div>
             <Label>
               Payment Method <span className="text-destructive">*</span>
             </Label>
-            <Controller
-              control={control}
-              name="payment_method"
-              render={({ field }) => (
-                <select {...field} className={selectCls} data-testid="select-payment-method">
-                  <option value="cash">Cash</option>
-                  <option value="upi">UPI</option>
-                  <option value="cheque">Cheque</option>
-                </select>
-              )}
-            />
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'upi' | 'bank_transfer')}
+              className={selectCls}
+            >
+              <option value="cash">Cash</option>
+              <option value="upi">UPI</option>
+              <option value="bank_transfer">Bank Transfer</option>
+            </select>
           </div>
+
           <div>
             <Label>Notes</Label>
-            <Input {...register('notes')} className="mt-1" placeholder="Optional note" />
+            <Input
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="mt-1"
+              placeholder="Optional note"
+            />
           </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                reset()
-                onClose()
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting} data-testid="btn-save-payment">
-              {isSubmitting ? 'Saving...' : 'Save Payment'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </div>
+
+        <SheetFooter className="mt-6 gap-2">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleSave} disabled={submitting}>
+            {submitting ? 'Saving...' : 'Save Payment'}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   )
 }
 
-// ─── CustomerHistoryDialog ────────────────────────────────────────────────────
+// ─── MonthTable ───────────────────────────────────────────────────────────────
 
-function CustomerHistoryDialog({
-  open,
-  onClose,
-  balance,
-}: {
-  open: boolean
-  onClose: () => void
-  balance: PostPaidBalance
-}) {
-  const { user } = useAuth()
-  const { data, isLoading } = usePostPaidHistory(balance.customer.id, !!user && open)
-
-  // Merge credits and payments into a single timeline sorted by date desc
-  type TimelineEntry = {
-    date: string
-    type: 'credit' | 'payment'
-    label: string
-    amount: number
-    runningBalance: number
-  }
-
-  const timeline: TimelineEntry[] = []
-  if (data) {
-    let running = balance.outstanding
-
-    const credits = [...data.credits].sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
-    const payments = [...data.payments].sort(
-      (a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
-    )
-
-    const all = [
-      ...credits.map((c) => ({
-        date: c.created_at,
-        type: 'credit' as const,
-        label: 'Credit sale',
-        amount: c.daily_total,
-      })),
-      ...payments.map((p) => ({
-        date: p.payment_date,
-        type: 'payment' as const,
-        label: `Payment (${p.payment_method ?? 'cash'})`,
-        amount: p.amount_received,
-      })),
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-
-    for (const entry of all) {
-      timeline.push({ ...entry, runningBalance: running })
-      if (entry.type === 'credit') running -= entry.amount
-      else running += entry.amount
-    }
+function MonthTable({ months }: { months: MonthlyRow[] }) {
+  if (months.length === 0) {
+    return <p className="text-muted-foreground text-sm text-center py-4">No transaction history</p>
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        if (!o) onClose()
-      }}
-    >
-      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>History — {balance.customer.name}</DialogTitle>
-        </DialogHeader>
-
-        {isLoading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : timeline.length === 0 ? (
-          <p className="text-muted-foreground text-sm text-center py-8">No transaction history</p>
-        ) : (
-          <div className="space-y-2">
-            {timeline.map((entry, i) => (
-              <div
-                key={i}
-                className={`flex items-center justify-between p-3 rounded-md border text-sm ${
-                  entry.type === 'payment'
-                    ? 'border-green-200 bg-green-50/40'
-                    : 'border-border bg-background'
-                }`}
-              >
-                <div>
-                  <p className="font-medium text-foreground">{entry.label}</p>
-                  <p className="text-xs text-muted-foreground">{formatDate(entry.date)}</p>
-                </div>
-                <div className="text-right">
-                  <p
-                    className={`font-semibold ${entry.type === 'payment' ? 'text-green-700' : 'text-foreground'}`}
-                  >
-                    {entry.type === 'payment' ? '−' : '+'}
-                    {formatCurrency(entry.amount)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Bal: {formatCurrency(entry.runningBalance)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b text-muted-foreground">
+            <th className="text-left py-2 pr-3 font-medium">Month</th>
+            <th className="text-right py-2 px-3 font-medium">Credit</th>
+            <th className="text-right py-2 px-3 font-medium">Paid</th>
+            <th className="text-right py-2 px-3 font-medium">Outstanding</th>
+            <th className="text-center py-2 pl-3 font-medium">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {months.map((row) => (
+            <tr
+              key={row.month}
+              className="border-b last:border-0 hover:bg-muted/30 transition-colors"
+            >
+              <td className="py-2.5 pr-3 font-medium text-foreground">{row.month_label}</td>
+              <td className="py-2.5 px-3 text-right tabular-nums text-foreground">
+                {formatCurrency(row.credit)}
+              </td>
+              <td className="py-2.5 px-3 text-right tabular-nums text-green-700">
+                {row.paid > 0 ? formatCurrency(row.paid) : '—'}
+              </td>
+              <td className="py-2.5 px-3 text-right tabular-nums">
+                <span
+                  className={
+                    row.outstanding > 0
+                      ? 'text-destructive font-semibold'
+                      : row.outstanding < 0
+                        ? 'text-blue-600 font-semibold'
+                        : 'text-green-700 font-semibold'
+                  }
+                >
+                  {row.outstanding === 0
+                    ? '—'
+                    : row.outstanding < 0
+                      ? `+${formatCurrency(row.outstanding)}`
+                      : formatCurrency(row.outstanding)}
+                </span>
+              </td>
+              <td className="py-2.5 pl-3 text-center">
+                <MonthStatusBadge status={row.status} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
-// ─── CustomerCard ─────────────────────────────────────────────────────────────
+// ─── CustomerLedgerCard ───────────────────────────────────────────────────────
 
-function CustomerCard({ balance }: { balance: PostPaidBalance }) {
+function CustomerLedgerCard({ customerData }: { customerData: CustomerMonthlyData }) {
+  const [expanded, setExpanded] = useState(false)
   const [payOpen, setPayOpen] = useState(false)
-  const [histOpen, setHistOpen] = useState(false)
-  const isSettled = balance.outstanding <= 0
 
-  const isOverdue = balance.days_since_payment != null && balance.days_since_payment > 30
+  const { customer, overall_outstanding, months } = customerData
+  const hasOverdue = months.some((m) => m.status === 'overdue')
+  const isSettled = overall_outstanding <= 0
 
   return (
     <>
-      <SectionCard
-        className="transition-all"
-        status={isSettled ? 'success' : isOverdue ? 'danger' : 'none'}
-        data-testid={`customer-card-${balance.customer.name.toLowerCase()}`}
+      <div
+        className="rounded-lg border bg-card shadow-sm overflow-hidden"
+        data-testid={`customer-card-${customer.name.toLowerCase()}`}
       >
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-foreground">{balance.customer.name}</h3>
-              {isSettled ? (
-                <StatusBadge status="settled" label="Settled" size="sm" />
-              ) : isOverdue ? (
-                <StatusBadge status="overdue" label="Overdue" size="sm" />
-              ) : (
-                <StatusBadge status="unpaid" label="Outstanding" size="sm" />
-              )}
-            </div>
-            {balance.customer.contact && (
-              <p className="text-xs text-muted-foreground">{balance.customer.contact}</p>
+        <div
+          className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors select-none"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="font-semibold text-foreground truncate">{customer.name}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border shrink-0">
+              {customer.branch}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <span
+              className={`font-bold text-sm tabular-nums ${
+                overall_outstanding > 0
+                  ? 'text-destructive'
+                  : overall_outstanding < 0
+                    ? 'text-blue-600'
+                    : 'text-green-700'
+              }`}
+            >
+              {overall_outstanding === 0
+                ? 'Settled'
+                : overall_outstanding < 0
+                  ? `+${formatCurrency(overall_outstanding)} advance`
+                  : formatCurrency(overall_outstanding)}
+            </span>
+            {expanded ? (
+              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
             )}
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setHistOpen(true)} className="h-8">
-            <History className="w-3.5 h-3.5" />
-          </Button>
         </div>
 
-        <div className="space-y-1.5 mb-4">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Total Credit</span>
-            <AmountDisplay amount={balance.total_credit} size="sm" />
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Total Paid</span>
-            <AmountDisplay amount={balance.total_paid} size="sm" variant="positive" />
-          </div>
-          <Separator />
-          <div className="flex justify-between text-sm font-semibold">
-            <span>Outstanding</span>
-            <AmountDisplay
-              amount={Math.abs(balance.outstanding)}
-              size="sm"
-              variant={balance.outstanding > 0 ? 'negative' : 'positive'}
-            />
-          </div>
-          {balance.last_payment_date && (
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Last payment</span>
-              <span>
-                {formatDate(balance.last_payment_date)}
-                {balance.days_since_payment != null && ` (${balance.days_since_payment}d ago)`}
-              </span>
+        {expanded && (
+          <div className="border-t px-4 pb-4 pt-3">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                {isSettled && <StatusBadge status="settled" label="Settled" size="sm" />}
+                {hasOverdue && !isSettled && (
+                  <StatusBadge status="overdue" label="Has overdue" size="sm" />
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant={isSettled ? 'outline' : 'default'}
+                onClick={() => setPayOpen(true)}
+                data-testid={`btn-record-payment-${customer.name.toLowerCase()}`}
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Record Payment
+              </Button>
             </div>
-          )}
-        </div>
+            <MonthTable months={months} />
+          </div>
+        )}
+      </div>
 
-        <Button
-          size="sm"
-          className="w-full"
-          variant={isSettled ? 'outline' : 'default'}
-          onClick={() => setPayOpen(true)}
-          data-testid={`btn-record-payment-${balance.customer.name.toLowerCase()}`}
-        >
-          <Plus className="w-3.5 h-3.5 mr-1" />
-          Record Payment
-        </Button>
-      </SectionCard>
-
-      <RecordPaymentDialog open={payOpen} onClose={() => setPayOpen(false)} balance={balance} />
-
-      <CustomerHistoryDialog open={histOpen} onClose={() => setHistOpen(false)} balance={balance} />
+      <RecordPaymentSheet
+        open={payOpen}
+        onClose={() => setPayOpen(false)}
+        customerData={customerData}
+      />
     </>
   )
 }
@@ -405,21 +382,25 @@ function CustomerCard({ balance }: { balance: PostPaidBalance }) {
 export default function PostPaidCustomersPage() {
   const { user } = useAuth()
 
-  const { data: balances = [], isLoading } = usePostPaidBalances(!!user)
+  const { data: balances = [], isLoading: balancesLoading } = usePostPaidBalances(!!user)
+  const { data: monthlyData = [], isLoading: monthlyLoading } = usePostPaidMonthlyData(!!user)
+
+  const isLoading = balancesLoading || monthlyLoading
 
   const totalOutstanding = balances.reduce((s, b) => s + Math.max(b.outstanding, 0), 0)
-  const overdueCount = balances.filter(
-    (b) => b.outstanding > 0 && b.days_since_payment != null && b.days_since_payment > 30
-  ).length
+
+  const overdueCount = monthlyData.reduce(
+    (s, cd) => s + (cd.months.some((m) => m.status === 'overdue') ? 1 : 0),
+    0
+  )
 
   return (
     <PageContainer data-testid="postpaid-customers-page">
       <PageHeader
         title="Post-Paid Customers"
-        subtitle="Credit sales and outstanding balances · KR branch"
+        subtitle="Month-wise credit ledger · KR &amp; C2 branches"
       />
 
-      {/* Summary */}
       {!isLoading && balances.length > 0 && (
         <div className="grid grid-cols-2 gap-3 mb-6">
           <KPICard
@@ -439,19 +420,18 @@ export default function PostPaidCustomersPage() {
         </div>
       )}
 
-      {/* Customer cards */}
       {isLoading ? (
         <CardGridSkeleton />
-      ) : balances.length === 0 ? (
+      ) : monthlyData.length === 0 ? (
         <EmptyState
           icon={IndianRupee}
           title="No post-paid customers"
           description="No post-paid customers found."
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" data-testid="customer-list">
-          {balances.map((balance) => (
-            <CustomerCard key={balance.customer.id} balance={balance} />
+        <div className="space-y-3" data-testid="customer-list">
+          {monthlyData.map((cd) => (
+            <CustomerLedgerCard key={cd.customer.id} customerData={cd} />
           ))}
         </div>
       )}
