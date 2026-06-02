@@ -33,7 +33,10 @@ export function usePostPaidCustomers(session: boolean) {
 
 /**
  * Computes the outstanding balance for all post-paid customers.
- * Aggregates total credit from postpaid_entries and total payments from postpaid_payments.
+ * Aggregates total credit from two sources:
+ *   1. postpaid_entries.daily_total — daily data-entry credits
+ *   2. bills.total_amount where payment_mode = 'postpaid' — POS bills charged to the customer
+ * Subtracts total payments from postpaid_payments to arrive at outstanding.
  * Returns a PostPaidBalance record per customer.
  *
  * @param session - Auth session guard
@@ -42,7 +45,7 @@ export function usePostPaidBalances(session: boolean) {
   return useSupabaseQuery<PostPaidBalance[]>(
     'postpaid_balances',
     async () => {
-      const [customersRes, entriesRes, paymentsRes] = await Promise.all([
+      const [customersRes, entriesRes, paymentsRes, posBillsRes] = await Promise.all([
         supabase.from('postpaid_customers').select('*').eq('active', true).order('name'),
         supabase
           .from('postpaid_entries')
@@ -52,11 +55,17 @@ export function usePostPaidBalances(session: boolean) {
           .from('postpaid_payments')
           .select('customer_id, amount_received, payment_date')
           .order('payment_date', { ascending: false }),
+        supabase
+          .from('bills')
+          .select('postpaid_customer_id, total_amount')
+          .eq('payment_mode', 'postpaid')
+          .not('postpaid_customer_id', 'is', null),
       ])
 
       if (customersRes.error) throw new Error(customersRes.error.message)
       if (entriesRes.error) throw new Error(entriesRes.error.message)
       if (paymentsRes.error) throw new Error(paymentsRes.error.message)
+      if (posBillsRes.error) throw new Error(posBillsRes.error.message)
 
       const customers = (customersRes.data ?? []) as PostPaidCustomer[]
       const entries = (entriesRes.data ?? []) as { customer_id: string; daily_total: number }[]
@@ -65,13 +74,23 @@ export function usePostPaidBalances(session: boolean) {
         amount_received: number
         payment_date: string
       }[]
+      const posBills = (posBillsRes.data ?? []) as {
+        postpaid_customer_id: string
+        total_amount: number
+      }[]
 
       const today = new Date()
 
       return customers.map((customer) => {
-        const credit = entries
+        const entriesCredit = entries
           .filter((e) => e.customer_id === customer.id)
           .reduce((sum, e) => sum + (e.daily_total ?? 0), 0)
+
+        const posCredit = posBills
+          .filter((b) => b.postpaid_customer_id === customer.id)
+          .reduce((sum, b) => sum + (b.total_amount ?? 0), 0)
+
+        const credit = entriesCredit + posCredit
 
         const customerPayments = payments.filter((p) => p.customer_id === customer.id)
 
