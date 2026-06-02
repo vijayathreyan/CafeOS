@@ -9,6 +9,10 @@ export interface ReportFilters {
 export interface MilkReportRow {
   entry_date: string
   branch: string
+  opening_balance: number
+  bought: number
+  used: number
+  remaining: number
   s1_coffee: number
   s1_tea: number
   s2_coffee: number

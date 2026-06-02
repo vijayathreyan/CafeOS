@@ -33,6 +33,7 @@ async function fetchDailyEntryIds(filters: ReportFilters) {
 /**
  * Fetches milk consumption (coffee + tea) per day per branch for the given date range.
  * Aggregates shift 1 and shift 2 into a single row per date+branch combination.
+ * Also includes packet inventory columns from stock_entries (item_name = 'Milk').
  *
  * @param filters - from_date, to_date, branch ('all' | 'KR' | 'C2')
  */
@@ -45,17 +46,58 @@ export function useMilkReport(filters: ReportFilters) {
 
       const ids = dailyEntries.map((d) => d.id)
 
-      const { data: milkEntries, error } = await supabase
-        .from('milk_entries')
-        .select('daily_entry_id, shift_number, coffee_milk_litres, tea_milk_litres')
-        .in('daily_entry_id', ids)
+      const [{ data: milkEntries, error: milkError }, { data: stockEntries, error: stockError }] =
+        await Promise.all([
+          supabase
+            .from('milk_entries')
+            .select('daily_entry_id, shift_number, coffee_milk_litres, tea_milk_litres')
+            .in('daily_entry_id', ids),
+          supabase
+            .from('stock_entries')
+            .select('daily_entry_id, opening_stock, purchase, closing_stock')
+            .in('daily_entry_id', ids)
+            .eq('item_name', 'Milk'),
+        ])
 
-      if (error) throw new Error(error.message)
+      if (milkError) throw new Error(milkError.message)
+      if (stockError) throw new Error(stockError.message)
 
-      // Build lookup: daily_entry_id → { entry_date, branch }
+      let priorQuery = supabase
+        .from('stock_entries')
+        .select('closing_stock, daily_entries!inner(entry_date, branch)')
+        .eq('item_name', 'Milk')
+        .lt('daily_entries.entry_date', filters.from_date)
+        .order('daily_entries.entry_date', { ascending: false })
+        .limit(1)
+      if (filters.branch !== 'all')
+        priorQuery = priorQuery.eq('daily_entries.branch', filters.branch)
+      const { data: priorData } = await priorQuery
+      const priorClosing = Number(priorData?.[0]?.closing_stock ?? 0)
+
       const dailyMap = new Map(dailyEntries.map((d) => [d.id, d]))
 
-      // Aggregate by entry_date + branch
+      const stockMap = new Map<
+        string,
+        { opening_stock: number; purchase: number; closing_stock: number }
+      >()
+      for (const s of stockEntries ?? []) {
+        const d = dailyMap.get(s.daily_entry_id)
+        if (!d) continue
+        const key = `${d.entry_date}:${d.branch}`
+        const existing = stockMap.get(key)
+        if (existing) {
+          existing.opening_stock += Number(s.opening_stock)
+          existing.purchase += Number(s.purchase)
+          existing.closing_stock += Number(s.closing_stock)
+        } else {
+          stockMap.set(key, {
+            opening_stock: Number(s.opening_stock),
+            purchase: Number(s.purchase),
+            closing_stock: Number(s.closing_stock),
+          })
+        }
+      }
+
       const rowMap = new Map<string, MilkReportRow>()
 
       for (const d of dailyEntries) {
@@ -64,6 +106,10 @@ export function useMilkReport(filters: ReportFilters) {
           rowMap.set(key, {
             entry_date: d.entry_date,
             branch: d.branch,
+            opening_balance: 0,
+            bought: 0,
+            used: 0,
+            remaining: 0,
             s1_coffee: 0,
             s1_tea: 0,
             s2_coffee: 0,
@@ -97,7 +143,22 @@ export function useMilkReport(filters: ReportFilters) {
         row.grand_total += coffee + tea
       }
 
-      return Array.from(rowMap.values()).sort((a, b) => b.entry_date.localeCompare(a.entry_date))
+      const sortedAsc = Array.from(rowMap.values()).sort((a, b) =>
+        a.entry_date.localeCompare(b.entry_date)
+      )
+
+      let runningBalance = priorClosing
+      for (const row of sortedAsc) {
+        const key = `${row.entry_date}:${row.branch}`
+        const stock = stockMap.get(key)
+        row.opening_balance = runningBalance
+        row.bought = stock?.purchase ?? 0
+        row.remaining = stock?.closing_stock ?? runningBalance + row.bought
+        row.used = row.opening_balance + row.bought - row.remaining
+        runningBalance = row.remaining
+      }
+
+      return sortedAsc.sort((a, b) => b.entry_date.localeCompare(a.entry_date))
     },
     { retry: 2, staleTime: 30000 }
   )

@@ -24,6 +24,10 @@ function litres(val: number): string {
 const MILK_EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Date', key: 'date', width: 14 },
   { header: 'Branch', key: 'branch', width: 16 },
+  { header: 'Opening Bal', key: 'opening_balance', width: 14, align: 'right' },
+  { header: 'Bought', key: 'bought', width: 10, align: 'right' },
+  { header: 'Used', key: 'used', width: 10, align: 'right' },
+  { header: 'Remaining', key: 'remaining', width: 12, align: 'right' },
   { header: 'S1 Coffee (L)', key: 's1_coffee', width: 14, align: 'right' },
   { header: 'S1 Tea (L)', key: 's1_tea', width: 12, align: 'right' },
   { header: 'S2 Coffee (L)', key: 's2_coffee', width: 14, align: 'right' },
@@ -48,6 +52,9 @@ export default function MilkReport() {
   const totalMilk = totalCoffee + totalTea
   const days = (rows ?? []).length
   const dailyAvg = days > 0 ? totalMilk / days : 0
+  const totalBought = (rows ?? []).reduce((s, r) => s + r.bought, 0)
+  const totalUsed = (rows ?? []).reduce((s, r) => s + r.used, 0)
+  const closingRemaining = (rows ?? []).length > 0 ? (rows ?? [])[0].remaining : 0
 
   const branchStr =
     filters.branch === 'all' ? 'All Branches' : branchLabel(filters.branch as 'KR' | 'C2')
@@ -56,6 +63,10 @@ export default function MilkReport() {
   const exportRows = (rows ?? []).map((r) => ({
     date: formatDate(r.entry_date),
     branch: branchLabel(r.branch),
+    opening_balance: String(Math.round(r.opening_balance)),
+    bought: String(Math.round(r.bought)),
+    used: String(Math.round(r.used)),
+    remaining: String(Math.round(r.remaining)),
     s1_coffee: r.s1_coffee.toFixed(2),
     s1_tea: r.s1_tea.toFixed(2),
     s2_coffee: r.s2_coffee.toFixed(2),
@@ -68,6 +79,10 @@ export default function MilkReport() {
   const exportTotals = {
     date: 'TOTAL',
     branch: '',
+    opening_balance: '',
+    bought: String(Math.round(totalBought)),
+    used: String(Math.round(totalUsed)),
+    remaining: '',
     s1_coffee: (rows ?? []).reduce((s, r) => s + r.s1_coffee, 0).toFixed(2),
     s1_tea: (rows ?? []).reduce((s, r) => s + r.s1_tea, 0).toFixed(2),
     s2_coffee: (rows ?? []).reduce((s, r) => s + r.s2_coffee, 0).toFixed(2),
@@ -107,6 +122,46 @@ export default function MilkReport() {
         </span>
       ),
       width: '140px',
+    },
+    {
+      header: 'Opening Bal',
+      accessor: (r) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
+          {Math.round(r.opening_balance)}
+        </span>
+      ),
+      align: 'right',
+      width: '100px',
+    },
+    {
+      header: 'Bought',
+      accessor: (r) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
+          {Math.round(r.bought)}
+        </span>
+      ),
+      align: 'right',
+      width: '80px',
+    },
+    {
+      header: 'Used',
+      accessor: (r) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
+          {Math.round(r.used)}
+        </span>
+      ),
+      align: 'right',
+      width: '80px',
+    },
+    {
+      header: 'Remaining',
+      accessor: (r) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600 }}>
+          {Math.round(r.remaining)}
+        </span>
+      ),
+      align: 'right',
+      width: '90px',
     },
     {
       header: 'S1 Coffee',
@@ -212,7 +267,7 @@ export default function MilkReport() {
       />
 
       {/* KPI summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <KPICard
           title="Total Coffee Milk"
           value={litres(totalCoffee)}
@@ -238,6 +293,26 @@ export default function MilkReport() {
           status="none"
         />
       </div>
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <KPICard
+          title="Total Bought"
+          value={String(Math.round(totalBought)) + ' pkts'}
+          subtitle="Packets purchased"
+          status="info"
+        />
+        <KPICard
+          title="Total Used"
+          value={String(Math.round(totalUsed)) + ' pkts'}
+          subtitle="Packets consumed"
+          status="success"
+        />
+        <KPICard
+          title="Closing Remaining"
+          value={String(Math.round(closingRemaining)) + ' pkts'}
+          subtitle="End of period stock"
+          status="none"
+        />
+      </div>
 
       {/* Filters */}
       <ReportFilterBar filters={filters} onChange={setFilters} count={rows?.length} />
@@ -246,7 +321,7 @@ export default function MilkReport() {
       <SectionCard padding="none">
         {isLoading ? (
           <div style={{ padding: 'var(--space-4)' }}>
-            <TableSkeleton cols={9} />
+            <TableSkeleton cols={13} />
           </div>
         ) : (
           <DataTable
