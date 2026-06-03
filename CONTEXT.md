@@ -1097,7 +1097,22 @@ When Phase 10 is built, the Alert Manager MUST implement:
 ### ✅ E2E Tests (`tests/e2e/phase13b.spec.ts`)
 - 8 tests passing (workers=1, retries=0): Milk Report units (3), Kalingaraj compute (3), Rate history CRUD (2)
 
-### ✅ Next migration: **020**
+### ✅ Milk Data Consolidation — Migration 020 (`supabase/migrations/020_milk_consolidation.sql`)
+- milk_entries is now the **single source of truth** for all milk data
+- New columns: `branch`, `entry_date`, `coffee_s1_litres`, `tea_s1_litres`, `coffee_s2_litres`, `tea_s2_litres`, `bought_litres`, `opening_balance_litres`, `closing_balance_litres`
+- `total_consumed_litres` GENERATED ALWAYS AS (sum of all 4 shift columns) STORED
+- Two-row-per-day (per shift) structure merged into ONE row per (branch, entry_date)
+- UNIQUE constraint changed from (daily_entry_id, shift_number) → (branch, entry_date)
+- Historical milk purchase data migrated from stock_entries.purchase → milk_entries.bought_litres
+- Opening balances back-filled from previous day closing
+- Milk marked inactive in stock_item_config (historical data preserved)
+- **MilkCard.tsx** — adds "Litres Bought Today" field, opening balance info (read-only), closing balance (auto-computed), saves ONE row per day via UPSERT on (branch, entry_date)
+- **StockForm.tsx** — Milk row removed from both KR_ITEMS and C2_ITEMS
+- **useReports.ts / useMilkReport** — queries milk_entries directly (no stock_entries join needed)
+- **useVendorPayments.ts** — Kalingaraj compute reads milk_entries.bought_litres (not stock_entries)
+- **usePLReport.ts** — milk cost reads milk_entries.bought_litres (not stock_entries)
+- Playwright tests: `tests/e2e/phase13_milk.spec.ts` (11 tests)
+- **Next migration: 021**
 
 ---
 
