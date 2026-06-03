@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -104,6 +104,13 @@ function VendorItemCard({ vi, vendorId }: { vi: VendorItem; vendorId: string }) 
   const addRate = useAddVendorItemRate()
   const deactivate = useDeactivateVendorItem()
   const [showAddRate, setShowAddRate] = useState(false)
+  const addRateFormRef = useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    if (showAddRate && addRateFormRef.current) {
+      addRateFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [showAddRate])
 
   const rates = (vi.vendor_item_rates ?? []).sort(
     (a, b) => new Date(b.effective_from).getTime() - new Date(a.effective_from).getTime()
@@ -137,7 +144,7 @@ function VendorItemCard({ vi, vendorId }: { vi: VendorItem; vendorId: string }) 
         effectiveFrom: values.effective_from,
         notes: values.notes,
       })
-      showToast('New rate added successfully', 'success')
+      showToast('Vendor item rate updated successfully', 'success')
       setShowAddRate(false)
       reset()
     } catch (e) {
@@ -207,6 +214,7 @@ function VendorItemCard({ vi, vendorId }: { vi: VendorItem; vendorId: string }) 
       {/* Add rate form */}
       {showAddRate && (
         <form
+          ref={addRateFormRef}
           onSubmit={handleSubmit(onAddRate)}
           className="bg-muted/40 rounded-md p-3 space-y-3"
           data-testid="add-rate-form"

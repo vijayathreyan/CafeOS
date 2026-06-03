@@ -497,7 +497,7 @@ export default function VendorOnboarding() {
                             .filter((item) => item.active)
                             .map((item) => (
                               <option key={item.id} value={item.id}>
-                                {item.name_en} ({item.item_type} · {item.unit})
+                                {item.name_en} · {item.unit}
                               </option>
                             ))}
                         </select>
@@ -582,8 +582,15 @@ export default function VendorOnboarding() {
                           type="number"
                           step="0.01"
                           min="0"
-                          {...register(`items.${idx}.selling_price`, { valueAsNumber: true })}
-                          placeholder="Optional"
+                          {...register(`items.${idx}.selling_price`, {
+                            setValueAs: (v) =>
+                              v === '' || v === null || v === undefined
+                                ? undefined
+                                : isNaN(Number(v))
+                                  ? undefined
+                                  : Number(v),
+                          })}
+                          placeholder="Optional — leave blank for internal use items"
                           className="mt-1"
                         />
                       </div>
