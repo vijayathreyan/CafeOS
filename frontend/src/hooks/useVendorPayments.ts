@@ -169,40 +169,24 @@ export function useVendorAutoTotal(
         const itemName = im.name_en
         const itemId = vi.item_id as string
 
-        // 2a. For Milk item: per-day litres BOUGHT from stock_entries × rate effective that date
+        // 2a. For Milk: per-day litres BOUGHT from milk_entries.bought_litres × rate
         if (itemName === 'Milk') {
-          const { data: de } = await supabase
-            .from('daily_entries')
-            .select('id, entry_date')
+          const { data: milkRows } = await supabase
+            .from('milk_entries')
+            .select('entry_date, branch, bought_litres')
             .gte('entry_date', cycleStart)
             .lte('entry_date', cycleEnd)
+            .in('branch', ['KR', 'C2'])
+            .gt('bought_litres', 0)
             .order('entry_date', { ascending: true })
 
-          if (!de?.length) continue
+          if (!milkRows?.length) continue
 
-          const dateByEntry = new Map<string, string>(
-            de.map((d) => [d.id as string, d.entry_date as string])
-          )
-          const deIds = de.map((d) => d.id as string)
-
-          // Read litres bought (purchase column) from stock_entries for Milk item
-          const { data: stockRows } = await supabase
-            .from('stock_entries')
-            .select('daily_entry_id, purchase')
-            .in('daily_entry_id', deIds)
-            .eq('item_name', 'Milk')
-
-          // Aggregate by date
-          const purchaseByDate = new Map<string, number>()
-          for (const row of stockRows ?? []) {
-            const date = dateByEntry.get(row.daily_entry_id as string)
-            if (!date) continue
-            purchaseByDate.set(date, (purchaseByDate.get(date) ?? 0) + Number(row.purchase))
-          }
-
-          // Per-day lines with rate effective on that specific date
-          for (const [date, litresBought] of Array.from(purchaseByDate.entries()).sort()) {
+          for (const row of milkRows) {
+            const date = row.entry_date as string
+            const litresBought = Number(row.bought_litres)
             if (litresBought <= 0) continue
+
             const effectiveRate =
               rates
                 .filter(

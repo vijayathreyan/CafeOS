@@ -143,15 +143,16 @@ async function fetchBranchMonthData(
     vendorPaymentsInMonth(momosVendor?.id as string),
   ])
 
-  // 2f. Milk: litres BOUGHT (purchase from stock_entries) × cost price
+  // 2f. Milk: litres BOUGHT from milk_entries.bought_litres × cost price
   let milkCost = 0
-  if (deIds.length > 0) {
-    const { data: milkStockRows } = await supabase
-      .from('stock_entries')
-      .select('purchase')
-      .ilike('item_name', '%Milk%')
-      .in('daily_entry_id', deIds)
-    const milkPurchased = (milkStockRows ?? []).reduce((s, r) => s + Number(r.purchase), 0)
+  {
+    const { data: milkEntryRows } = await supabase
+      .from('milk_entries')
+      .select('bought_litres')
+      .eq('branch', branch)
+      .gte('entry_date', firstDay)
+      .lte('entry_date', lastDay)
+    const milkPurchased = (milkEntryRows ?? []).reduce((s, r) => s + Number(r.bought_litres), 0)
 
     // Get milk cost price from Kalingaraj vendor rates
     let milkRatePerLitre = 0

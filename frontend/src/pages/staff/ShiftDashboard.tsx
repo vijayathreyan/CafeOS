@@ -245,6 +245,8 @@ export default function ShiftDashboard() {
         >
           <MilkCard
             dailyEntryId={activeEntry.id}
+            branch={branch!}
+            entryDate={today}
             onDone={(done) => markSectionDone('milk', done)}
           />
         </SectionCard>

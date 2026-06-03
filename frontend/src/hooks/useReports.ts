@@ -12,7 +12,7 @@ import type {
 
 /**
  * Fetches daily_entry IDs for a date range and optional branch.
- * Returns an array of { id, entry_date, branch } objects.
+ * Used by wastage and expense reports which still need the daily_entries join.
  */
 async function fetchDailyEntryIds(filters: ReportFilters) {
   let q = supabase
@@ -28,54 +28,12 @@ async function fetchDailyEntryIds(filters: ReportFilters) {
   return data ?? []
 }
 
-/**
- * Fetches the most recent closing stock for 'Milk' before a given date, per branch.
- * Uses a reliable 2-step approach (consistent with fetchDailyEntryIds pattern) instead
- * of PostgREST embedded-filter dot-notation which is unreliable for ordering/filtering.
- *
- * @param fromDate - ISO date string; we want entries strictly before this date
- * @param branch - 'all' | 'KR' | 'C2'
- * @returns Record mapping branch name to its prior closing stock (0 if none found)
- */
-async function fetchPriorClosingStock(
-  fromDate: string,
-  branch: string
-): Promise<Record<string, number>> {
-  const branches = branch === 'all' ? ['KR', 'C2'] : [branch]
-  const result: Record<string, number> = {}
-
-  for (const br of branches) {
-    const { data: priorEntries } = await supabase
-      .from('daily_entries')
-      .select('id')
-      .eq('branch', br)
-      .lt('entry_date', fromDate)
-      .order('entry_date', { ascending: false })
-      .limit(5)
-
-    if (priorEntries?.length) {
-      const priorIds = priorEntries.map((e) => e.id)
-      const { data: stockRows } = await supabase
-        .from('stock_entries')
-        .select('closing_stock, daily_entry_id')
-        .eq('item_name', 'Milk')
-        .in('daily_entry_id', priorIds)
-        .limit(1)
-      result[br] = Number(stockRows?.[0]?.closing_stock ?? 0)
-    } else {
-      result[br] = 0
-    }
-  }
-
-  return result
-}
-
 // ─── Milk Report ─────────────────────────────────────────────────────────────
 
 /**
- * Fetches milk consumption (coffee + tea) per day per branch for the given date range.
- * Aggregates shift 1 and shift 2 into a single row per date+branch combination.
- * Also includes packet inventory columns from stock_entries (item_name = 'Milk').
+ * Fetches milk data per day per branch from milk_entries (single source of truth).
+ * Migration 020 consolidated all milk data — bought, opening, closing, consumed —
+ * into milk_entries directly. No join to stock_entries needed.
  *
  * @param filters - from_date, to_date, branch ('all' | 'KR' | 'C2')
  */
@@ -83,114 +41,42 @@ export function useMilkReport(filters: ReportFilters) {
   return useSupabaseQuery<MilkReportRow[]>(
     ['milk_report', filters.from_date, filters.to_date, filters.branch],
     async () => {
-      const dailyEntries = await fetchDailyEntryIds(filters)
-      if (!dailyEntries.length) return []
+      let q = supabase
+        .from('milk_entries')
+        .select(
+          'entry_date, branch, opening_balance_litres, bought_litres, total_consumed_litres, closing_balance_litres, coffee_s1_litres, tea_s1_litres, coffee_s2_litres, tea_s2_litres'
+        )
+        .gte('entry_date', filters.from_date)
+        .lte('entry_date', filters.to_date)
+        .order('entry_date', { ascending: false })
 
-      const ids = dailyEntries.map((d) => d.id)
+      if (filters.branch !== 'all') q = q.eq('branch', filters.branch)
 
-      const [{ data: milkEntries, error: milkError }, { data: stockEntries, error: stockError }] =
-        await Promise.all([
-          supabase
-            .from('milk_entries')
-            .select('daily_entry_id, shift_number, coffee_milk_litres, tea_milk_litres')
-            .in('daily_entry_id', ids),
-          supabase
-            .from('stock_entries')
-            .select('daily_entry_id, purchase, closing_stock')
-            .in('daily_entry_id', ids)
-            .eq('item_name', 'Milk'),
-        ])
+      const { data, error } = await q
+      if (error) throw new Error(error.message)
 
-      if (milkError) throw new Error(milkError.message)
-      if (stockError) throw new Error(stockError.message)
-
-      // Fix 2+3: Per-branch prior closing stock via reliable 2-step query
-      const priorByBranch = await fetchPriorClosingStock(filters.from_date, filters.branch)
-
-      const dailyMap = new Map(dailyEntries.map((d) => [d.id, d]))
-
-      const stockMap = new Map<string, { purchase: number; closing_stock: number }>()
-      for (const s of stockEntries ?? []) {
-        const d = dailyMap.get(s.daily_entry_id)
-        if (!d) continue
-        const key = `${d.entry_date}:${d.branch}`
-        const existing = stockMap.get(key)
-        if (existing) {
-          existing.purchase += Number(s.purchase)
-          existing.closing_stock += Number(s.closing_stock)
-        } else {
-          stockMap.set(key, {
-            purchase: Number(s.purchase),
-            closing_stock: Number(s.closing_stock),
-          })
+      return (data ?? []).map((row) => {
+        const s1c = Number(row.coffee_s1_litres ?? 0)
+        const s1t = Number(row.tea_s1_litres ?? 0)
+        const s2c = Number(row.coffee_s2_litres ?? 0)
+        const s2t = Number(row.tea_s2_litres ?? 0)
+        const consumed = Number(row.total_consumed_litres ?? 0)
+        return {
+          entry_date: row.entry_date as string,
+          branch: row.branch as string,
+          opening_balance: Number(row.opening_balance_litres ?? 0),
+          bought: Number(row.bought_litres ?? 0),
+          used: consumed,
+          remaining: Number(row.closing_balance_litres ?? 0),
+          s1_coffee: s1c,
+          s1_tea: s1t,
+          s2_coffee: s2c,
+          s2_tea: s2t,
+          total_coffee: s1c + s2c,
+          total_tea: s1t + s2t,
+          grand_total: consumed,
         }
-      }
-
-      const rowMap = new Map<string, MilkReportRow>()
-
-      for (const d of dailyEntries) {
-        const key = `${d.entry_date}:${d.branch}`
-        if (!rowMap.has(key)) {
-          rowMap.set(key, {
-            entry_date: d.entry_date,
-            branch: d.branch,
-            opening_balance: 0,
-            bought: 0,
-            used: 0,
-            remaining: 0,
-            s1_coffee: 0,
-            s1_tea: 0,
-            s2_coffee: 0,
-            s2_tea: 0,
-            total_coffee: 0,
-            total_tea: 0,
-            grand_total: 0,
-          })
-        }
-      }
-
-      for (const m of milkEntries ?? []) {
-        const d = dailyMap.get(m.daily_entry_id)
-        if (!d) continue
-        const key = `${d.entry_date}:${d.branch}`
-        const row = rowMap.get(key)
-        if (!row) continue
-
-        const coffee = Number(m.coffee_milk_litres)
-        const tea = Number(m.tea_milk_litres)
-
-        if (m.shift_number === 1) {
-          row.s1_coffee += coffee
-          row.s1_tea += tea
-        } else {
-          row.s2_coffee += coffee
-          row.s2_tea += tea
-        }
-        row.total_coffee += coffee
-        row.total_tea += tea
-        row.grand_total += coffee + tea
-      }
-
-      const sortedAsc = Array.from(rowMap.values()).sort((a, b) =>
-        a.entry_date.localeCompare(b.entry_date)
-      )
-
-      // Fix 1: Per-branch running balance so KR and C2 don't pollute each other
-      const runningByBranch: Record<string, number> = {}
-      for (const row of sortedAsc) {
-        const br = row.branch
-        const key = `${row.entry_date}:${br}`
-        const stock = stockMap.get(key)
-        const prior = runningByBranch[br] ?? priorByBranch[br] ?? 0
-        row.opening_balance = prior
-        row.bought = stock?.purchase ?? 0
-        row.remaining = stock ? Number(stock.closing_stock) : prior + row.bought
-        // Fix 5: Clamp used to 0 to handle data entry errors
-        row.used = Math.max(0, row.opening_balance + row.bought - row.remaining)
-        runningByBranch[br] = row.remaining
-      }
-
-      return sortedAsc.sort((a, b) => b.entry_date.localeCompare(a.entry_date))
+      })
     },
     { retry: 2, staleTime: 30000 }
   )
