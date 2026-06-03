@@ -65,6 +65,7 @@ function RateHistoryRow({ rate }: { rate: VendorItemRate }) {
   return (
     <div
       className={`p-3 rounded-md border text-sm ${isCurrent ? 'border-primary bg-primary/5' : 'border-border'}`}
+      data-testid="rate-history-row"
     >
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
@@ -184,7 +185,12 @@ function VendorItemCard({ vi, vendorId }: { vi: VendorItem; vendorId: string }) 
           </Badge>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowAddRate(!showAddRate)}>
+          <Button
+            variant="outline"
+            size="sm"
+            data-testid="new-rate-btn"
+            onClick={() => setShowAddRate(!showAddRate)}
+          >
             <Plus className="w-3.5 h-3.5 mr-1" /> New Rate
           </Button>
           <Button
@@ -200,7 +206,11 @@ function VendorItemCard({ vi, vendorId }: { vi: VendorItem; vendorId: string }) 
 
       {/* Add rate form */}
       {showAddRate && (
-        <form onSubmit={handleSubmit(onAddRate)} className="bg-muted/40 rounded-md p-3 space-y-3">
+        <form
+          onSubmit={handleSubmit(onAddRate)}
+          className="bg-muted/40 rounded-md p-3 space-y-3"
+          data-testid="add-rate-form"
+        >
           <p className="text-sm font-medium">Add New Rate</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
@@ -211,6 +221,7 @@ function VendorItemCard({ vi, vendorId }: { vi: VendorItem; vendorId: string }) 
                 min="0"
                 {...register('cost_price', { valueAsNumber: true })}
                 className="mt-1 h-8 text-sm"
+                data-testid="input-cost-price"
               />
               {errors.cost_price && (
                 <p className="text-destructive text-xs">{errors.cost_price.message}</p>
@@ -222,7 +233,14 @@ function VendorItemCard({ vi, vendorId }: { vi: VendorItem; vendorId: string }) 
                 type="number"
                 step="0.01"
                 min="0"
-                {...register('selling_price', { valueAsNumber: true })}
+                {...register('selling_price', {
+                  setValueAs: (v) =>
+                    v === '' || v === null || v === undefined
+                      ? undefined
+                      : isNaN(Number(v))
+                        ? undefined
+                        : Number(v),
+                })}
                 placeholder="Optional"
                 className="mt-1 h-8 text-sm"
               />
@@ -242,7 +260,12 @@ function VendorItemCard({ vi, vendorId }: { vi: VendorItem; vendorId: string }) 
             </div>
             <div>
               <Label className="text-xs">Effective From</Label>
-              <Input type="date" {...register('effective_from')} className="mt-1 h-8 text-sm" />
+              <Input
+                type="date"
+                {...register('effective_from')}
+                className="mt-1 h-8 text-sm"
+                data-testid="input-effective-from"
+              />
               {errors.effective_from && (
                 <p className="text-destructive text-xs">{errors.effective_from.message}</p>
               )}
@@ -257,7 +280,12 @@ function VendorItemCard({ vi, vendorId }: { vi: VendorItem; vendorId: string }) 
             </div>
           </div>
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isSubmitting}
+              data-testid="btn-add-rate-submit"
+            >
               {isSubmitting ? 'Saving...' : 'Add Rate'}
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => setShowAddRate(false)}>
@@ -351,7 +379,7 @@ export default function VendorProfile() {
   const bd = vendor.vendor_bank_details
 
   return (
-    <div className="p-4 max-w-4xl mx-auto pb-8">
+    <div className="p-4 max-w-4xl mx-auto pb-8" data-testid="vendor-profile-page">
       {/* Header */}
       <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-3">
@@ -374,7 +402,9 @@ export default function VendorProfile() {
         <TabsList className="w-full grid grid-cols-4 mb-5">
           <TabsTrigger value="business">Business</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
-          <TabsTrigger value="items">Items & Rates</TabsTrigger>
+          <TabsTrigger value="items" data-testid="items-tab-trigger">
+            Items & Rates
+          </TabsTrigger>
           <TabsTrigger value="bank">Bank</TabsTrigger>
         </TabsList>
 

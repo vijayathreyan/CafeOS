@@ -300,21 +300,21 @@ export default function MilkReport() {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <KPICard
           title="Total Bought"
-          value={String(Math.round(totalBought)) + ' pkts'}
-          subtitle="Packets purchased"
+          value={String(Math.round(totalBought)) + ' L'}
+          subtitle="Litres purchased"
           status="info"
           data-testid="kpi-total-bought"
         />
         <KPICard
           title="Total Used"
-          value={String(Math.round(totalUsed)) + ' pkts'}
-          subtitle="Packets consumed"
+          value={String(Math.round(totalUsed)) + ' L'}
+          subtitle="Litres consumed"
           status="success"
           data-testid="kpi-total-used"
         />
         <KPICard
           title="Closing Remaining"
-          value={String(Math.round(closingRemaining)) + ' pkts'}
+          value={String(Math.round(closingRemaining)) + ' L'}
           subtitle="End of period stock"
           status="none"
           data-testid="kpi-closing-remaining"

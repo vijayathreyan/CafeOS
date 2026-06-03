@@ -113,11 +113,13 @@ function AutoTotalPanel({
   cycleStart,
   cycleEnd,
   onTotal,
+  emptyMessage,
 }: {
   vendorId: string
   cycleStart: string
   cycleEnd: string
   onTotal: (total: number) => void
+  emptyMessage?: string
 }) {
   const { user } = useAuth()
   const {
@@ -127,6 +129,14 @@ function AutoTotalPanel({
   } = useVendorAutoTotal(vendorId, cycleStart, cycleEnd, !!user)
 
   const total = lines.reduce((s, l) => s + l.line_total, 0)
+  const isDateBased = lines.length > 0 && lines[0].date != null
+
+  function fmtShortDate(iso: string) {
+    return new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+    })
+  }
 
   return (
     <div className="rounded-md border border-border bg-muted/30 p-3">
@@ -138,6 +148,7 @@ function AutoTotalPanel({
           size="sm"
           variant="ghost"
           className="h-7 text-xs gap-1"
+          data-testid="compute-btn"
           onClick={async () => {
             await refetch()
             onTotal(total)
@@ -151,25 +162,35 @@ function AutoTotalPanel({
       {isLoading ? (
         <Skeleton className="h-16 w-full" />
       ) : lines.length === 0 ? (
-        <p className="text-xs text-muted-foreground">
-          No daily entries found for this period. Click Compute to refresh.
+        <p className="text-xs text-muted-foreground" data-testid="auto-total-empty">
+          {emptyMessage ?? 'No daily entries found for this period. Click Compute to refresh.'}
         </p>
       ) : (
-        <Table className="text-xs">
+        <Table className="text-xs" data-testid="auto-total-table">
           <TableHeader>
             <TableRow>
-              <TableHead className="py-1 pl-0">Item</TableHead>
-              <TableHead className="py-1 text-right">Qty</TableHead>
-              <TableHead className="py-1 text-right">Rate</TableHead>
+              <TableHead className="py-1 pl-0">{isDateBased ? 'Date' : 'Item'}</TableHead>
+              <TableHead className="py-1 text-right">
+                {isDateBased ? 'Litres (L)' : 'Qty'}
+              </TableHead>
+              <TableHead className="py-1 text-right">
+                {isDateBased ? 'Rate (₹/L)' : 'Rate'}
+              </TableHead>
               <TableHead className="py-1 text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {lines.map((l, i) => (
               <TableRow key={i}>
-                <TableCell className="py-1 pl-0">{l.item_name}</TableCell>
-                <TableCell className="py-1 text-right">{l.qty}</TableCell>
-                <TableCell className="py-1 text-right">₹{l.rate}</TableCell>
+                <TableCell className="py-1 pl-0">
+                  {l.date ? fmtShortDate(l.date) : l.item_name}
+                </TableCell>
+                <TableCell className="py-1 text-right">
+                  {isDateBased ? `${l.qty} L` : l.qty}
+                </TableCell>
+                <TableCell className="py-1 text-right">
+                  {isDateBased ? `₹${l.rate}/L` : `₹${l.rate}`}
+                </TableCell>
                 <TableCell className="py-1 text-right font-medium">
                   {formatCurrency(l.line_total)}
                 </TableCell>
@@ -620,6 +641,11 @@ function SectionACard({
             cycleStart={cycleStart}
             cycleEnd={cycleEnd}
             onTotal={(t) => setSystemTotal(t)}
+            emptyMessage={
+              isKalingaraj(vendor.business_name)
+                ? 'No milk purchases recorded for this period'
+                : undefined
+            }
           />
         )}
 

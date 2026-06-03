@@ -390,6 +390,7 @@ export default function VendorMaster() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      data-testid={`btn-view-vendor-${vendor.business_name.toLowerCase().replace(/\s+/g, '-')}`}
                       onClick={() => navigate(`/vendors/${vendor.id}`)}
                     >
                       View <ChevronRight className="w-4 h-4 ml-0.5" />

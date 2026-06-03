@@ -119,7 +119,9 @@ export function useVendorAutoTotal(
   cycleEnd: string,
   session: boolean
 ) {
-  return useSupabaseQuery<{ item_name: string; qty: number; rate: number; line_total: number }[]>(
+  return useSupabaseQuery<
+    { date?: string; item_name: string; qty: number; rate: number; line_total: number }[]
+  >(
     ['vendor_auto_total', vendorId, cycleStart, cycleEnd],
     async () => {
       if (!vendorId) return []
@@ -141,7 +143,13 @@ export function useVendorAutoTotal(
       if (viErr) throw new Error(viErr.message)
       if (!vendorItems || vendorItems.length === 0) return []
 
-      const lines: { item_name: string; qty: number; rate: number; line_total: number }[] = []
+      const lines: {
+        date?: string
+        item_name: string
+        qty: number
+        rate: number
+        line_total: number
+      }[] = []
 
       for (const vi of vendorItems) {
         // Pick the rate effective during the cycle period (most recent effective_from <= cycleEnd)
@@ -161,34 +169,57 @@ export function useVendorAutoTotal(
         const itemName = im.name_en
         const itemId = vi.item_id as string
 
-        // 2a. For Milk item: sum litres from milk_entries via daily_entries
+        // 2a. For Milk item: per-day litres BOUGHT from stock_entries × rate effective that date
         if (itemName === 'Milk') {
-          // Get daily_entry_ids in the cycle period
           const { data: de } = await supabase
             .from('daily_entries')
-            .select('id')
+            .select('id, entry_date')
             .gte('entry_date', cycleStart)
             .lte('entry_date', cycleEnd)
+            .order('entry_date', { ascending: true })
 
-          const deIds = (de ?? []).map((d) => d.id as string)
-          if (deIds.length === 0) continue
+          if (!de?.length) continue
 
-          const { data: milkRows } = await supabase
-            .from('milk_entries')
-            .select('coffee_milk_litres, tea_milk_litres')
-            .in('daily_entry_id', deIds)
-
-          const totalLitres = (milkRows ?? []).reduce(
-            (acc, r) => acc + (r.coffee_milk_litres as number) + (r.tea_milk_litres as number),
-            0
+          const dateByEntry = new Map<string, string>(
+            de.map((d) => [d.id as string, d.entry_date as string])
           )
+          const deIds = de.map((d) => d.id as string)
 
-          if (totalLitres > 0) {
+          // Read litres bought (purchase column) from stock_entries for Milk item
+          const { data: stockRows } = await supabase
+            .from('stock_entries')
+            .select('daily_entry_id, purchase')
+            .in('daily_entry_id', deIds)
+            .eq('item_name', 'Milk')
+
+          // Aggregate by date
+          const purchaseByDate = new Map<string, number>()
+          for (const row of stockRows ?? []) {
+            const date = dateByEntry.get(row.daily_entry_id as string)
+            if (!date) continue
+            purchaseByDate.set(date, (purchaseByDate.get(date) ?? 0) + Number(row.purchase))
+          }
+
+          // Per-day lines with rate effective on that specific date
+          for (const [date, litresBought] of Array.from(purchaseByDate.entries()).sort()) {
+            if (litresBought <= 0) continue
+            const effectiveRate =
+              rates
+                .filter(
+                  (r) =>
+                    r.effective_from <= date && (r.effective_to == null || r.effective_to >= date)
+                )
+                .sort((a, b) => (a.effective_from < b.effective_from ? 1 : -1))[0]?.cost_price ??
+              rates
+                .filter((r) => r.effective_from <= date)
+                .sort((a, b) => (a.effective_from < b.effective_from ? 1 : -1))[0]?.cost_price ??
+              0
             lines.push({
-              item_name: 'Milk',
-              qty: Math.round(totalLitres * 100) / 100,
-              rate,
-              line_total: Math.round(totalLitres * rate * 100) / 100,
+              date,
+              item_name: date,
+              qty: Math.round(litresBought * 100) / 100,
+              rate: effectiveRate,
+              line_total: Math.round(litresBought * effectiveRate * 100) / 100,
             })
           }
           continue
