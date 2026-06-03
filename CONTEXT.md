@@ -1112,7 +1112,14 @@ When Phase 10 is built, the Alert Manager MUST implement:
 - **useVendorPayments.ts** — Kalingaraj compute reads milk_entries.bought_litres (not stock_entries)
 - **usePLReport.ts** — milk cost reads milk_entries.bought_litres (not stock_entries)
 - Playwright tests: `tests/e2e/phase13_milk.spec.ts` (11 tests)
-- **Next migration: 021**
+
+### ✅ Phase 13 Vendor Master + Kalingaraj Fixes (migration 021)
+- **Fix 1** — `VendorOnboarding.tsx`: selling_price used `valueAsNumber: true` → returned NaN for empty input, blocking save. Changed to `setValueAs` (empty → undefined). Placeholder updated to "Optional — leave blank for internal use items".
+- **Fix 2** — `item_master.unit = 'L'` for Milk (migration 021). VendorOnboarding dropdown changed from `{name} ({item_type} · {unit})` to `{name} · {unit}`.
+- **Fix 3** — `VendorProfile.tsx`: Add Rate form now auto-scrolls into view when opened (`scrollIntoView`). Toast updated to "Vendor item rate updated successfully".
+- **Fix 4** — Migration 021: Kalingaraj milk `vendor_item_rates.effective_from` back-dated to 2026-01-01; `cost_price` seeded to 69 where 0 or null.
+- Playwright tests: `tests/e2e/phase13_vendor.spec.ts` (8 tests)
+- **Next migration: 022**
 
 ---
 
