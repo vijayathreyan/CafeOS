@@ -214,7 +214,7 @@ export function useUpdateVendor() {
         .update({
           business_name: values.business_name,
           contact_name: values.contact_name || null,
-          whatsapp_number: values.whatsapp_number,
+          whatsapp_number: values.whatsapp_number || null,
           alternate_phone: values.alternate_phone || null,
           email: values.email || null,
           address: values.address || null,

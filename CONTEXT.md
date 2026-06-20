@@ -1138,6 +1138,20 @@ When Phase 10 is built, the Alert Manager MUST implement:
   - All `new Date().toISOString().split('T')[0]` for "today" — minor risk before 5:30am IST (UTC midnight returns previous local date); low priority since shop is closed those hours
 - 3 new E2E tests added to `tests/e2e/phase13_vendor.spec.ts` (tests 9–11).
 
+### ✅ Phase 13 Bug Fix — Edit Vendor Silent Save Failure
+- **Symptom**: Edit Kalingaraj → Items tab → change Cost Price → "Update Vendor" → nothing happened (no Toast, no loading state, no navigation, no save).
+- **Root cause 1 — Silent validation failure**: `vendorSchema` had `whatsapp_number` and `contact_name` as required fields. Kalingaraj (and other seeded vendors like Bisleri, Devi S) have `null` phone numbers. `reset()` set them to `''`, which failed the 10-digit regex / `min(1)`. `handleSubmit(onSubmit)` saw validation errors and refused to call `onSubmit` — no `onError` handler was registered so the failure was completely silent.
+- **Root cause 2 — Rates never saved**: `useUpdateVendor` only updated vendor metadata and bank details — it never processed `values.items`. Even if validation passed, any cost_price change was silently discarded.
+- **Fix**:
+  - `vendorSchema`: made `whatsapp_number` and `contact_name` optional (accept `''`), matching the `alternate_phone` pattern.
+  - `useVendors.ts` → `useUpdateVendor`: `whatsapp_number: values.whatsapp_number || null` (was passing empty string to DB).
+  - `itemRowSchema`: added `vendor_item_id: z.string().optional()` and `original_cost_price: z.number().optional()` as hidden tracked fields.
+  - Edit mode pre-fill: sets `vendor_item_id: vi.id` and `original_cost_price: latestRate?.cost_price ?? 0` per item; `effective_from` defaults to today.
+  - `onSubmit` (edit mode): after `updateVendor.mutateAsync`, loops items — if `cost_price !== original_cost_price`, INSERTs a new `vendor_item_rates` row (preserves history, does NOT overwrite old rows).
+  - Added `onFormError()` handler wired to `handleSubmit(onSubmit, onFormError)` — validation failures now show a Toast instead of silently dying.
+- **Files changed**: `VendorOnboarding.tsx`, `useVendors.ts`, `types/vendor.ts`
+- 4 new E2E tests added to `tests/e2e/phase13_vendor.spec.ts` (tests 12–15); covers Kalingaraj (incomplete profile), new vendor with blank phone, price change rate INSERT, complete vendor (Vada Vendor).
+
 ---
 
 ## What's NOT Built Yet (Phase 14 onwards)

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { supabase } from '@/lib/supabase'
 import { useForm, useFieldArray, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -27,6 +28,8 @@ import type { VendorFormValues } from '../../types/vendor'
 // ─── Validation schema ────────────────────────────────────────────────────────
 
 const itemRowSchema = z.object({
+  vendor_item_id: z.string().optional(), // edit mode only — identifies existing vendor_item row
+  original_cost_price: z.number().optional(), // edit mode only — snapshot for change detection
   item_id: z.string().min(1, 'Select an item'),
   branch_kr: z.boolean(),
   branch_c2: z.boolean(),
@@ -47,8 +50,13 @@ const vendorSchema = z.object({
   payment_cycle_type: z.enum(['mon_thu', 'fixed_dates', 'prepaid', 'same_day_cash']),
   is_prepaid: z.boolean(),
   is_same_day_cash: z.boolean(),
-  contact_name: z.string().min(1, 'Contact name is required'),
-  whatsapp_number: z.string().regex(/^\d{10}$/, '10-digit Indian mobile number required'),
+  // Optional in edit mode — some seeded vendors (e.g. Kalingaraj, Bisleri) have no phone on record
+  contact_name: z.string().min(1, 'Contact name is required').optional().or(z.literal('')),
+  whatsapp_number: z
+    .string()
+    .regex(/^\d{10}$/, '10-digit Indian mobile number required')
+    .optional()
+    .or(z.literal('')),
   alternate_phone: z
     .string()
     .regex(/^\d{10}$/, '10-digit number')
@@ -131,10 +139,11 @@ export default function VendorOnboarding() {
         email: existingVendor.email ?? '',
         address: existingVendor.address ?? '',
         google_maps_url: existingVendor.google_maps_url ?? '',
-        // Don't pre-fill items on edit — managed via VendorProfile
         items: activeItems.map((vi) => {
           const latestRate = vi.vendor_item_rates?.find((r) => !r.effective_to)
           return {
+            vendor_item_id: vi.id, // hidden — used on submit to insert rate
+            original_cost_price: latestRate?.cost_price ?? 0, // snapshot for change detection
             item_id: vi.item_id,
             branch_kr: vi.branch === null || vi.branch === 'KR',
             branch_c2: vi.branch === null || vi.branch === 'C2',
@@ -142,8 +151,8 @@ export default function VendorOnboarding() {
             cost_price: latestRate?.cost_price ?? 0,
             selling_price: latestRate?.selling_price ?? undefined,
             unit: latestRate?.unit ?? 'per_piece',
-            effective_from: latestRate?.effective_from ?? today,
-            notes: latestRate?.notes ?? '',
+            effective_from: today, // default to today so a price change creates a new rate from now
+            notes: '',
           }
         }),
         payment_preference: bd?.payment_preference ?? '',
@@ -161,6 +170,23 @@ export default function VendorOnboarding() {
     try {
       if (isEdit && id) {
         await updateVendor.mutateAsync({ id, values: values as VendorFormValues })
+
+        // Insert a new rate row for any item whose cost_price changed.
+        // Uses INSERT (not UPDATE) to preserve the full rate history — old rows remain.
+        for (const item of values.items) {
+          if (!item.vendor_item_id) continue
+          if (item.cost_price === item.original_cost_price) continue // no change → skip
+          const { error } = await supabase.from('vendor_item_rates').insert({
+            vendor_item_id: item.vendor_item_id,
+            cost_price: item.cost_price,
+            selling_price: item.selling_price ?? null,
+            unit: item.unit,
+            effective_from: item.effective_from,
+            notes: item.notes || null,
+          })
+          if (error) throw new Error(error.message)
+        }
+
         showToast('Vendor updated successfully', 'success')
         navigate(`/vendors/${id}`)
       } else {
@@ -174,6 +200,10 @@ export default function VendorOnboarding() {
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Failed to save vendor', 'error')
     }
+  }
+
+  function onFormError() {
+    showToast('Please check all required fields', 'error')
   }
 
   const cycleValue = useWatch({ control, name: 'payment_cycle_type' })
@@ -201,7 +231,7 @@ export default function VendorOnboarding() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form onSubmit={handleSubmit(onSubmit, onFormError)} noValidate>
         <Tabs defaultValue="business" className="w-full">
           <TabsList className="w-full grid grid-cols-4 mb-6">
             <TabsTrigger value="business">Business</TabsTrigger>

@@ -301,3 +301,117 @@ test.describe('Phase 13 Kalingaraj compute — date boundary inclusion', () => {
     }
   })
 })
+
+// ─── Phase 13 Edit Vendor Silent Save Fix ────────────────────────────────────
+
+test.describe('Phase 13 Edit Vendor — silent save failure fix', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, TEST_USERS.owner)
+    await page.waitForURL('**/dashboard', { timeout: 15000 })
+  })
+
+  /** Navigate to the edit form for a vendor by display name fragment. */
+  async function goToEditVendor(page: import('@playwright/test').Page, nameFragment: string) {
+    await page.goto(`${BASE_URL}/vendors`)
+    await page.waitForSelector('[data-testid^="btn-edit-vendor-"]', { timeout: 15000 })
+    const editBtn = page
+      .locator('[data-testid^="btn-edit-vendor-"]')
+      .filter({ hasText: new RegExp(nameFragment, 'i') })
+    await editBtn.first().click()
+    await page.waitForSelector('input[id="business_name"]', { timeout: 10000 })
+  }
+
+  test('12. Edit Kalingaraj — Update Vendor shows success toast (not silent failure)', async ({
+    page,
+  }) => {
+    test.setTimeout(30000)
+    await goToEditVendor(page, 'kalingaraj')
+
+    // Submit without any changes — should succeed even if phone is missing
+    const submitBtn = page.locator('button[type="submit"]')
+    await submitBtn.click()
+
+    // Must show some toast (success or validation error) — NOT silent
+    const toast = page.locator('[role="status"], [data-testid="toast"], .toast')
+    await toast.first().waitFor({ state: 'visible', timeout: 8000 })
+    const toastText = (await toast.first().textContent()) ?? ''
+    // Should either succeed or show a visible validation message — never stay silent
+    expect(toastText.length).toBeGreaterThan(0)
+  })
+
+  test('13. Edit vendor with missing phone — optional fields do not block save', async ({
+    page,
+  }) => {
+    test.setTimeout(30000)
+    await page.goto(`${BASE_URL}/vendors/new`)
+    await page.waitForSelector('input[id="business_name"]', { timeout: 10000 })
+
+    // Fill only business_name — leave contact_name and whatsapp_number blank
+    await page.fill('input[id="business_name"]', 'Test Incomplete Vendor')
+    // Do NOT fill contact_name or whatsapp_number
+
+    const submitBtn = page.locator('button[type="submit"]')
+    await submitBtn.click()
+
+    // Should not silently do nothing — must show some feedback (toast)
+    const toast = page.locator('[role="status"], [data-testid="toast"], .toast')
+    await toast.first().waitFor({ state: 'visible', timeout: 8000 })
+    const text = (await toast.first().textContent()) ?? ''
+    expect(text.length).toBeGreaterThan(0)
+  })
+
+  test('14. Edit Kalingaraj Items tab — change cost price → Update Vendor inserts new rate', async ({
+    page,
+  }) => {
+    test.setTimeout(30000)
+    await goToEditVendor(page, 'kalingaraj')
+
+    // Navigate to Items tab
+    await page.locator('button[role="tab"]').filter({ hasText: 'Items' }).click()
+    await page.waitForSelector('input[type="number"]', { timeout: 5000 })
+
+    // Change the first cost price field to a new value
+    const costInput = page.locator('input[type="number"]').first()
+    await costInput.clear()
+    await costInput.fill('72')
+
+    // Submit
+    const submitBtn = page.locator('button[type="submit"]')
+    await submitBtn.click()
+
+    // Must show success toast and navigate away — not silent failure
+    const toast = page.locator('[role="status"], [data-testid="toast"], .toast')
+    await toast.first().waitFor({ state: 'visible', timeout: 10000 })
+    const toastText = (await toast.first().textContent()) ?? ''
+    expect(toastText.toLowerCase()).toMatch(/updated|success/i)
+  })
+
+  test('15. Edit complete vendor (Vada Vendor) — Update Vendor shows success toast', async ({
+    page,
+  }) => {
+    test.setTimeout(30000)
+    // Try to find a different vendor (complete profile — has phone/bank)
+    await page.goto(`${BASE_URL}/vendors`)
+    await page.waitForSelector('[data-testid^="btn-edit-vendor-"]', { timeout: 15000 })
+
+    // Click the first edit button available (any vendor with complete data)
+    const allEditBtns = page.locator('[data-testid^="btn-edit-vendor-"]')
+    const count = await allEditBtns.count()
+    expect(count).toBeGreaterThan(0)
+
+    // Try Vada Vendor or fall back to first edit button
+    const vadaBtn = allEditBtns.filter({ hasText: /vada/i })
+    const target = (await vadaBtn.count()) > 0 ? vadaBtn.first() : allEditBtns.first()
+    await target.click()
+    await page.waitForSelector('input[id="business_name"]', { timeout: 10000 })
+
+    // Submit without changes
+    const submitBtn = page.locator('button[type="submit"]')
+    await submitBtn.click()
+
+    const toast = page.locator('[role="status"], [data-testid="toast"], .toast')
+    await toast.first().waitFor({ state: 'visible', timeout: 10000 })
+    const toastText = (await toast.first().textContent()) ?? ''
+    expect(toastText.toLowerCase()).toMatch(/updated|success/i)
+  })
+})

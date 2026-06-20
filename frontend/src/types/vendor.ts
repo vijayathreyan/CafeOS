@@ -96,6 +96,8 @@ export interface Vendor {
 // ─── Form types ───────────────────────────────────────────────────────────────
 
 export interface VendorItemFormRow {
+  vendor_item_id?: string // only set in edit mode — used to insert new rate rows
+  original_cost_price?: number // snapshot at page load — detect if price changed
   item_id: string
   branch_kr: boolean
   branch_c2: boolean
