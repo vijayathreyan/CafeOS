@@ -174,7 +174,10 @@ export interface CyclePeriod {
 export function getMonThuCycle(today: Date): CyclePeriod {
   const day = today.getDay() // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
 
-  const fmt = (d: Date) => d.toISOString().split('T')[0]
+  // Use local date getters — toISOString() is UTC and shifts the date back one day
+  // in IST (UTC+5:30), causing period boundaries to be computed one day too early.
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   const label = (s: Date, e: Date) => {
     const opts: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short' }
     return `${s.toLocaleDateString('en-IN', opts)} – ${e.toLocaleDateString('en-IN', opts)}`
@@ -303,7 +306,10 @@ export function getMonThuCycle(today: Date): CyclePeriod {
  * Cycles: 1st–10th (pay 11th), 11th–20th (pay 21st), 21st–end (pay 1st next month).
  */
 export function getFixedDateCycle(today: Date): CyclePeriod {
-  const fmt = (d: Date) => d.toISOString().split('T')[0]
+  // Use local date getters — toISOString() is UTC and shifts the date back one day
+  // in IST (UTC+5:30), causing period boundaries to be computed one day too early.
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   const d = today.getDate()
   const year = today.getFullYear()
   const month = today.getMonth()

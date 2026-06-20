@@ -1129,6 +1129,15 @@ When Phase 10 is built, the Alert Manager MUST implement:
 - **KR single-entry**: `branch === 'KR'` renders one Coffee Milk + one Tea Milk field (no shift split). C2 renders S1 + S2 shift-split form.
 - 5 new E2E tests added to `tests/e2e/phase13_milk.spec.ts` (tests 12–16).
 
+### ✅ Phase 13 Bug Fix — Kalingaraj Compute Date Boundary (IST timezone)
+- **Root cause**: `getFixedDateCycle()` and `getMonThuCycle()` in `phase5.ts` used `d.toISOString().split('T')[0]` to format dates. `new Date(year, month, day)` constructs a date in LOCAL time (IST), but `toISOString()` outputs UTC — in IST (UTC+5:30), midnight local = 18:30 UTC previous day, so the date string was one day early. The card label was correct (used `toLocaleDateString()` = local time) but `cycleStart`/`cycleEnd` strings passed to queries were both 1 day too early.
+- **Fix**: Changed `fmt` in both functions to use local-time getters (`getFullYear()`, `getMonth()`, `getDate()`) instead of `toISOString()`.
+- **Other places with same pattern (NOT fixed yet — flagged for follow-up):**
+  - `phase8.ts:100` — `monthToLastDay()` uses `new Date(year, month, 0).toISOString()` — off by one for month-end boundaries in IST
+  - `MonthEndStockPage.tsx:600` — same `new Date(year, month, 0).toISOString()` pattern for last-day calculation
+  - All `new Date().toISOString().split('T')[0]` for "today" — minor risk before 5:30am IST (UTC midnight returns previous local date); low priority since shop is closed those hours
+- 3 new E2E tests added to `tests/e2e/phase13_vendor.spec.ts` (tests 9–11).
+
 ---
 
 ## What's NOT Built Yet (Phase 14 onwards)
