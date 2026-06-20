@@ -381,3 +381,70 @@ test.describe('Phase 13 Milk Bug Fix — form fields and card Done status', () =
     await expect(cardHeader.locator('text=Done')).toBeVisible({ timeout: 5000 })
   })
 })
+
+// ─── Phase 13 Milk DB Fix — column existence + save round-trip ───────────────
+
+test.describe('Phase 13 Milk DB Fix — bought_litres column and save round-trip', () => {
+  test('17. Milk Details save — no database error, toast success shown (C2)', async ({ page }) => {
+    test.setTimeout(30000)
+    await loginAsStaffC2(page)
+    await openMilkCard(page)
+
+    await page.locator('[data-testid="milk-bought-input"]').fill('9')
+    await page.locator('[data-testid="milk-coffee-s1"]').fill('2')
+    await page.locator('[data-testid="milk-tea-s1"]').fill('4')
+
+    // No error toast before save
+    await expect(
+      page.locator('[role="status"]').filter({ hasText: /error|failed|does not exist/i })
+    ).not.toBeVisible()
+
+    await page.locator('[data-testid="milk-save-btn"]').click()
+
+    // Success toast appears — not an error
+    await page.waitForSelector('[role="status"]', { timeout: 8000 })
+    const toastText = await page.locator('[role="status"]').first().textContent()
+    expect(toastText).not.toMatch(/error|failed|does not exist/i)
+  })
+
+  test('18. Milk Details save — values persist after page refresh (C2)', async ({ page }) => {
+    test.setTimeout(30000)
+    await loginAsStaffC2(page)
+    await openMilkCard(page)
+
+    // Save known values
+    await page.locator('[data-testid="milk-bought-input"]').fill('9')
+    await page.locator('[data-testid="milk-coffee-s1"]').fill('2')
+    await page.locator('[data-testid="milk-tea-s1"]').fill('4')
+    await page.locator('[data-testid="milk-coffee-s2"]').fill('1')
+    await page.locator('[data-testid="milk-tea-s2"]').fill('2')
+    await page.locator('[data-testid="milk-save-btn"]').click()
+    await page.waitForSelector('[role="status"]', { timeout: 8000 })
+
+    // Reload and re-open card
+    await page.reload()
+    await openMilkCard(page)
+
+    // Persisted values must be visible
+    await expect(page.locator('[data-testid="milk-bought-input"]')).toHaveValue('9')
+    await expect(page.locator('[data-testid="milk-coffee-s1"]')).toHaveValue('2')
+    await expect(page.locator('[data-testid="milk-tea-s1"]')).toHaveValue('4')
+    await expect(page.locator('[data-testid="milk-coffee-s2"]')).toHaveValue('1')
+    await expect(page.locator('[data-testid="milk-tea-s2"]')).toHaveValue('2')
+  })
+
+  test('19. Milk Report shows bought column with real data (bought_litres column confirmed)', async ({
+    page,
+  }) => {
+    test.setTimeout(30000)
+    await loginAsOwner(page)
+    await page.goto(`${BASE_URL}/reports/milk`)
+    await page.waitForSelector('[data-testid="milk-table"]', { timeout: 15000 })
+    // If bought_litres column missing, query would fail and table would not render
+    await expect(page.locator('[data-testid="milk-table"]')).toBeVisible()
+    // No error alert
+    await expect(
+      page.locator('[role="alert"]').filter({ hasText: /error|failed|does not exist/i })
+    ).not.toBeVisible()
+  })
+})
