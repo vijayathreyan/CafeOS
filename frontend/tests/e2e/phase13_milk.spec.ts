@@ -260,3 +260,124 @@ test.describe('Phase 13 Milk Consolidation — Staff Entry + Reports', () => {
     await expect(milkRow.or(rawMaterialsSection.locator('text=Milk'))).toBeVisible()
   })
 })
+
+// ─── Phase 13 Milk Bug Fix — Milk Details form fields and card status ────────
+
+async function loginAsStaffC2(page: import('@playwright/test').Page) {
+  await loginAs(page, TEST_USERS.staff_c2)
+  await page.waitForURL('**/dashboard', { timeout: 15000 })
+}
+
+async function openMilkCard(page: import('@playwright/test').Page) {
+  await ensureShiftOpen(page)
+  // Find the Milk section card header and click to expand if not already open
+  const milkHeader = page.locator('button').filter({ hasText: /Milk/i }).first()
+  const milkInput = page.locator('[data-testid="milk-bought-input"]')
+  const alreadyOpen = await milkInput.isVisible({ timeout: 2000 }).catch(() => false)
+  if (!alreadyOpen) {
+    await milkHeader.click()
+  }
+  await page.waitForSelector('[data-testid="milk-bought-input"]', { timeout: 10000 })
+}
+
+test.describe('Phase 13 Milk Bug Fix — form fields and card Done status', () => {
+  test('12. C2 staff — all 5 milk fields accept input', async ({ page }) => {
+    test.setTimeout(30000)
+    await loginAsStaffC2(page)
+    await openMilkCard(page)
+
+    // Fill all 5 fields and verify each accepts the value
+    await page.locator('[data-testid="milk-bought-input"]').fill('10')
+    await expect(page.locator('[data-testid="milk-bought-input"]')).toHaveValue('10')
+
+    await page.locator('[data-testid="milk-coffee-s1"]').fill('3')
+    await expect(page.locator('[data-testid="milk-coffee-s1"]')).toHaveValue('3')
+
+    await page.locator('[data-testid="milk-tea-s1"]').fill('2')
+    await expect(page.locator('[data-testid="milk-tea-s1"]')).toHaveValue('2')
+
+    await page.locator('[data-testid="milk-coffee-s2"]').fill('1.5')
+    await expect(page.locator('[data-testid="milk-coffee-s2"]')).toHaveValue('1.5')
+
+    await page.locator('[data-testid="milk-tea-s2"]').fill('1')
+    await expect(page.locator('[data-testid="milk-tea-s2"]')).toHaveValue('1')
+  })
+
+  test('13. C2 staff — Daily Total updates live as shift fields change', async ({ page }) => {
+    test.setTimeout(30000)
+    await loginAsStaffC2(page)
+    await openMilkCard(page)
+
+    await page.locator('[data-testid="milk-coffee-s1"]').fill('3')
+    await page.locator('[data-testid="milk-tea-s1"]').fill('2')
+    await page.locator('[data-testid="milk-coffee-s2"]').fill('1')
+    await page.locator('[data-testid="milk-tea-s2"]').fill('1')
+
+    // Daily total should be 3+2+1+1 = 7.0L
+    const dailyTotal = page.locator('[data-testid="milk-daily-total"]')
+    await expect(dailyTotal).toBeVisible()
+    const text = await dailyTotal.textContent()
+    expect(text).toContain('7.0L')
+  })
+
+  test('14. C2 staff — Save persists all fields and card shows Done', async ({ page }) => {
+    test.setTimeout(30000)
+    await loginAsStaffC2(page)
+    await openMilkCard(page)
+
+    await page.locator('[data-testid="milk-bought-input"]').fill('12')
+    await page.locator('[data-testid="milk-coffee-s1"]').fill('4')
+    await page.locator('[data-testid="milk-tea-s1"]').fill('3')
+    await page.locator('[data-testid="milk-coffee-s2"]').fill('2')
+    await page.locator('[data-testid="milk-tea-s2"]').fill('1')
+
+    await page.locator('[data-testid="milk-save-btn"]').click()
+
+    // Toast should appear with success message
+    await page.waitForSelector('[role="status"], .toast, [data-testid*="toast"]', {
+      timeout: 8000,
+    })
+
+    // Card header should show Done (green checkmark text)
+    const cardHeader = page.locator('button').filter({ hasText: /Milk/i }).first()
+    await expect(cardHeader.locator('text=Done')).toBeVisible({ timeout: 5000 })
+  })
+
+  test('15. KR staff — single daily entry form renders (no shift columns)', async ({ page }) => {
+    test.setTimeout(30000)
+    await loginAsStaffKR(page)
+    await openMilkCard(page)
+
+    // KR should NOT show the shift-split table
+    await expect(page.locator('[data-testid="milk-shift-table"]')).not.toBeVisible()
+
+    // KR should show single coffee and tea fields
+    await expect(page.locator('[data-testid="milk-coffee-s1"]')).toBeVisible()
+    await expect(page.locator('[data-testid="milk-tea-s1"]')).toBeVisible()
+
+    // KR should NOT show shift-2 fields
+    await expect(page.locator('[data-testid="milk-coffee-s2"]')).not.toBeVisible()
+    await expect(page.locator('[data-testid="milk-tea-s2"]')).not.toBeVisible()
+  })
+
+  test('16. KR staff — Save persists values and card shows Done', async ({ page }) => {
+    test.setTimeout(30000)
+    await loginAsStaffKR(page)
+    await openMilkCard(page)
+
+    await page.locator('[data-testid="milk-bought-input"]').fill('8')
+    await page.locator('[data-testid="milk-coffee-s1"]').fill('5')
+    await page.locator('[data-testid="milk-tea-s1"]').fill('3')
+
+    await page.locator('[data-testid="milk-save-btn"]').click()
+
+    // Toast should appear
+    await page.waitForSelector('[role="status"], .toast, [data-testid*="toast"]', {
+      timeout: 8000,
+    })
+
+    // Card header shows Done
+    const cardHeader = page.locator('button').filter({ hasText: /Milk/i }).first()
+    await expect(cardHeader.locator('text=Done')).toBeVisible({ timeout: 5000 })
+  })
+})

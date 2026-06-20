@@ -120,6 +120,30 @@ export default function ShiftDashboard() {
     setSectionStatus((prev) => ({ ...prev, [section]: done }))
   }, [])
 
+  // Stable onDone callbacks — each card gets a memoised function so that
+  // inline arrow props don't create new references on every parent render,
+  // which would cause an effect → setState → re-render → new prop loop.
+  const onSnacksDone = useCallback(
+    (done: boolean) => markSectionDone('snacks', done),
+    [markSectionDone]
+  )
+  const onCashDone = useCallback(
+    (done: boolean) => markSectionDone('cash', done),
+    [markSectionDone]
+  )
+  const onMilkDone = useCallback(
+    (done: boolean) => markSectionDone('milk', done),
+    [markSectionDone]
+  )
+  const onAssetsDone = useCallback(
+    (done: boolean) => markSectionDone('assets', done),
+    [markSectionDone]
+  )
+  const onPostpaidDone = useCallback(
+    (done: boolean) => markSectionDone('postpaid', done),
+    [markSectionDone]
+  )
+
   const allRequiredDone =
     sectionStatus.snacks &&
     sectionStatus.cash &&
@@ -212,11 +236,7 @@ export default function ShiftDashboard() {
           onToggle={() => setExpandedCard(expandedCard === 'snacks' ? null : 'snacks')}
           required
         >
-          <SnacksCard
-            dailyEntryId={activeEntry.id}
-            branch={branch!}
-            onDone={(done) => markSectionDone('snacks', done)}
-          />
+          <SnacksCard dailyEntryId={activeEntry.id} branch={branch!} onDone={onSnacksDone} />
         </SectionCard>
 
         {/* Cash Deposit */}
@@ -228,10 +248,7 @@ export default function ShiftDashboard() {
           onToggle={() => setExpandedCard(expandedCard === 'cash' ? null : 'cash')}
           required
         >
-          <CashCard
-            dailyEntryId={activeEntry.id}
-            onDone={(done) => markSectionDone('cash', done)}
-          />
+          <CashCard dailyEntryId={activeEntry.id} onDone={onCashDone} />
         </SectionCard>
 
         {/* Milk Details */}
@@ -247,7 +264,7 @@ export default function ShiftDashboard() {
             dailyEntryId={activeEntry.id}
             branch={branch!}
             entryDate={today}
-            onDone={(done) => markSectionDone('milk', done)}
+            onDone={onMilkDone}
           />
         </SectionCard>
 
@@ -260,10 +277,7 @@ export default function ShiftDashboard() {
           onToggle={() => setExpandedCard(expandedCard === 'assets' ? null : 'assets')}
           required
         >
-          <AssetsCard
-            dailyEntryId={activeEntry.id}
-            onDone={(done) => markSectionDone('assets', done)}
-          />
+          <AssetsCard dailyEntryId={activeEntry.id} onDone={onAssetsDone} />
         </SectionCard>
 
         {/* Post-Paid — KR only */}
@@ -276,10 +290,7 @@ export default function ShiftDashboard() {
             onToggle={() => setExpandedCard(expandedCard === 'postpaid' ? null : 'postpaid')}
             required
           >
-            <PostPaidCard
-              dailyEntryId={activeEntry.id}
-              onDone={(done) => markSectionDone('postpaid', done)}
-            />
+            <PostPaidCard dailyEntryId={activeEntry.id} onDone={onPostpaidDone} />
           </SectionCard>
         )}
 

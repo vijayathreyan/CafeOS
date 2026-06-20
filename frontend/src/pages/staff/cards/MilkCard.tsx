@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../../lib/supabase'
 import { saveDraft, loadDraft } from '../../../lib/offlineQueue'
+import { showToast } from '../../../lib/dialogs'
 
 interface MilkData {
   coffee_s1: number
@@ -23,6 +24,62 @@ interface Props {
   onDone: (done: boolean) => void
 }
 
+// ─── Shift row for C2 (2-shift per day) ────────────────────────────────────
+// Defined OUTSIDE MilkCard so React never treats it as a new component type
+// on each parent render — prevents unmount/remount that would lose focus.
+interface MilkRowProps {
+  label: string
+  s1Key: keyof MilkData
+  s2Key: keyof MilkData
+  s1TestId?: string
+  s2TestId?: string
+  data: MilkData
+  onUpdate: (field: keyof MilkData, val: number) => void
+}
+
+function MilkRow({ label, s1Key, s2Key, s1TestId, s2TestId, data, onUpdate }: MilkRowProps) {
+  return (
+    <tr className="border-b border-border last:border-b-0">
+      <td className="py-3 font-medium text-foreground text-sm pl-1">{label}</td>
+      <td className="py-3 px-2 text-center">
+        <div className="flex items-center justify-center gap-1">
+          <input
+            type="number"
+            min={0}
+            step={0.5}
+            className={INPUT}
+            placeholder="0"
+            value={data[s1Key] || ''}
+            onFocus={(e) => e.target.select()}
+            onChange={(e) => onUpdate(s1Key, parseFloat(e.target.value) || 0)}
+            data-testid={s1TestId}
+          />
+          <span className="text-xs text-muted-foreground">L</span>
+        </div>
+      </td>
+      <td className="py-3 px-2 text-center">
+        <div className="flex items-center justify-center gap-1">
+          <input
+            type="number"
+            min={0}
+            step={0.5}
+            className={INPUT}
+            placeholder="0"
+            value={data[s2Key] || ''}
+            onFocus={(e) => e.target.select()}
+            onChange={(e) => onUpdate(s2Key, parseFloat(e.target.value) || 0)}
+            data-testid={s2TestId}
+          />
+          <span className="text-xs text-muted-foreground">L</span>
+        </div>
+      </td>
+      <td className="py-3 px-2 text-right font-semibold text-foreground">
+        {(Number(data[s1Key]) + Number(data[s2Key])).toFixed(1)}L
+      </td>
+    </tr>
+  )
+}
+
 export default function MilkCard({ dailyEntryId, branch, entryDate, onDone }: Props) {
   const { t } = useTranslation()
   const [data, setData] = useState<MilkData>(
@@ -32,9 +89,10 @@ export default function MilkCard({ dailyEntryId, branch, entryDate, onDone }: Pr
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
+  const isKR = branch === 'KR'
   const totalConsumed = data.coffee_s1 + data.tea_s1 + data.coffee_s2 + data.tea_s2
   const closingBalance = Math.max(0, openingBalance + data.bought_litres - totalConsumed)
-  const isDone = data.coffee_s1 > 0 || data.tea_s1 > 0
+  const isDone = totalConsumed > 0 || data.bought_litres > 0
 
   // Load existing entry (opening balance + saved values)
   useEffect(() => {
@@ -77,17 +135,24 @@ export default function MilkCard({ dailyEntryId, branch, entryDate, onDone }: Pr
     load()
   }, [branch, entryDate])
 
+  // Keep a ref to onDone so the effect below never re-triggers from a new
+  // inline function prop — prevents the ShiftDashboard ↔ MilkCard re-render storm.
+  const onDoneRef = useRef(onDone)
   useEffect(() => {
-    onDone(isDone)
-  }, [isDone, onDone])
+    onDoneRef.current = onDone
+  })
+  useEffect(() => {
+    onDoneRef.current(isDone)
+  }, [isDone])
 
   useEffect(() => {
     const i = setInterval(() => saveDraft(`milk_${branch}_${entryDate}`, data), 30_000)
     return () => clearInterval(i)
   }, [data, branch, entryDate])
 
-  const update = (field: keyof MilkData, val: number) =>
+  const update = useCallback((field: keyof MilkData, val: number) => {
     setData((prev) => ({ ...prev, [field]: val < 0 ? 0 : val }))
+  }, [])
 
   const handleSave = async () => {
     setSaving(true)
@@ -103,69 +168,26 @@ export default function MilkCard({ dailyEntryId, branch, entryDate, onDone }: Pr
           tea_milk_litres: data.tea_s1 + data.tea_s2,
           coffee_s1_litres: data.coffee_s1,
           tea_s1_litres: data.tea_s1,
-          coffee_s2_litres: data.coffee_s2,
-          tea_s2_litres: data.tea_s2,
+          coffee_s2_litres: isKR ? 0 : data.coffee_s2,
+          tea_s2_litres: isKR ? 0 : data.tea_s2,
           bought_litres: data.bought_litres,
           opening_balance_litres: openingBalance,
           closing_balance_litres: closing,
         },
         { onConflict: 'branch,entry_date' }
       )
-      if (!error) {
+      if (error) {
+        showToast(error.message, 'error')
+      } else {
         setSaved(true)
+        onDoneRef.current(true)
+        showToast('Milk details saved', 'success')
         setTimeout(() => setSaved(false), 2000)
       }
     } finally {
       setSaving(false)
     }
   }
-
-  const Row = ({
-    label,
-    s1Key,
-    s2Key,
-  }: {
-    label: string
-    s1Key: keyof MilkData
-    s2Key: keyof MilkData
-  }) => (
-    <tr className="border-b border-border last:border-b-0">
-      <td className="py-3 font-medium text-foreground text-sm pl-1">{label}</td>
-      <td className="py-3 px-2 text-center">
-        <div className="flex items-center justify-center gap-1">
-          <input
-            type="number"
-            min={0}
-            step={0.5}
-            className={INPUT}
-            placeholder="0"
-            value={data[s1Key] || ''}
-            onFocus={(e) => e.target.select()}
-            onChange={(e) => update(s1Key, parseFloat(e.target.value) || 0)}
-          />
-          <span className="text-xs text-muted-foreground">L</span>
-        </div>
-      </td>
-      <td className="py-3 px-2 text-center">
-        <div className="flex items-center justify-center gap-1">
-          <input
-            type="number"
-            min={0}
-            step={0.5}
-            className={INPUT}
-            placeholder="0"
-            value={data[s2Key] || ''}
-            onFocus={(e) => e.target.select()}
-            onChange={(e) => update(s2Key, parseFloat(e.target.value) || 0)}
-          />
-          <span className="text-xs text-muted-foreground">L</span>
-        </div>
-      </td>
-      <td className="py-3 px-2 text-right font-semibold text-foreground">
-        {(Number(data[s1Key]) + Number(data[s2Key])).toFixed(1)}L
-      </td>
-    </tr>
-  )
 
   return (
     <div className="px-4 pb-4 pt-2">
@@ -200,33 +222,113 @@ export default function MilkCard({ dailyEntryId, branch, entryDate, onDone }: Pr
         </div>
       </div>
 
-      {/* Shift consumption table */}
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-muted-foreground text-xs bg-muted/50">
-            <th className="text-left py-2 pl-1 font-semibold rounded-l">Type</th>
-            <th className="text-center py-2 font-semibold">{t('milk.shift1')}</th>
-            <th className="text-center py-2 font-semibold">{t('milk.shift2')}</th>
-            <th className="text-right py-2 font-semibold rounded-r">{t('milk.dailyTotal')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <Row label={t('milk.coffeeMilk')} s1Key="coffee_s1" s2Key="coffee_s2" />
-          <Row label={t('milk.teaMilk')} s1Key="tea_s1" s2Key="tea_s2" />
-        </tbody>
-        <tfoot>
-          <tr className="border-t-2 border-border bg-muted/30">
-            <td className="py-3 font-semibold text-sm pl-1">{t('milk.dailyTotal')}</td>
-            <td className="py-3 text-center font-semibold">
-              {(data.coffee_s1 + data.tea_s1).toFixed(1)}L
-            </td>
-            <td className="py-3 text-center font-semibold">
-              {(data.coffee_s2 + data.tea_s2).toFixed(1)}L
-            </td>
-            <td className="py-3 text-right font-bold text-primary">{totalConsumed.toFixed(1)}L</td>
-          </tr>
-        </tfoot>
-      </table>
+      {/* KR: single daily entry — no shift split */}
+      {isKR ? (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-muted-foreground text-xs bg-muted/50">
+              <th className="text-left py-2 pl-1 font-semibold rounded-l">Type</th>
+              <th className="text-center py-2 font-semibold">Today</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-border">
+              <td className="py-3 font-medium text-foreground text-sm pl-1">
+                {t('milk.coffeeMilk')}
+              </td>
+              <td className="py-3 px-2 text-center">
+                <div className="flex items-center justify-center gap-1">
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    className={INPUT}
+                    placeholder="0"
+                    value={data.coffee_s1 || ''}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => update('coffee_s1', parseFloat(e.target.value) || 0)}
+                    data-testid="milk-coffee-s1"
+                  />
+                  <span className="text-xs text-muted-foreground">L</span>
+                </div>
+              </td>
+            </tr>
+            <tr className="border-b border-border last:border-b-0">
+              <td className="py-3 font-medium text-foreground text-sm pl-1">{t('milk.teaMilk')}</td>
+              <td className="py-3 px-2 text-center">
+                <div className="flex items-center justify-center gap-1">
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    className={INPUT}
+                    placeholder="0"
+                    value={data.tea_s1 || ''}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => update('tea_s1', parseFloat(e.target.value) || 0)}
+                    data-testid="milk-tea-s1"
+                  />
+                  <span className="text-xs text-muted-foreground">L</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr className="border-t-2 border-border bg-muted/30">
+              <td className="py-3 font-semibold text-sm pl-1">{t('milk.dailyTotal')}</td>
+              <td className="py-3 text-center font-bold text-primary">
+                {totalConsumed.toFixed(1)}L
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      ) : (
+        /* C2: shift-split entry */
+        <table className="w-full text-sm" data-testid="milk-shift-table">
+          <thead>
+            <tr className="text-muted-foreground text-xs bg-muted/50">
+              <th className="text-left py-2 pl-1 font-semibold rounded-l">Type</th>
+              <th className="text-center py-2 font-semibold">{t('milk.shift1')}</th>
+              <th className="text-center py-2 font-semibold">{t('milk.shift2')}</th>
+              <th className="text-right py-2 font-semibold rounded-r">{t('milk.dailyTotal')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <MilkRow
+              label={t('milk.coffeeMilk')}
+              s1Key="coffee_s1"
+              s2Key="coffee_s2"
+              s1TestId="milk-coffee-s1"
+              s2TestId="milk-coffee-s2"
+              data={data}
+              onUpdate={update}
+            />
+            <MilkRow
+              label={t('milk.teaMilk')}
+              s1Key="tea_s1"
+              s2Key="tea_s2"
+              s1TestId="milk-tea-s1"
+              s2TestId="milk-tea-s2"
+              data={data}
+              onUpdate={update}
+            />
+          </tbody>
+          <tfoot>
+            <tr className="border-t-2 border-border bg-muted/30">
+              <td className="py-3 font-semibold text-sm pl-1">{t('milk.dailyTotal')}</td>
+              <td className="py-3 text-center font-semibold">
+                {(data.coffee_s1 + data.tea_s1).toFixed(1)}L
+              </td>
+              <td className="py-3 text-center font-semibold">
+                {(data.coffee_s2 + data.tea_s2).toFixed(1)}L
+              </td>
+              <td className="py-3 text-right font-bold text-primary" data-testid="milk-daily-total">
+                {totalConsumed.toFixed(1)}L
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      )}
 
       {/* Closing balance computed */}
       <div
@@ -246,6 +348,7 @@ export default function MilkCard({ dailyEntryId, branch, entryDate, onDone }: Pr
           onClick={handleSave}
           className={`btn-primary text-sm px-4 py-2 ${saved ? 'bg-secondary' : ''}`}
           disabled={saving}
+          data-testid="milk-save-btn"
         >
           {saved ? '✓ Saved' : saving ? t('shift.saving') : t('common.save')}
         </button>
