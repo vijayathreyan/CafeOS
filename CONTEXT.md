@@ -1121,6 +1121,14 @@ When Phase 10 is built, the Alert Manager MUST implement:
 - Playwright tests: `tests/e2e/phase13_vendor.spec.ts` (8 tests)
 - **Next migration: 022**
 
+### ✅ Phase 13 Bug Fix — Milk Details Form (post-phase fix, no new migration)
+- **Root cause 1**: `Row` component was defined inside `MilkCard` → React treated it as a new type on every render → inputs unmounted/remounted on each keystroke → lost focus → appeared disabled. Fixed by extracting `MilkRow` as a top-level module-scope component.
+- **Root cause 2**: Inline `onDone` arrow function in `ShiftDashboard` created a new reference on every render → `useEffect([isDone, onDone])` fired constantly → `markSectionDone` → `setSectionStatus` → re-render → loop. Fixed via `useRef` for `onDone` in `MilkCard` + `useCallback` for all `onDone` handlers in `ShiftDashboard`.
+- `isDone` broadened to `totalConsumed > 0 || bought_litres > 0`.
+- `onDone(true)` called after save; `showToast` added on success/error.
+- **KR single-entry**: `branch === 'KR'` renders one Coffee Milk + one Tea Milk field (no shift split). C2 renders S1 + S2 shift-split form.
+- 5 new E2E tests added to `tests/e2e/phase13_milk.spec.ts` (tests 12–16).
+
 ---
 
 ## What's NOT Built Yet (Phase 14 onwards)
