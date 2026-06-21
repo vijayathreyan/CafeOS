@@ -93,6 +93,10 @@ interface ExpenseFormProps {
   branch: BranchCode
   date: string
   enteredByRole: string
+  /** Called with true after save or when existing DB data is loaded */
+  onDone?: (done: boolean) => void
+  /** When true, hides the outer Card wrapper (for embedding inside a SectionCard) */
+  embedded?: boolean
 }
 
 /**
@@ -101,7 +105,13 @@ interface ExpenseFormProps {
  * Features: draft auto-save every 30s, draft restoration dialog.
  * Gas category is flagged with is_gas=true (flows to P&L Gas Bill).
  */
-export default function ExpenseForm({ branch, date, enteredByRole }: ExpenseFormProps) {
+export default function ExpenseForm({
+  branch,
+  date,
+  enteredByRole,
+  onDone,
+  embedded,
+}: ExpenseFormProps) {
   const { user } = useAuth()
   const { toast } = useToast()
   const categories = branch === 'KR' ? KR_CATEGORIES : C2_CATEGORIES
@@ -123,7 +133,10 @@ export default function ExpenseForm({ branch, date, enteredByRole }: ExpenseForm
   useEffect(() => {
     if (dbLoaded || isLoading || draftDialogOpen) return
     if (dbRows !== undefined) {
-      if (dbRows.length > 0) setRows(rowsFromDb(dbRows, categories))
+      if (dbRows.length > 0) {
+        setRows(rowsFromDb(dbRows, categories))
+        onDone?.(true)
+      }
       setDbLoaded(true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -204,6 +217,7 @@ export default function ExpenseForm({ branch, date, enteredByRole }: ExpenseForm
           })),
       })
       clearDraft(draftKey)
+      onDone?.(true)
       toast({ title: 'Expenses saved', description: 'Cash expenses saved successfully.' })
     } catch (err) {
       toast({
@@ -223,6 +237,132 @@ export default function ExpenseForm({ branch, date, enteredByRole }: ExpenseForm
           <Skeleton key={i} className="h-10 w-full" />
         ))}
       </div>
+    )
+  }
+
+  const formContent = (
+    <>
+      <div className="divide-y">
+        {rows.map((row) => (
+          <div key={row.rowKey} className="flex items-center gap-2 px-4 py-2">
+            <div className="flex-1 min-w-0">
+              {row.isStandard ? (
+                <span className="text-sm font-medium text-foreground">
+                  {row.category}
+                  {row.isGas && (
+                    <span className="ml-1.5 text-xs text-amber-600 font-normal">
+                      (P&L Gas Bill)
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <Input
+                  placeholder="Category name"
+                  value={row.category}
+                  onChange={(e) => updateCategory(row.rowKey, e.target.value)}
+                  className="h-8 text-sm"
+                  aria-label="Custom expense category"
+                />
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-sm text-muted-foreground">₹</span>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={row.amount || ''}
+                placeholder="0"
+                onChange={(e) => updateAmount(row.rowKey, e.target.value)}
+                onFocus={(e) => e.target.select()}
+                className="h-8 w-28 text-right text-sm"
+                aria-label={`${row.category} amount`}
+              />
+            </div>
+
+            {!row.isStandard && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => removeRow(row.rowKey)}
+                className="h-8 w-8 text-destructive hover:text-destructive/70 shrink-0"
+                aria-label="Remove row"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="px-4 py-2 border-t">
+        <Button variant="link" onClick={addRow} className="p-0 h-auto text-sm">
+          <Plus className="w-4 h-4 mr-1" />
+          Add Row
+        </Button>
+      </div>
+
+      <div className="px-4 py-3 border-t bg-muted/30 space-y-1">
+        {gasTotal > 0 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-amber-700 font-medium">Gas Bill (P&L)</span>
+            <span className="font-medium">
+              ₹{gasTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        )}
+        <div className="flex justify-between text-sm font-semibold">
+          <span>Shop Expenses Total</span>
+          <span>₹{shopTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+        </div>
+        <div className="flex justify-between text-base font-bold border-t pt-1">
+          <span>Grand Total</span>
+          <span>
+            ₹{(shopTotal + gasTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          </span>
+        </div>
+      </div>
+
+      <div className="p-4 border-t flex justify-end">
+        <Button
+          onClick={handleSave}
+          disabled={saveMutation.isLoading}
+          data-testid="expense-save-btn"
+          className="min-w-[140px]"
+        >
+          {saveMutation.isLoading ? (
+            <span className="flex items-center gap-2">
+              <span className="animate-spin h-4 w-4 border-2 border-background border-t-transparent rounded-full" />
+              Saving…
+            </span>
+          ) : (
+            <span className="flex items-center gap-2">
+              <Save className="w-4 h-4" />
+              Save Expenses
+            </span>
+          )}
+        </Button>
+      </div>
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <>
+        <DraftRestorationDialog
+          open={draftDialogOpen}
+          onRestore={handleRestoreDraft}
+          onDiscard={handleDiscardDraft}
+        />
+        {draftSavedAt && (
+          <div className="px-4 pt-2 text-xs text-muted-foreground flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3 text-green-500" />
+            Draft saved ✓
+          </div>
+        )}
+        {formContent}
+      </>
     )
   }
 
@@ -247,115 +387,7 @@ export default function ExpenseForm({ branch, date, enteredByRole }: ExpenseForm
           )}
         </CardHeader>
 
-        <CardContent className="p-0">
-          <div className="divide-y">
-            {rows.map((row) => (
-              <div key={row.rowKey} className="flex items-center gap-2 px-4 py-2">
-                {/* Category */}
-                <div className="flex-1 min-w-0">
-                  {row.isStandard ? (
-                    <span className="text-sm font-medium text-foreground">
-                      {row.category}
-                      {row.isGas && (
-                        <span className="ml-1.5 text-xs text-amber-600 font-normal">
-                          (P&L Gas Bill)
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <Input
-                      placeholder="Category name"
-                      value={row.category}
-                      onChange={(e) => updateCategory(row.rowKey, e.target.value)}
-                      className="h-8 text-sm"
-                      aria-label="Custom expense category"
-                    />
-                  )}
-                </div>
-
-                {/* Amount */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-sm text-muted-foreground">₹</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={row.amount || ''}
-                    placeholder="0"
-                    onChange={(e) => updateAmount(row.rowKey, e.target.value)}
-                    onFocus={(e) => e.target.select()}
-                    className="h-8 w-28 text-right text-sm"
-                    aria-label={`${row.category} amount`}
-                  />
-                </div>
-
-                {/* Remove button (ad-hoc rows only) */}
-                {!row.isStandard && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeRow(row.rowKey)}
-                    className="h-8 w-8 text-destructive hover:text-destructive/70 shrink-0"
-                    aria-label="Remove row"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Add row */}
-          <div className="px-4 py-2 border-t">
-            <Button variant="link" onClick={addRow} className="p-0 h-auto text-sm">
-              <Plus className="w-4 h-4 mr-1" />
-              Add Row
-            </Button>
-          </div>
-
-          {/* Totals */}
-          <div className="px-4 py-3 border-t bg-muted/30 space-y-1">
-            {gasTotal > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-amber-700 font-medium">Gas Bill (P&L)</span>
-                <span className="font-medium">
-                  ₹{gasTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm font-semibold">
-              <span>Shop Expenses Total</span>
-              <span>₹{shopTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-            </div>
-            <div className="flex justify-between text-base font-bold border-t pt-1">
-              <span>Grand Total</span>
-              <span>
-                ₹{(shopTotal + gasTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-          </div>
-
-          {/* Save */}
-          <div className="p-4 border-t flex justify-end">
-            <Button
-              onClick={handleSave}
-              disabled={saveMutation.isLoading}
-              className="min-w-[140px]"
-            >
-              {saveMutation.isLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="animate-spin h-4 w-4 border-2 border-background border-t-transparent rounded-full" />
-                  Saving…
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Save className="w-4 h-4" />
-                  Save Expenses
-                </span>
-              )}
-            </Button>
-          </div>
-        </CardContent>
+        <CardContent className="p-0">{formContent}</CardContent>
       </Card>
     </>
   )

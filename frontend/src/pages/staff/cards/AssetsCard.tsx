@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../../lib/supabase'
 import { saveDraft, loadDraft } from '../../../lib/offlineQueue'
+import { showToast } from '../../../lib/dialogs'
 
 interface AssetRow {
   current: number
@@ -37,10 +38,55 @@ export default function AssetsCard({ dailyEntryId, onDone }: Props) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  const isDone = Object.values(data).some((r) => r.current > 0)
+  // Load existing DB data on mount if no localStorage draft
   useEffect(() => {
-    onDone(isDone)
-  }, [isDone, onDone])
+    async function loadFromDb() {
+      const hasDraft = !!loadDraft(`assets_${dailyEntryId}`)
+      if (hasDraft) return
+      const { data: row } = await supabase
+        .from('asset_entries')
+        .select('*')
+        .eq('daily_entry_id', dailyEntryId)
+        .maybeSingle()
+      if (row) {
+        setData({
+          tea_small: {
+            current: row.tea_glass_small_curr ?? 0,
+            new: row.tea_glass_small_new ?? 0,
+            broken: row.tea_glass_small_broke ?? 0,
+          },
+          tea_big: {
+            current: row.tea_glass_big_curr ?? 0,
+            new: row.tea_glass_big_new ?? 0,
+            broken: row.tea_glass_big_broke ?? 0,
+          },
+          dawara: {
+            current: row.dawara_set_curr ?? 0,
+            new: row.dawara_set_new ?? 0,
+            broken: row.dawara_set_broke ?? 0,
+          },
+          black_tea: {
+            current: row.black_tea_glass_curr ?? 0,
+            new: row.black_tea_glass_new ?? 0,
+            broken: row.black_tea_glass_broke ?? 0,
+          },
+        })
+      }
+    }
+    loadFromDb()
+  }, [dailyEntryId])
+
+  const isDone = Object.values(data).some((r) => r.current > 0)
+
+  // Ref pattern prevents re-render storm when parent passes inline arrow prop
+  const onDoneRef = useRef(onDone)
+  useEffect(() => {
+    onDoneRef.current = onDone
+  })
+  useEffect(() => {
+    onDoneRef.current(isDone)
+  }, [isDone])
+
   useEffect(() => {
     const i = setInterval(() => saveDraft(`assets_${dailyEntryId}`, data), 30_000)
     return () => clearInterval(i)
@@ -52,8 +98,15 @@ export default function AssetsCard({ dailyEntryId, onDone }: Props) {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await supabase.from('asset_entries').delete().eq('daily_entry_id', dailyEntryId)
-      await supabase.from('asset_entries').insert({
+      const { error: delError } = await supabase
+        .from('asset_entries')
+        .delete()
+        .eq('daily_entry_id', dailyEntryId)
+      if (delError) {
+        showToast(delError.message, 'error')
+        return
+      }
+      const { error } = await supabase.from('asset_entries').insert({
         daily_entry_id: dailyEntryId,
         tea_glass_small_curr: data.tea_small.current,
         tea_glass_small_new: data.tea_small.new,
@@ -68,7 +121,13 @@ export default function AssetsCard({ dailyEntryId, onDone }: Props) {
         black_tea_glass_new: data.black_tea.new,
         black_tea_glass_broke: data.black_tea.broken,
       })
+      if (error) {
+        showToast(error.message, 'error')
+        return
+      }
       setSaved(true)
+      onDoneRef.current(true)
+      showToast('Assets saved', 'success')
       setTimeout(() => setSaved(false), 2000)
     } finally {
       setSaving(false)
@@ -119,6 +178,7 @@ export default function AssetsCard({ dailyEntryId, onDone }: Props) {
       <div className="flex justify-end mt-4">
         <button
           onClick={handleSave}
+          data-testid="assets-save-btn"
           className={`btn-primary text-sm px-4 py-2 ${saved ? 'bg-secondary' : ''}`}
           disabled={saving}
         >

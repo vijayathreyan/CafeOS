@@ -47,57 +47,65 @@ export function useDailySalesSummary(branch: PLBranch, month: Date) {
       const allDeIds = (dailyEntries ?? []).map((d) => d.id as string)
 
       // Parallel bulk fetches
-      const [cashRes, expenseRes, postpaidRes, upiRes, depositRes, posRes] = await Promise.all([
-        // Cash entries (denomination totals) — sum per daily_entry_id
-        allDeIds.length > 0
-          ? supabase
-              .from('cash_entries')
-              .select('daily_entry_id, shift_total')
-              .in('daily_entry_id', allDeIds)
-          : Promise.resolve({ data: [], error: null }),
-        // Cash expenses per date per branch
-        supabase
-          .from('expense_entries')
-          .select('entry_date, branch, amount')
-          .in('branch', branches)
-          .gte('entry_date', firstDay)
-          .lte('entry_date', lastDay),
-        // Post-paid entries (by customer name)
-        allDeIds.length > 0
-          ? supabase
-              .from('postpaid_entries')
-              .select('daily_entry_id, customer_name, daily_total')
-              .in('daily_entry_id', allDeIds)
-          : Promise.resolve({ data: [], error: null }),
-        // UPI entries per date per branch (null = not entered = show —)
-        supabase
-          .from('upi_entries')
-          .select('entry_date, branch, upi_total')
-          .in('branch', branches)
-          .gte('entry_date', firstDay)
-          .lte('entry_date', lastDay),
-        // Cash deposits (rows JSONB [{branch, date, amount}])
-        supabase
-          .from('cash_deposits')
-          .select('rows')
-          .gte('deposit_date', firstDay)
-          .lte('deposit_date', lastDay),
-        // POS bills — total per date+branch (Phase 12)
-        supabase
-          .from('bills')
-          .select('bill_date, branch, total_amount')
-          .in('branch', branches)
-          .gte('bill_date', firstDay)
-          .lte('bill_date', lastDay),
-      ])
+      const [posDeclaredRes, expenseRes, postpaidRes, upiRes, depositRes, posRes] =
+        await Promise.all([
+          // POS declared cash — sum declared_cash from closed sessions per branch+date
+          // Replaces old cash_entries denomination data (denomination entry retired in favour of POS shift close)
+          supabase
+            .from('pos_sessions')
+            .select('branch, declared_cash, opened_at')
+            .in('branch', branches)
+            .gte('opened_at', firstDay + 'T00:00:00')
+            .lte('opened_at', lastDay + 'T23:59:59')
+            .not('declared_cash', 'is', null),
+          // Cash expenses per date per branch
+          supabase
+            .from('expense_entries')
+            .select('entry_date, branch, amount')
+            .in('branch', branches)
+            .gte('entry_date', firstDay)
+            .lte('entry_date', lastDay),
+          // Post-paid entries (by customer name)
+          allDeIds.length > 0
+            ? supabase
+                .from('postpaid_entries')
+                .select('daily_entry_id, customer_name, daily_total')
+                .in('daily_entry_id', allDeIds)
+            : Promise.resolve({ data: [], error: null }),
+          // UPI entries per date per branch (null = not entered = show —)
+          supabase
+            .from('upi_entries')
+            .select('entry_date, branch, upi_total')
+            .in('branch', branches)
+            .gte('entry_date', firstDay)
+            .lte('entry_date', lastDay),
+          // Cash deposits (rows JSONB [{branch, date, amount}])
+          supabase
+            .from('cash_deposits')
+            .select('rows')
+            .gte('deposit_date', firstDay)
+            .lte('deposit_date', lastDay),
+          // POS bills — total per date+branch (Phase 12)
+          supabase
+            .from('bills')
+            .select('bill_date, branch, total_amount')
+            .in('branch', branches)
+            .gte('bill_date', firstDay)
+            .lte('bill_date', lastDay),
+        ])
 
       // Build lookup maps for fast access
 
-      // Cash in hand: sum shift_total per daily_entry_id
-      const cashByDeId = new Map<string, number>()
-      for (const ce of cashRes.data ?? []) {
-        const id = ce.daily_entry_id as string
-        cashByDeId.set(id, (cashByDeId.get(id) ?? 0) + Number(ce.shift_total))
+      // POS declared cash: group by local date + branch (using browser timezone for IST)
+      const posDeclaredByDateBranch = new Map<string, number>()
+      for (const session of posDeclaredRes.data ?? []) {
+        const d = new Date(session.opened_at as string)
+        const localDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        const key = `${localDate}:${session.branch as string}`
+        posDeclaredByDateBranch.set(
+          key,
+          (posDeclaredByDateBranch.get(key) ?? 0) + Number(session.declared_cash ?? 0)
+        )
       }
 
       // Cash expenses: sum per date+branch
@@ -148,11 +156,10 @@ export function useDailySalesSummary(branch: PLBranch, month: Date) {
         }
       }
 
-      // Build a lookup of daily_entry aggregates: date+branch → { cashInHand, deIds, notes }
+      // Build a lookup of daily_entry aggregates: date+branch → { postpaid, notes }
       const deByDateBranch = new Map<
         string,
         {
-          cashInHand: number
           iti: number
           ramco: number
           arun: number
@@ -163,21 +170,18 @@ export function useDailySalesSummary(branch: PLBranch, month: Date) {
       for (const de of dailyEntries ?? []) {
         const key = `${de.entry_date}:${de.branch}`
         const curr = deByDateBranch.get(key) ?? {
-          cashInHand: 0,
           iti: 0,
           ramco: 0,
           arun: 0,
           ajith: 0,
           notes: null,
         }
-        const cashForShift = cashByDeId.get(de.id as string) ?? 0
         const ppForShift = postByDeId.get(de.id as string) ?? {
           iti: 0,
           ramco: 0,
           arun: 0,
           ajith: 0,
         }
-        curr.cashInHand += cashForShift
         curr.iti += ppForShift.iti
         curr.ramco += ppForShift.ramco
         curr.arun += ppForShift.arun
@@ -196,7 +200,8 @@ export function useDailySalesSummary(branch: PLBranch, month: Date) {
           const de = deByDateBranch.get(key)
           const upiVal = upiByDateBranch.has(key) ? upiByDateBranch.get(key)! : null
           const cashExp = expByDateBranch.get(key) ?? 0
-          const cashInHand = de?.cashInHand ?? 0
+          // Cash in hand now sourced from POS shift close declared_cash (not denomination entries)
+          const cashInHand = posDeclaredByDateBranch.get(key) ?? 0
 
           const iti = b === 'KR' ? (de?.iti ?? null) : null
           const ramco = b === 'KR' ? (de?.ramco ?? null) : null

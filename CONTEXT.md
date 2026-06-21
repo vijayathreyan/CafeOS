@@ -1138,6 +1138,33 @@ When Phase 10 is built, the Alert Manager MUST implement:
   - All `new Date().toISOString().split('T')[0]` for "today" — minor risk before 5:30am IST (UTC midnight returns previous local date); low priority since shop is closed those hours
 - 3 new E2E tests added to `tests/e2e/phase13_vendor.spec.ts` (tests 9–11).
 
+### ✅ Phase 13 Data Entry Cards — Systemic Save Bug Fixed + Cash Deposit Retired + Stock/Expenses Moved to Shift Flow
+
+#### Fix 1 — Snacks / Assets / Notes cards silently failing to save
+- **Root cause**: All three cards called `await supabase.from(...).insert(...)` but never checked the returned `{ error }`. Supabase JS client does not throw on HTTP/DB errors — it returns them in the result object. So even failed inserts (column mismatch, constraint violation, network error) would silently set `setSaved(true)` and show "✓ Saved" with no data written to DB.
+- **Fix**: Destructure `{ error }` from every supabase operation; show `showToast(error.message, 'error')` on failure; only call `setSaved(true)` and `onDoneRef.current(true)` on confirmed success.
+- **DB load on mount**: Cards previously only loaded from `localStorage` draft. After a full page refresh or new device/session, the draft would be gone and the card would appear empty even though DB had valid data. Fixed by adding a `useEffect` that fetches existing DB rows on mount (if no localStorage draft).
+- **onDoneRef pattern**: Applied `useRef(onDone)` pattern (same as MilkCard fix) to SnacksCard and AssetsCard to prevent `useEffect([isDone, onDone])` re-render storms.
+- **NotesCard**: Added `initialNotes` prop — ShiftDashboard passes `activeEntry.notes` so the textarea pre-fills on mount from the already-fetched daily_entry.
+- **data-testid attributes**: Added `data-testid="snacks-save-btn"`, `data-testid="assets-save-btn"`, `data-testid="notes-save-btn"`, `data-testid="notes-textarea"` for E2E test targeting.
+
+#### Part 2 — Staff Denomination Card Retired (POS Shift Close is now single source of truth for cash)
+- `CashCard` removed from `ShiftDashboard.tsx`. The POS shift close `declared_cash` (in `pos_sessions`) is the authoritative cash count going forward.
+- `cash_entries` table and historical data preserved — no migration, no data deletion.
+- `useDailySalesSummary.ts`: "Cash in Hand" column now queries `pos_sessions.declared_cash` summed per branch+date (grouped using browser local time for IST). Old `cash_entries` query removed.
+- `CardId`, `SectionStatus`, `allRequiredDone` in ShiftDashboard updated: `cash` removed.
+
+#### Part 3 — Stock Levels and Cash Expenses moved into Shift Card Flow
+- `StockForm.tsx` and `ExpenseForm.tsx`: Added `onDone?: (done: boolean) => void` and `embedded?: boolean` props. When `embedded=true`, outer `Card`/`CardHeader` wrappers are skipped — the form renders as plain content inside a `SectionCard`. `onDone(true)` is called after save success AND when existing DB data is loaded on mount.
+- New card wrappers: `StockLevelsCard.tsx` and `CashExpensesCard.tsx` — thin wrappers that render `StockForm`/`ExpenseForm` with `embedded` and `onDone` props.
+- `ShiftDashboard.tsx`: Added "Stock Levels" and "Cash Expenses" as optional `SectionCard` entries (not required for shift close, same as Notes). These are once-per-day cards; opening in Shift 2 after Shift 1 already entered data shows the existing DB values automatically (since StockForm/ExpenseForm load from DB via `useStockEntries`/`useExpenseEntries`).
+- `StaffDashboard.tsx`: Removed Stock Levels and Cash Expenses standalone grid tiles. Dashboard grid now shows only Month End Stock and Open POS. Service Contacts unchanged.
+- Routes `/stock-entry` and `/expense-entry` still work — supervisor uses `/supervisor-entry` which uses StockForm/ExpenseForm without `embedded` (full page layout).
+- **data-testid attributes**: Added `data-testid="stock-save-btn"` and `data-testid="expense-save-btn"`.
+
+#### E2E Tests
+- `tests/e2e/phase13_dataentry.spec.ts` (11 tests): Snacks save, Assets save+persist, Notes save, Stock Levels/Cash Expenses in shift card list, Cash Deposit card absent, Dashboard grid structure, Milk regression, Daily Sales Summary structure, Supervisor bank deposit unaffected, Stock Levels existing data shown.
+
 ### ✅ Phase 13 Bug Fix — Edit Vendor Silent Save Failure
 - **Symptom**: Edit Kalingaraj → Items tab → change Cost Price → "Update Vendor" → nothing happened (no Toast, no loading state, no navigation, no save).
 - **Root cause 1 — Silent validation failure**: `vendorSchema` had `whatsapp_number` and `contact_name` as required fields. Kalingaraj (and other seeded vendors like Bisleri, Devi S) have `null` phone numbers. `reset()` set them to `''`, which failed the 10-digit regex / `min(1)`. `handleSubmit(onSubmit)` saw validation errors and refused to call `onSubmit` — no `onError` handler was registered so the failure was completely silent.

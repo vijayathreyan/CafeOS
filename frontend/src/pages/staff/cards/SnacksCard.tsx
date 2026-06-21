@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../../lib/supabase'
 import { saveDraft, loadDraft } from '../../../lib/offlineQueue'
 import { getItemName } from '../../../lib/itemName'
+import { showToast } from '../../../lib/dialogs'
 import { AlertTriangle } from 'lucide-react'
 
 interface SnackItem {
@@ -212,7 +213,6 @@ const C2_SNACKS: SnackItem[] = [
   },
 ]
 
-// Shared input class: empty by default, clean focus ring, mobile-smaller
 const INPUT =
   'w-12 h-9 sm:w-14 sm:h-10 rounded-md border border-input bg-background text-center text-sm px-1 focus:outline-none focus:ring-2 focus:ring-ring'
 
@@ -232,10 +232,46 @@ export default function SnacksCard({ dailyEntryId, branch, onDone }: Props) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  const anyFilled = items.some((i) => i.qty > 0 || i.prepared > 0 || i.sold > 0 || i.wastage > 0)
+  // Load existing DB data on mount if no localStorage draft
   useEffect(() => {
-    onDone(anyFilled)
-  }, [anyFilled, onDone])
+    async function loadFromDb() {
+      const hasDraft = !!loadDraft(`snacks_${dailyEntryId}`)
+      if (hasDraft) return
+      const defaults = branch === 'KR' ? KR_SNACKS : C2_SNACKS
+      const { data } = await supabase
+        .from('snack_entries')
+        .select('*')
+        .eq('daily_entry_id', dailyEntryId)
+      if (data && data.length > 0) {
+        setItems(
+          defaults.map((def) => {
+            const row = data.find((d) => d.item_name === def.item_name)
+            if (!row) return def
+            return {
+              ...def,
+              qty: row.qty ?? 0,
+              prepared: row.prepared ?? 0,
+              sold: row.sold ?? 0,
+              wastage: row.wastage ?? 0,
+              complimentary: row.complimentary ?? 0,
+            }
+          })
+        )
+      }
+    }
+    loadFromDb()
+  }, [dailyEntryId, branch])
+
+  const anyFilled = items.some((i) => i.qty > 0 || i.prepared > 0 || i.sold > 0 || i.wastage > 0)
+
+  // Ref pattern prevents re-render storm when parent passes inline arrow prop
+  const onDoneRef = useRef(onDone)
+  useEffect(() => {
+    onDoneRef.current = onDone
+  })
+  useEffect(() => {
+    onDoneRef.current(anyFilled)
+  }, [anyFilled])
 
   useEffect(() => {
     const interval = setInterval(() => saveDraft(`snacks_${dailyEntryId}`, items), 30_000)
@@ -259,7 +295,14 @@ export default function SnacksCard({ dailyEntryId, branch, onDone }: Props) {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await supabase.from('snack_entries').delete().eq('daily_entry_id', dailyEntryId)
+      const { error: delError } = await supabase
+        .from('snack_entries')
+        .delete()
+        .eq('daily_entry_id', dailyEntryId)
+      if (delError) {
+        showToast(delError.message, 'error')
+        return
+      }
       const inserts = items.map((item) => ({
         daily_entry_id: dailyEntryId,
         item_name: item.item_name,
@@ -270,8 +313,14 @@ export default function SnacksCard({ dailyEntryId, branch, onDone }: Props) {
         wastage: item.wastage,
         complimentary: item.complimentary,
       }))
-      await supabase.from('snack_entries').insert(inserts)
+      const { error } = await supabase.from('snack_entries').insert(inserts)
+      if (error) {
+        showToast(error.message, 'error')
+        return
+      }
       setSaved(true)
+      onDoneRef.current(true)
+      showToast('Snacks saved', 'success')
       setTimeout(() => setSaved(false), 2000)
     } finally {
       setSaving(false)
@@ -382,6 +431,7 @@ export default function SnacksCard({ dailyEntryId, branch, onDone }: Props) {
         <p className="text-xs text-muted-foreground">{t('snacks.warning').slice(0, 35)}...</p>
         <button
           onClick={handleSave}
+          data-testid="snacks-save-btn"
           className={`btn-primary text-sm px-4 py-2 ${saved ? 'bg-secondary' : ''}`}
           disabled={saving}
         >

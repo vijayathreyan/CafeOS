@@ -6,11 +6,12 @@ import { supabase } from '../../lib/supabase'
 import { loadDraft, flushQueue } from '../../lib/offlineQueue'
 import { Coffee, CheckCircle2, ChevronDown, Clock, Circle } from 'lucide-react'
 import SnacksCard from './cards/SnacksCard'
-import CashCard from './cards/CashCard'
 import MilkCard from './cards/MilkCard'
 import AssetsCard from './cards/AssetsCard'
 import PostPaidCard from './cards/PostPaidCard'
 import NotesCard from './cards/NotesCard'
+import StockLevelsCard from './cards/StockLevelsCard'
+import CashExpensesCard from './cards/CashExpensesCard'
 import ShiftCloseModal from './ShiftCloseModal'
 
 interface DailyEntry {
@@ -23,13 +24,14 @@ interface DailyEntry {
   notes: string | null
 }
 
-type CardId = 'snacks' | 'cash' | 'milk' | 'assets' | 'postpaid' | 'notes'
+type CardId = 'snacks' | 'milk' | 'assets' | 'stockLevels' | 'cashExpenses' | 'postpaid' | 'notes'
 
 interface SectionStatus {
   snacks: boolean
-  cash: boolean
   milk: boolean
   assets: boolean
+  stockLevels: boolean
+  cashExpenses: boolean
   postpaid: boolean
   notes: boolean
 }
@@ -44,9 +46,10 @@ export default function ShiftDashboard() {
   const [showCloseModal, setShowCloseModal] = useState(false)
   const [sectionStatus, setSectionStatus] = useState<SectionStatus>({
     snacks: false,
-    cash: false,
     milk: false,
     assets: false,
+    stockLevels: false,
+    cashExpenses: false,
     postpaid: false,
     notes: true,
   })
@@ -127,16 +130,20 @@ export default function ShiftDashboard() {
     (done: boolean) => markSectionDone('snacks', done),
     [markSectionDone]
   )
-  const onCashDone = useCallback(
-    (done: boolean) => markSectionDone('cash', done),
-    [markSectionDone]
-  )
   const onMilkDone = useCallback(
     (done: boolean) => markSectionDone('milk', done),
     [markSectionDone]
   )
   const onAssetsDone = useCallback(
     (done: boolean) => markSectionDone('assets', done),
+    [markSectionDone]
+  )
+  const onStockLevelsDone = useCallback(
+    (done: boolean) => markSectionDone('stockLevels', done),
+    [markSectionDone]
+  )
+  const onCashExpensesDone = useCallback(
+    (done: boolean) => markSectionDone('cashExpenses', done),
     [markSectionDone]
   )
   const onPostpaidDone = useCallback(
@@ -146,7 +153,6 @@ export default function ShiftDashboard() {
 
   const allRequiredDone =
     sectionStatus.snacks &&
-    sectionStatus.cash &&
     sectionStatus.milk &&
     sectionStatus.assets &&
     (isKR ? sectionStatus.postpaid : true)
@@ -217,7 +223,6 @@ export default function ShiftDashboard() {
             {branch ? t(`branch.${branch}`) : ''} · {today} · {user?.full_name}
           </p>
         </div>
-        {/* Draft saved indicator */}
         {draftSaved && (
           <span className="text-xs text-secondary font-medium animate-fade-in">
             {t('shift.draftSaved')}
@@ -237,18 +242,6 @@ export default function ShiftDashboard() {
           required
         >
           <SnacksCard dailyEntryId={activeEntry.id} branch={branch!} onDone={onSnacksDone} />
-        </SectionCard>
-
-        {/* Cash Deposit */}
-        <SectionCard
-          id="cash"
-          title={t('shift.sections.cash')}
-          done={sectionStatus.cash}
-          expanded={expandedCard === 'cash'}
-          onToggle={() => setExpandedCard(expandedCard === 'cash' ? null : 'cash')}
-          required
-        >
-          <CashCard dailyEntryId={activeEntry.id} onDone={onCashDone} />
         </SectionCard>
 
         {/* Milk Details */}
@@ -280,6 +273,30 @@ export default function ShiftDashboard() {
           <AssetsCard dailyEntryId={activeEntry.id} onDone={onAssetsDone} />
         </SectionCard>
 
+        {/* Stock Levels — once per day, not required for shift close */}
+        <SectionCard
+          id="stockLevels"
+          title="Stock Levels"
+          done={sectionStatus.stockLevels}
+          expanded={expandedCard === 'stockLevels'}
+          onToggle={() => setExpandedCard(expandedCard === 'stockLevels' ? null : 'stockLevels')}
+          optional
+        >
+          <StockLevelsCard branch={branch!} entryDate={today} onDone={onStockLevelsDone} />
+        </SectionCard>
+
+        {/* Cash Expenses — once per day, not required for shift close */}
+        <SectionCard
+          id="cashExpenses"
+          title="Cash Expenses"
+          done={sectionStatus.cashExpenses}
+          expanded={expandedCard === 'cashExpenses'}
+          onToggle={() => setExpandedCard(expandedCard === 'cashExpenses' ? null : 'cashExpenses')}
+          optional
+        >
+          <CashExpensesCard branch={branch!} entryDate={today} onDone={onCashExpensesDone} />
+        </SectionCard>
+
         {/* Post-Paid — KR only */}
         {isKR && (
           <SectionCard
@@ -303,7 +320,7 @@ export default function ShiftDashboard() {
           onToggle={() => setExpandedCard(expandedCard === 'notes' ? null : 'notes')}
           optional
         >
-          <NotesCard dailyEntryId={activeEntry.id} />
+          <NotesCard dailyEntryId={activeEntry.id} initialNotes={activeEntry.notes || ''} />
         </SectionCard>
       </div>
 

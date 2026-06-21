@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../contexts/AuthContext'
 import { Button } from '@/components/ui/button'
-import { Package, Wallet, ClipboardList, Phone, ShoppingCart } from 'lucide-react'
+import { Package, ClipboardList, Phone, ShoppingCart } from 'lucide-react'
 import PageContainer from '@/components/layouts/PageContainer'
 import PageHeader from '@/components/layouts/PageHeader'
 import SectionCard from '@/components/ui/SectionCard'
@@ -58,86 +58,8 @@ export default function StaffDashboard() {
         </div>
       </SectionCard>
 
-      {/* Quick actions grid */}
+      {/* Quick actions grid — Month End Stock and Open POS only (Stock Levels and Cash Expenses are now inside the Today's Shift card flow) */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <SectionCard
-          padding="compact"
-          hoverable
-          onClick={() => navigate('/stock-entry')}
-          className="cursor-pointer"
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--brand-primary-subtle)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Package size={20} style={{ color: 'var(--brand-primary)' }} />
-            </div>
-            <div>
-              <p
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  fontWeight: 500,
-                  fontSize: 'var(--text-sm)',
-                  color: 'var(--gray-900)',
-                  margin: 0,
-                }}
-              >
-                Stock Levels
-              </p>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
-                Enter today&apos;s stock
-              </p>
-            </div>
-          </div>
-        </SectionCard>
-
-        <SectionCard
-          padding="compact"
-          hoverable
-          onClick={() => navigate('/expense-entry')}
-          className="cursor-pointer"
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--color-success-bg)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Wallet size={20} style={{ color: 'var(--color-success)' }} />
-            </div>
-            <div>
-              <p
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  fontWeight: 500,
-                  fontSize: 'var(--text-sm)',
-                  color: 'var(--gray-900)',
-                  margin: 0,
-                }}
-              >
-                Cash Expenses
-              </p>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
-                Record today&apos;s expenses
-              </p>
-            </div>
-          </div>
-        </SectionCard>
-
         <SectionCard
           padding="compact"
           hoverable

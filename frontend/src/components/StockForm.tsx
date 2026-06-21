@@ -106,6 +106,10 @@ interface StockFormProps {
   branch: BranchCode
   date: string
   enteredByRole: string
+  /** Called with true after save or when existing DB data is loaded */
+  onDone?: (done: boolean) => void
+  /** When true, hides the outer Card wrapper (for embedding inside a SectionCard) */
+  embedded?: boolean
 }
 
 /**
@@ -114,7 +118,13 @@ interface StockFormProps {
  * kg+grams dual input for Coffee/Tea Powder closing stock,
  * auto-calculated Total and Consumption columns.
  */
-export default function StockForm({ branch, date, enteredByRole }: StockFormProps) {
+export default function StockForm({
+  branch,
+  date,
+  enteredByRole,
+  onDone,
+  embedded,
+}: StockFormProps) {
   const { user } = useAuth()
   const { toast } = useToast()
   const items = branch === 'KR' ? KR_ITEMS : C2_ITEMS
@@ -136,7 +146,10 @@ export default function StockForm({ branch, date, enteredByRole }: StockFormProp
   useEffect(() => {
     if (dbLoaded || isLoading || draftDialogOpen) return
     if (dbRows !== undefined) {
-      if (dbRows.length > 0) setRows(rowsFromDb(dbRows, items))
+      if (dbRows.length > 0) {
+        setRows(rowsFromDb(dbRows, items))
+        onDone?.(true)
+      }
       setDbLoaded(true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -214,6 +227,7 @@ export default function StockForm({ branch, date, enteredByRole }: StockFormProp
     try {
       await saveMutation.mutateAsync({ branch, date, rows: records })
       clearDraft(draftKey)
+      onDone?.(true)
       toast({ title: 'Stock saved', description: 'Stock levels saved successfully.' })
     } catch (err) {
       toast({
@@ -233,6 +247,135 @@ export default function StockForm({ branch, date, enteredByRole }: StockFormProp
           <Skeleton key={i} className="h-12 w-full" />
         ))}
       </div>
+    )
+  }
+
+  const formContent = (
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="border-b bg-muted/50 text-xs text-muted-foreground uppercase tracking-wide">
+              <th className="text-left px-3 py-2 font-medium min-w-[140px] sticky left-0 bg-muted/50">
+                Item
+              </th>
+              <th className="text-center px-3 py-2 font-medium min-w-[60px]">Unit</th>
+              <th className="text-center px-3 py-2 font-medium min-w-[90px]">Opening</th>
+              <th className="text-center px-3 py-2 font-medium min-w-[90px]">Purchase</th>
+              <th className="text-center px-3 py-2 font-medium min-w-[90px]">Total</th>
+              <th className="text-center px-3 py-2 font-medium min-w-[160px]">Closing</th>
+              <th className="text-center px-3 py-2 font-medium min-w-[90px]">Used</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, idx) => {
+              const total = row.openingStock + row.purchase
+              const consumed = total - row.closingStock
+              const isKgGrams = row.inputType === 'kg_grams'
+
+              return (
+                <tr key={row.name} className="border-b last:border-0 hover:bg-accent/20">
+                  <td className="px-3 py-2 font-medium sticky left-0 bg-background">{row.name}</td>
+                  <td className="px-3 py-2 text-center text-muted-foreground">{row.unit}</td>
+                  <td className="px-3 py-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={row.openingStock}
+                      onChange={handleNumericChange(idx, 'openingStock')}
+                      onFocus={handleFocus}
+                      className="h-8 text-center text-sm w-full"
+                      aria-label={`${row.name} opening stock`}
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={row.purchase}
+                      onChange={handleNumericChange(idx, 'purchase')}
+                      onFocus={handleFocus}
+                      className="h-8 text-center text-sm w-full"
+                      aria-label={`${row.name} purchase`}
+                    />
+                  </td>
+                  <td className="px-3 py-2 text-center text-muted-foreground font-medium">
+                    {total.toLocaleString('en-IN')}
+                  </td>
+                  <td className="px-3 py-2">
+                    {isKgGrams ? (
+                      <KgGramsInput
+                        kg={row.closingKg}
+                        grams={row.closingGramsField}
+                        onChange={handleKgGramsChange(idx)}
+                        label={row.name}
+                      />
+                    ) : (
+                      <Input
+                        type="number"
+                        min="0"
+                        value={row.closingStock}
+                        onChange={handleNumericChange(idx, 'closingStock')}
+                        onFocus={handleFocus}
+                        className="h-8 text-center text-sm w-full"
+                        aria-label={`${row.name} closing stock`}
+                      />
+                    )}
+                  </td>
+                  <td
+                    className={`px-3 py-2 text-center font-medium ${consumed < 0 ? 'text-destructive' : 'text-foreground'}`}
+                  >
+                    {consumed.toLocaleString('en-IN')}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="p-4 border-t flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          Multiple saves allowed — last saved values count.
+        </p>
+        <Button
+          onClick={handleSave}
+          disabled={saveMutation.isLoading}
+          data-testid="stock-save-btn"
+          className="min-w-[120px]"
+        >
+          {saveMutation.isLoading ? (
+            <span className="flex items-center gap-2">
+              <span className="animate-spin h-4 w-4 border-2 border-background border-t-transparent rounded-full" />
+              Saving…
+            </span>
+          ) : (
+            <span className="flex items-center gap-2">
+              <Save className="w-4 h-4" />
+              Save Stock
+            </span>
+          )}
+        </Button>
+      </div>
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <>
+        <DraftRestorationDialog
+          open={draftDialogOpen}
+          onRestore={handleRestoreDraft}
+          onDiscard={handleDiscardDraft}
+        />
+        {draftSavedAt && (
+          <div className="px-4 pt-2 text-xs text-muted-foreground flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3 text-green-500" />
+            Draft saved ✓
+          </div>
+        )}
+        {formContent}
+      </>
     )
   }
 
@@ -257,129 +400,7 @@ export default function StockForm({ branch, date, enteredByRole }: StockFormProp
           )}
         </CardHeader>
 
-        <CardContent className="p-0">
-          {/* Horizontal-scroll table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="border-b bg-muted/50 text-xs text-muted-foreground uppercase tracking-wide">
-                  <th className="text-left px-3 py-2 font-medium min-w-[140px] sticky left-0 bg-muted/50">
-                    Item
-                  </th>
-                  <th className="text-center px-3 py-2 font-medium min-w-[60px]">Unit</th>
-                  <th className="text-center px-3 py-2 font-medium min-w-[90px]">Opening</th>
-                  <th className="text-center px-3 py-2 font-medium min-w-[90px]">Purchase</th>
-                  <th className="text-center px-3 py-2 font-medium min-w-[90px]">Total</th>
-                  <th className="text-center px-3 py-2 font-medium min-w-[160px]">Closing</th>
-                  <th className="text-center px-3 py-2 font-medium min-w-[90px]">Used</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, idx) => {
-                  const total = row.openingStock + row.purchase
-                  const consumed = total - row.closingStock
-                  const isKgGrams = row.inputType === 'kg_grams'
-
-                  return (
-                    <tr key={row.name} className="border-b last:border-0 hover:bg-accent/20">
-                      {/* Item name */}
-                      <td className="px-3 py-2 font-medium sticky left-0 bg-background">
-                        {row.name}
-                      </td>
-
-                      {/* Unit */}
-                      <td className="px-3 py-2 text-center text-muted-foreground">{row.unit}</td>
-
-                      {/* Opening stock */}
-                      <td className="px-3 py-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          value={row.openingStock}
-                          onChange={handleNumericChange(idx, 'openingStock')}
-                          onFocus={handleFocus}
-                          className="h-8 text-center text-sm w-full"
-                          aria-label={`${row.name} opening stock`}
-                        />
-                      </td>
-
-                      {/* Purchase */}
-                      <td className="px-3 py-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          value={row.purchase}
-                          onChange={handleNumericChange(idx, 'purchase')}
-                          onFocus={handleFocus}
-                          className="h-8 text-center text-sm w-full"
-                          aria-label={`${row.name} purchase`}
-                        />
-                      </td>
-
-                      {/* Total (auto) */}
-                      <td className="px-3 py-2 text-center text-muted-foreground font-medium">
-                        {total.toLocaleString('en-IN')}
-                      </td>
-
-                      {/* Closing stock */}
-                      <td className="px-3 py-2">
-                        {isKgGrams ? (
-                          <KgGramsInput
-                            kg={row.closingKg}
-                            grams={row.closingGramsField}
-                            onChange={handleKgGramsChange(idx)}
-                            label={row.name}
-                          />
-                        ) : (
-                          <Input
-                            type="number"
-                            min="0"
-                            value={row.closingStock}
-                            onChange={handleNumericChange(idx, 'closingStock')}
-                            onFocus={handleFocus}
-                            className="h-8 text-center text-sm w-full"
-                            aria-label={`${row.name} closing stock`}
-                          />
-                        )}
-                      </td>
-
-                      {/* Consumption (auto) */}
-                      <td
-                        className={`px-3 py-2 text-center font-medium ${consumed < 0 ? 'text-destructive' : 'text-foreground'}`}
-                      >
-                        {consumed.toLocaleString('en-IN')}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Save button */}
-          <div className="p-4 border-t flex items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">
-              Multiple saves allowed — last saved values count.
-            </p>
-            <Button
-              onClick={handleSave}
-              disabled={saveMutation.isLoading}
-              className="min-w-[120px]"
-            >
-              {saveMutation.isLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="animate-spin h-4 w-4 border-2 border-background border-t-transparent rounded-full" />
-                  Saving…
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Save className="w-4 h-4" />
-                  Save Stock
-                </span>
-              )}
-            </Button>
-          </div>
-        </CardContent>
+        <CardContent className="p-0">{formContent}</CardContent>
       </Card>
     </>
   )
