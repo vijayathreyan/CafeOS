@@ -202,11 +202,38 @@ export function useUpdateItem() {
         // Explicit clear — deactivate all vendor links
         await supabase.from('vendor_items').update({ active: false }).eq('item_id', payload.id)
       }
+
+      // Dual-write: mirror price/branch/active into the linked pos_items row
+      // (POS billing screen reads price from item_master, but bill_items is
+      // still FK'd to pos_items.id — see CONTEXT.md follow-up note on
+      // migrating that FK directly to item_master).
+      const { data: linkedPosItem } = await supabase
+        .from('pos_items')
+        .select('id')
+        .eq('item_id', payload.id)
+        .maybeSingle()
+      if (linkedPosItem) {
+        const mirrored: Record<string, unknown> = {
+          branch_kr: payload.branch_kr,
+          branch_c2: payload.branch_c2,
+        }
+        if (payload.selling_price !== undefined && payload.selling_price !== null) {
+          mirrored.selling_price = payload.selling_price
+        }
+        if (payload.active !== undefined) mirrored.active = payload.active
+        const { error: posErr } = await supabase
+          .from('pos_items')
+          .update(mirrored)
+          .eq('id', linkedPosItem.id)
+        if (posErr) throw new Error(posErr.message)
+      }
     },
     {
       onSuccess: () => {
         qc.invalidateQueries('item_master')
         qc.invalidateQueries('vendors')
+        qc.invalidateQueries(['pos_items'])
+        qc.invalidateQueries('pos_items_billing')
       },
     }
   )
@@ -265,10 +292,20 @@ export function useToggleItemActive() {
     async ({ id, active }: { id: string; active: boolean }) => {
       const { error } = await supabase.from('item_master').update({ active }).eq('id', id)
       if (error) throw new Error(error.message)
+
+      // Dual-write into linked pos_items row, if one exists (see CONTEXT.md
+      // follow-up note on the planned FK migration)
+      const { error: posErr } = await supabase
+        .from('pos_items')
+        .update({ active })
+        .eq('item_id', id)
+      if (posErr) throw new Error(posErr.message)
     },
     {
       onSuccess: () => {
         qc.invalidateQueries('item_master')
+        qc.invalidateQueries(['pos_items'])
+        qc.invalidateQueries('pos_items_billing')
       },
     }
   )
@@ -296,10 +333,20 @@ export function useToggleItemBranch() {
         .update({ [field]: value })
         .eq('id', id)
       if (error) throw new Error(error.message)
+
+      // Dual-write into linked pos_items row, if one exists (see CONTEXT.md
+      // follow-up note on the planned FK migration)
+      const { error: posErr } = await supabase
+        .from('pos_items')
+        .update({ [field]: value })
+        .eq('item_id', id)
+      if (posErr) throw new Error(posErr.message)
     },
     {
       onSuccess: () => {
         qc.invalidateQueries('item_master')
+        qc.invalidateQueries(['pos_items'])
+        qc.invalidateQueries('pos_items_billing')
       },
     }
   )

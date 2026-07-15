@@ -272,21 +272,66 @@ export function useCloseSession() {
 // ── POS items for billing (branch-filtered) ───────────────────────────────────
 
 /**
- * Fetches active pos_items for the current branch, caches to localStorage for offline.
+ * Fetches active POS-billable items for the current branch, caches to localStorage for offline.
+ * Reads display data (name, price, branch flags, active) from item_master — the single source
+ * of truth since the Phase 12B pos_items/item_master merge. `id` and `category_id` come from the
+ * linked pos_items row so bill_items.pos_item_id (still FK'd to pos_items) stays valid — see
+ * CONTEXT.md follow-up note on migrating that FK to item_master directly.
  */
 export function usePOSItemsForBilling(branch: string | undefined) {
   return useQuery<POSItem[]>(
     ['pos_items_billing', branch],
     async () => {
       const col = branch === 'KR' ? 'branch_kr' : 'branch_c2'
-      const { data, error } = await supabase
-        .from('pos_items')
-        .select('*')
+      const { data: masterRows, error: masterErr } = await supabase
+        .from('item_master')
+        .select(
+          'id, name_en, name_ta, selling_price, active, ml_per_serving, image_url, pos_sort_order, branch_kr, branch_c2'
+        )
+        .eq('used_in_pos_billing', true)
         .eq(col, true)
         .eq('active', true)
-        .order('sort_order', { ascending: true })
-      if (error) throw new Error(error.message)
-      const items = (data ?? []) as POSItem[]
+        .order('pos_sort_order', { ascending: true })
+      if (masterErr) throw new Error(masterErr.message)
+
+      const rows = masterRows ?? []
+      let items: POSItem[] = []
+
+      if (rows.length > 0) {
+        const { data: linkedPosItems, error: posErr } = await supabase
+          .from('pos_items')
+          .select('id, item_id, category_id')
+          .in(
+            'item_id',
+            rows.map((r) => r.id)
+          )
+        if (posErr) throw new Error(posErr.message)
+
+        const posByItemId = new Map((linkedPosItems ?? []).map((p) => [p.item_id as string, p]))
+
+        items = rows
+          .map((r) => {
+            const linked = posByItemId.get(r.id)
+            if (!linked) return null
+            return {
+              id: linked.id,
+              name_en: r.name_en,
+              name_ta: r.name_ta,
+              category_id: linked.category_id,
+              selling_price: Number(r.selling_price),
+              branch_kr: r.branch_kr,
+              branch_c2: r.branch_c2,
+              image_url: r.image_url,
+              sort_order: r.pos_sort_order ?? 0,
+              active: r.active,
+              ml_per_serving: r.ml_per_serving,
+              updated_at: null,
+              created_at: '',
+            } as POSItem
+          })
+          .filter((x): x is POSItem => x !== null)
+      }
+
       // Cache for offline
       try {
         localStorage.setItem(`pos_items_cache_${branch}`, JSON.stringify(items))
@@ -338,6 +383,10 @@ export function usePostPaidCustomersForBranch(branch: string | undefined) {
 
 /**
  * Updates pos_item selling_price and inserts pos_item_price_history record.
+ * Dual-writes the new price into the linked item_master row so POS billing
+ * (which now reads price from item_master) reflects the change — until the
+ * pos_item_price_history FK is migrated to item_master directly (see
+ * CONTEXT.md follow-up note).
  */
 export function useUpdatePOSItemPrice() {
   const qc = useQueryClient()
@@ -352,16 +401,27 @@ export function useUpdatePOSItemPrice() {
       })
       if (histErr) throw new Error(histErr.message)
 
-      const { error: updateErr } = await supabase
+      const { data: updatedPosItem, error: updateErr } = await supabase
         .from('pos_items')
         .update({ selling_price: payload.newPrice, updated_at: new Date().toISOString() })
         .eq('id', payload.itemId)
+        .select('item_id')
+        .single()
       if (updateErr) throw new Error(updateErr.message)
+
+      if (updatedPosItem?.item_id) {
+        const { error: masterErr } = await supabase
+          .from('item_master')
+          .update({ selling_price: payload.newPrice })
+          .eq('id', updatedPosItem.item_id)
+        if (masterErr) throw new Error(masterErr.message)
+      }
     },
     {
       onSuccess: () => {
         qc.invalidateQueries('pos_items')
         qc.invalidateQueries('pos_items_billing')
+        qc.invalidateQueries('item_master')
       },
     }
   )

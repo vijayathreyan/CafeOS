@@ -1181,6 +1181,26 @@ When Phase 10 is built, the Alert Manager MUST implement:
 
 ---
 
+## Database Maintenance Log
+
+### 2026-07-15 — item_master / pos_items merge (migration 022) + POS billing screen repointed
+
+- **Migration `022_merge_pos_items_into_item_master.sql`**: `item_master` is now the source of truth for POS-billable items. Added `used_in_pos_billing` (bool, default false), `image_url`, `pos_sort_order` columns. Merged all 38 `pos_items` rows into `item_master` (24 inserted new, 14 matched existing rows — including 3 same-item/different-name pairs the diagnostic almost missed: `Momos (Veg)`/`Veg Momos`, `Momos (Chicken)`/`Chicken Momos`, `Bun`/`Plain Bun`). Collapsed an exact-duplicate `White Channa` row. `item_master` went from 156 → 179 rows. Conflict rule used throughout: **pos_items wins on price and branch flags** (it reflected live production). `pos_items.item_id` (existing FK to `item_master`, previously 100% NULL/unused since Phase 12) is now populated for all 38 rows and is the linkage used everywhere below.
+- **POSBillingScreen now reads item display data (name, price, branch flags, active) from `item_master`** via `usePOSItemsForBilling` in `usePOSBilling.ts` — `pos_items` is queried only for `id` (kept for the FK below) and `category_id` (item_master has no categories table, only free-text `category`). Verified via full `phase12.spec.ts` + `phase12b.spec.ts` run (58/58 passing) plus direct REST API checks that per-branch item counts/prices exactly match what `pos_items` produced pre-merge.
+- **`bill_items.pos_item_id` and `pos_item_price_history.pos_item_id` were NOT migrated to reference `item_master(id)`** — they still FK to `pos_items(id)`. Repointing them would have required backfilling and changing the Admin Settings price-edit flow the night before the POS launch; chose the lower-risk path instead (owner decision, 2026-07-15).
+- **Dual-write added everywhere an item can be edited**, so `item_master` and its linked `pos_items` row never drift apart: `useUpdateItem`, `useToggleItemActive`, `useToggleItemBranch` (`useItemMaster.ts`) now mirror price/branch/active into the linked `pos_items` row; `useUpdatePOSItem`, `useCreatePOSItem` (`usePOSConfig.ts`) and `useUpdatePOSItemPrice` (`usePOSBilling.ts`) mirror the same fields back into `item_master`. Verified no price drift between the two tables after a full Playwright run (which includes a live price-change test).
+- **⚠️ Follow-up — not urgent, do not forget**: once POS has been stable in production for a few days, migrate `bill_items.pos_item_id` and `pos_item_price_history.pos_item_id` to reference `item_master(id)` directly, backfill using the now-populated `pos_items.item_id` link, then remove the dual-write shims above and retire `pos_items` (rename to `pos_items_deprecated`, don't drop — bill history still needs it until the FK migration lands).
+- Full diagnostic (Step 1) surfaced two unrelated pre-existing gaps, not touched by this change: migration 007's seed `UPDATE`s for `Tea`/`Coffee`/`Tea Milk`/`Coffee Milk`/`Rose Milk`/`Badam Milk`/`Brownie`/`Tea Cake`/`Choco Lava`/`Banana Cake` were silent no-ops (no matching rows existed at the time), so litre-based beverage reconciliation was never actually seeded into `item_master`. Also, 127 of the pre-merge 156 `item_master` rows (81%) were leftover Playwright test data (`00000 Test...`, `00000 EditTest...`, `00000 EnhTest...`) — flagged for a separate cleanup pass, not deleted yet (owner review pending).
+
+### 2026-07-08 — Test data cleanup
+- Removed 49 test vendor rows (`"00000 Test Vendor Phase3"`, phone `9000000001`, created 2026-04-09 to 2026-06-02 by Playwright runs) — all had 0 linked items/payments. `vendors` table now has 14 rows: the real Section 5A seed set.
+- Removed 94 test employee rows: 50 with `phone LIKE '00000%'` + 44 with names matching `E2E%` (e.g. "E2E Staff ...", "E2E Edge ...", "E2E State ...") that had realistic-looking (non-`00000`) phone numbers. Verified zero references to any of these IDs across all 27 FK-referencing tables (daily_entries, tasks, stock_entries, etc.) before deletion.
+- `employees` table now has **9 rows**, not 4 — besides the 4 protected Playwright fixture accounts (`9999999999` Vijay, `8888888888` C2Staff, `9876543210`/`9876543211` Test Staff/Test Supervisor), there are 5 more real-looking accounts that don't match any test pattern and were intentionally left alone: Jhanani (owner, `8122211803`), Masala (staff, `9884672279`), Staff1 (staff, `987654321`), and two rows both named "Test2" (`9940060501`, `9789925786`). Worth a manual review — unclear if the "Test2" pair or "Staff1" are real onboarded staff or leftover fixtures under non-standard names.
+- **KR Franchisor vendor row is missing** — needs to be added in Vendor Master before go-live (not part of the 14 real seeded vendors currently present).
+- Known staff named in this doc's "Known Staff" table (Kanchana, Parvathi, Praveen, Silambarasan, Vasanth) do not currently exist in the `employees` table under those names — flagged for follow-up, not addressed in this cleanup.
+
+---
+
 ## What's NOT Built Yet (Phase 14 onwards)
 
 | Phase | Scope |

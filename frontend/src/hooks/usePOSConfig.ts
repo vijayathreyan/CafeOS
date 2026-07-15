@@ -37,6 +37,9 @@ export function usePOSItems(session: boolean) {
 
 /**
  * Mutation that inserts a new pos_items row.
+ * Also creates the linked item_master row (used_in_pos_billing=true) so the
+ * new item keeps showing up in the billing grid, which now reads from
+ * item_master — see CONTEXT.md follow-up note on the planned FK migration.
  * Invalidates the ['pos_items'] query cache on success.
  */
 export function useCreatePOSItem() {
@@ -44,6 +47,36 @@ export function useCreatePOSItem() {
 
   return useMutation(
     async (payload: CreatePOSItemPayload) => {
+      let categoryName: string | null = null
+      if (payload.category_id) {
+        const { data: cat } = await supabase
+          .from('pos_categories')
+          .select('name_en')
+          .eq('id', payload.category_id)
+          .maybeSingle()
+        categoryName = cat?.name_en ?? null
+      }
+
+      const { data: masterRow, error: masterErr } = await supabase
+        .from('item_master')
+        .insert({
+          name_en: payload.name_en,
+          name_ta: payload.name_ta ?? null,
+          item_type: 'vendor_supplied',
+          category: categoryName,
+          unit: 'piece',
+          branch_kr: payload.branch_kr,
+          branch_c2: payload.branch_c2,
+          selling_price: payload.selling_price,
+          ml_per_serving: payload.ml_per_serving ?? null,
+          used_in_pos_billing: true,
+          pos_sort_order: payload.sort_order,
+          active: true,
+        })
+        .select('id')
+        .single()
+      if (masterErr) throw new Error(masterErr.message)
+
       const { error } = await supabase.from('pos_items').insert({
         name_en: payload.name_en,
         name_ta: payload.name_ta ?? null,
@@ -53,12 +86,15 @@ export function useCreatePOSItem() {
         branch_c2: payload.branch_c2,
         sort_order: payload.sort_order,
         ml_per_serving: payload.ml_per_serving ?? null,
+        item_id: masterRow?.id ?? null,
       })
       if (error) throw new Error(error.message)
     },
     {
       onSuccess: () => {
         qc.invalidateQueries(['pos_items'])
+        qc.invalidateQueries('pos_items_billing')
+        qc.invalidateQueries('item_master')
       },
     }
   )
@@ -67,6 +103,9 @@ export function useCreatePOSItem() {
 /**
  * Mutation that partially updates a pos_items row by id.
  * Supports toggling active_kr and active_c2 independently.
+ * Mirrors price/branch/active changes into the linked item_master row (the
+ * source POS billing reads from) — until the FK migration (see CONTEXT.md
+ * follow-up note) lets item_master be the only place these are edited.
  * Invalidates the ['pos_items'] query cache on success.
  */
 export function useUpdatePOSItem() {
@@ -74,12 +113,34 @@ export function useUpdatePOSItem() {
 
   return useMutation(
     async ({ id, ...rest }: UpdatePOSItemPayload) => {
-      const { error } = await supabase.from('pos_items').update(rest).eq('id', id)
+      const { data: updated, error } = await supabase
+        .from('pos_items')
+        .update(rest)
+        .eq('id', id)
+        .select('item_id')
+        .single()
       if (error) throw new Error(error.message)
+
+      if (updated?.item_id) {
+        const mirrored: Record<string, unknown> = {}
+        if (rest.selling_price !== undefined) mirrored.selling_price = rest.selling_price
+        if (rest.branch_kr !== undefined) mirrored.branch_kr = rest.branch_kr
+        if (rest.branch_c2 !== undefined) mirrored.branch_c2 = rest.branch_c2
+        if (rest.active !== undefined) mirrored.active = rest.active
+        if (Object.keys(mirrored).length > 0) {
+          const { error: masterErr } = await supabase
+            .from('item_master')
+            .update(mirrored)
+            .eq('id', updated.item_id)
+          if (masterErr) throw new Error(masterErr.message)
+        }
+      }
     },
     {
       onSuccess: () => {
         qc.invalidateQueries(['pos_items'])
+        qc.invalidateQueries('pos_items_billing')
+        qc.invalidateQueries('item_master')
       },
     }
   )
